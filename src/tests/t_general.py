@@ -49,6 +49,17 @@ if 'fred\n' not in output:
 if 'barney\n' not in output:
     fail('Policy not preserved across dump/load.')
 
+# Check that we will fail if a temp stash file is already present.
+collisionfile = os.path.join(realm.testdir, 'stash_tmp')
+f = open(collisionfile, 'w')
+f.close()
+addmkpw = password('addmkpw')
+output = realm.run_as_master([kdb5_util, 'add_mkey', '-s'],
+                             input=addmkpw+'\n'+addmkpw+'\n')
+if 'Warning: couldn\'t stash master key.\n' not in output:
+    fail('Did not detect temp stash file collision')
+os.unlink(collisionfile)
+
 # Spot-check KRB5_TRACE output
 tracefile = os.path.join(realm.testdir, 'trace')
 realm.run_as_client(['env', 'KRB5_TRACE=' + tracefile, kinit,
