@@ -285,11 +285,18 @@ void get_tickets(context)
         }
     }
 
-    retval = krb5_get_in_tkt_with_keytab(context, 0, 0, NULL,
-                                         NULL, keytab, ccache, &creds, 0);
+    retval = krb5_get_init_creds_keytab(context, &creds, creds.client,
+                                        keytab, 0 /* start time */,
+                                        NULL /* in_tkt_service */,
+                                        NULL /* options */);
     if (retval) {
         com_err(progname, retval, _("while getting initial ticket\n"));
         (void) krb5_cc_destroy(context, ccache);
+        exit(1);
+    }
+    retval = krb5_cc_store_cred(context, ccache, &creds);
+    if (retval) {
+        com_err(progname, retval, _("while storing credentials in cache"));
         exit(1);
     }
 
