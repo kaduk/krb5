@@ -189,6 +189,7 @@ void get_tickets(context)
 {
     char   buf[BUFSIZ], *def_realm;
     krb5_error_code retval;
+    krb5_get_init_creds_opt *opts;
     static char tkstring[] = "/tmp/kproptktXXXXXX";
     krb5_keytab keytab = NULL;
 
@@ -288,13 +289,30 @@ void get_tickets(context)
         }
     }
 
+/* begin compat */
+    retval = krb5int_populate_gic_opt(context, &opts, 0, 0, NULL, NULL,
+                                      &creds);
+    if (retval)
+        return retval;
+/* end compat */
+#if 0
+    retval = krb5_get_init_creds_keytab(context, &creds, creds.client,
+                                        keytab, 0 /* start time */,
+                                        NULL /* in_tkt_service */,
+                                        opts)
+#endif
     retval = krb5_get_in_tkt_with_keytab(context, 0, 0, NULL,
                                          NULL, keytab, ccache, &creds, 0);
+    krb5_get_init_creds_opt_free(context, opts);
     if (retval) {
         com_err(progname, retval, _("while getting initial ticket\n"));
         (void) krb5_cc_destroy(context, ccache);
         exit(1);
     }
+#if 0
+    retval = krb5_cc_store_cred(context, ccache, creds);
+    if (retval)
+#endif
 
     if (keytab)
         (void) krb5_kt_close(context, keytab);
