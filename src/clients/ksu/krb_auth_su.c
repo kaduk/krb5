@@ -31,13 +31,6 @@
 
 void plain_dump_principal ();
 
-/*
- * Try no preauthentication first; then try the encrypted timestamp
- */
-krb5_preauthtype * preauth_ptr = NULL;
-
-
-
 krb5_boolean krb5_auth_check(context, client_pname, hostname, options,
                              target_user, cc, path_passwd, target_uid)
     krb5_context context;
@@ -330,7 +323,7 @@ krb5_boolean krb5_get_tkt_via_passwd (context, ccache, client, server,
     }
 
     code = krb5_get_in_tkt_with_password(context, options->opt,
-                                         0, NULL, preauth_ptr,
+                                         0, NULL, NULL,
                                          password, *ccache, &my_creds, 0);
     memset(password, 0, sizeof(password));
 
