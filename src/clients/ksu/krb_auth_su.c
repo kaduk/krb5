@@ -29,18 +29,12 @@
 #include "ksu.h"
 
 
-void plain_dump_principal ();
+void plain_dump_principal(krb5_context context, krb5_principal p);
 
-krb5_boolean krb5_auth_check(context, client_pname, hostname, options,
-                             target_user, cc, path_passwd, target_uid)
-    krb5_context context;
-    krb5_principal client_pname;
-    char *hostname;
-    opt_info *options;
-    char *target_user;
-    uid_t target_uid;
-    krb5_ccache cc;
-    int *path_passwd;
+krb5_boolean
+krb5_auth_check(krb5_context context, krb5_principal client_pname,
+                char *hostname, opt_info *options, char *target_user,
+                krb5_ccache cc, int *path_passwd, uid_t target_uid)
 {
     krb5_principal client, server;
     krb5_verify_init_creds_opt vfy_opts;
@@ -199,12 +193,9 @@ krb5_boolean krb5_auth_check(context, client_pname, hostname, options,
 /* krb5_fast_auth checks if ticket for the end server is already in
    the cache, if it is, we don't need a tgt */
 
-krb5_boolean krb5_fast_auth(context, client, server, target_user, cc)
-    krb5_context context;
-    krb5_principal client;
-    krb5_principal server;
-    char *target_user;
-    krb5_ccache cc;
+krb5_boolean
+krb5_fast_auth(krb5_context context, krb5_principal client,
+               krb5_principal server, char *target_user, krb5_ccache cc)
 {
 
     krb5_creds tgt, tgtq;
@@ -247,14 +238,10 @@ krb5_boolean krb5_fast_auth(context, client, server, target_user, cc)
 
 
 
-krb5_boolean krb5_get_tkt_via_passwd (context, ccache, client, server,
-                                      options, zero_password)
-    krb5_context context;
-    krb5_ccache *ccache;
-    krb5_principal client;
-    krb5_principal server;
-    opt_info *options;
-    krb5_boolean *zero_password;
+krb5_boolean
+krb5_get_tkt_via_passwd(krb5_context context, krb5_ccache *ccache,
+                        krb5_principal client, krb5_principal server,
+                        opt_info *options, krb5_boolean *zero_password)
 {
     krb5_error_code code;
     krb5_creds my_creds;
@@ -339,10 +326,8 @@ krb5_boolean krb5_get_tkt_via_passwd (context, ccache, client, server,
 }
 
 
-void dump_principal (context, str, p)
-    krb5_context context;
-    char *str;
-    krb5_principal p;
+void
+dump_principal(krb5_context context, char *str, krb5_principal p)
 {
     char * stname;
     krb5_error_code retval;
@@ -354,9 +339,8 @@ void dump_principal (context, str, p)
     fprintf(stderr, " %s: %s\n", str, stname);
 }
 
-void plain_dump_principal (context, p)
-    krb5_context context;
-    krb5_principal p;
+void
+plain_dump_principal(krb5_context context, krb5_principal p)
 {
     char * stname;
     krb5_error_code retval;
@@ -378,10 +362,8 @@ A principal is picked that has the best chance of getting in.
 **********************************************************************/
 
 
-krb5_error_code get_best_principal(context, plist, client)
-    krb5_context context;
-    char **plist;
-    krb5_principal *client;
+krb5_error_code
+get_best_principal(krb5_context context, char **plist, krb5_principal *client)
 {
     krb5_error_code retval =0;
     krb5_principal temp_client, best_client = NULL;

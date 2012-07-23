@@ -43,21 +43,23 @@ int quiet = 0;
 /***********/
 
 #define _DEF_CSH "/bin/csh"
-static int set_env_var (char *, char *);
-static void sweep_up (krb5_context, krb5_ccache);
-static char * ontty (void);
-static void print_status( const char *fmt, ...)
+static int set_env_var(char *name, char *value);
+static void sweep_up(krb5_context context, krb5_ccache cc);
+static char *ontty(void);
+static void print_status(const char *fmt, ...)
 #if __GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ >= 7)
     __attribute__ ((__format__ (__printf__, 1, 2)))
 #endif
     ;
-char * get_dir_of_file();
+char *get_dir_of_file(const char *path);
 
 /* Note -e and -a options are mutually exclusive */
 /* insure the proper specification of target user as well as catching
    ill specified arguments to commands */
 
-void usage (){
+void
+usage(void)
+{
     fprintf(stderr,
             _("Usage: %s [target user] [-n principal] [-c source cachename] "
               "[-k] [-D] [-r time] [-pf] [-l lifetime] [-zZ] [-q] "
@@ -73,9 +75,7 @@ void usage (){
 static uid_t source_uid, target_uid;
 
 int
-main (argc, argv)
-    int argc;
-    char ** argv;
+main(int argc, char *argv[])
 {
     int hp =0;
     int some_rest_copy = 0;
@@ -836,8 +836,8 @@ main (argc, argv)
 
 #ifdef HAVE_GETUSERSHELL
 
-int standard_shell(sh)
-    char *sh;
+int
+standard_shell(char *sh)
 {
     register char *cp;
     char *getusershell();
@@ -850,7 +850,8 @@ int standard_shell(sh)
 
 #endif /* HAVE_GETUSERSHELL */
 
-static char * ontty()
+static char *
+ontty(void)
 {
     char *p, *ttyname();
     static char buf[MAXPATHLEN + 5];
@@ -868,9 +869,8 @@ static char * ontty()
 }
 
 
-static int set_env_var(name, value)
-    char *name;
-    char *value;
+static int
+set_env_var(char *name, char *value)
 {
     char * env_var_buf;
 
@@ -879,9 +879,8 @@ static int set_env_var(name, value)
 
 }
 
-static void sweep_up(context, cc)
-    krb5_context context;
-    krb5_ccache cc;
+static void
+sweep_up(krb5_context context, krb5_ccache cc)
 {
     krb5_error_code retval;
     const char * cc_name;
@@ -912,11 +911,7 @@ get_params is to be called for the -a option or -e option to
 *****************************************************************/
 
 krb5_error_code
-get_params(optindex, pargc, pargv, params)
-    int *optindex;
-    int pargc;
-    char **pargv;
-    char ***params;
+get_params(int *optindex, int pargc, char **pargv, char ***params)
 {
 
     int i,j;
@@ -937,8 +932,8 @@ get_params(optindex, pargc, pargv, params)
     return 0;
 }
 
-static
-void print_status(const char *fmt, ...)
+static void
+print_status(const char *fmt, ...)
 {
     va_list ap;
     if (! quiet){
@@ -949,8 +944,8 @@ void print_status(const char *fmt, ...)
 }
 
 
-char *get_dir_of_file(path)
-    const char *path;
+char *
+get_dir_of_file(const char *path)
 {
     char * temp_path;
     char * ptr;
@@ -969,10 +964,8 @@ char *get_dir_of_file(path)
 }
 
 krb5_error_code
-ksu_tgtname(context, server, client, tgtprinc)
-    krb5_context context;
-    const krb5_data *server, *client;
-    krb5_principal *tgtprinc;
+ksu_tgtname(krb5_context context, const krb5_data *server,
+            const krb5_data *client, krb5_principal *tgtprinc)
 {
     return krb5_build_principal_ext(context, tgtprinc, client->length, client->data,
                                     KRB5_TGS_NAME_SIZE, KRB5_TGS_NAME,

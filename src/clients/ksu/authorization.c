@@ -30,9 +30,8 @@
 
 static void auth_cleanup (FILE *, FILE *, char *);
 
-krb5_boolean fowner(fp, uid)
-    FILE *fp;
-    uid_t uid;
+krb5_boolean
+fowner(FILE *fp, uid_t uid)
 {
     struct stat sbuf;
 
@@ -57,18 +56,18 @@ krb5_boolean fowner(fp, uid)
  * authorization files ~luser/.k5login" and ~luser/.k5users.  Returns TRUE
  * if authorized, FALSE if not authorized.
  *
+ * @param[in] context
+ * @param[in] principal
+ * @param[in] luser
+ * @param[in] cmd
+ * @param[out] ok
+ * @param[out] out_fcmd
  */
 
-krb5_error_code krb5_authorization(context, principal, luser,
-                                   cmd, ok, out_fcmd)
-/* IN */
-    krb5_context context;
-    krb5_principal principal;
-    const char *luser;
-    char *cmd;
-    /* OUT */
-    krb5_boolean *ok;
-    char **out_fcmd;
+krb5_error_code
+krb5_authorization(krb5_context context, krb5_principal principal,
+                   const char *luser, char *cmd, krb5_boolean *ok,
+                   char **out_fcmd)
 {
     struct passwd *pwd;
     char *princname;
@@ -195,12 +194,9 @@ any tokens after the principal name  FALSE is returned.
 
 ***********************************************************/
 
-krb5_error_code k5login_lookup (fp, princname, found)
-    FILE *fp;
-    char *princname;
-    krb5_boolean *found;
+krb5_error_code
+k5login_lookup(FILE *fp, char *princname, krb5_boolean *found)
 {
-
     krb5_error_code retval;
     char * line;
     char * fprinc;
@@ -257,12 +253,9 @@ if princname is found{
 
 
 ***********************************************************/
-krb5_error_code k5users_lookup (fp, princname, cmd, found, out_fcmd)
-    FILE *fp;
-    char *princname;
-    char *cmd;
-    krb5_boolean *found;
-    char **out_fcmd;
+krb5_error_code
+k5users_lookup(FILE *fp, char *princname, char *cmd, krb5_boolean *found,
+               char **out_fcmd)
 {
     krb5_error_code retval;
     char * line;
@@ -345,10 +338,8 @@ resolves it into a full path name.
 
 ************************************************/
 
-krb5_boolean fcmd_resolve(fcmd, out_fcmd, out_err)
-    char *fcmd;
-    char ***out_fcmd;
-    char **out_err;
+krb5_boolean
+fcmd_resolve(char *fcmd, char ***out_fcmd, char **out_err)
 {
     char * err;
     char ** tmp_fcmd;
@@ -424,8 +415,8 @@ cmd_single - checks if cmd consists of a path
 
 ********************************************/
 
-krb5_boolean cmd_single(cmd)
-    char * cmd;
+krb5_boolean
+cmd_single(char *cmd)
 {
 
     if ( ( strrchr( cmd, '/')) ==  NULL){
@@ -440,9 +431,8 @@ cmd_arr_cmp_postfix - compares a command with the postfix
          of fcmd
 ********************************************/
 
-int cmd_arr_cmp_postfix(fcmd_arr, cmd)
-    char **fcmd_arr;
-    char *cmd;
+int
+cmd_arr_cmp_postfix(char **fcmd_arr, char *cmd)
 {
     char  * temp_fcmd;
     char *ptr;
@@ -474,9 +464,8 @@ cmd_arr_cmp - checks if cmd matches any
 
 **********************************************/
 
-int cmd_arr_cmp (fcmd_arr, cmd)
-    char **fcmd_arr;
-    char *cmd;
+int
+cmd_arr_cmp(char **fcmd_arr, char *cmd)
 {
     int result =1;
     int i = 0;
@@ -492,10 +481,8 @@ int cmd_arr_cmp (fcmd_arr, cmd)
 }
 
 
-krb5_boolean find_first_cmd_that_exists(fcmd_arr, cmd_out, err_out)
-    char **fcmd_arr;
-    char **cmd_out;
-    char **err_out;
+krb5_boolean
+find_first_cmd_that_exists(char **fcmd_arr, char **cmd_out, char **err_out)
 {
     struct stat st_temp;
     int i = 0;
@@ -534,12 +521,9 @@ returns 1 if there is an error, 0 if no error.
 
 ***************************************************************/
 
-int match_commands (fcmd, cmd, match, cmd_out, err_out)
-    char *fcmd;
-    char *cmd;
-    krb5_boolean *match;
-    char **cmd_out;
-    char **err_out;
+int
+match_commands(char *fcmd, char *cmd, krb5_boolean *match, char **cmd_out,
+               char **err_out)
 {
     char ** fcmd_arr;
     char * err;
@@ -581,13 +565,12 @@ int match_commands (fcmd, cmd, match, cmd_out, err_out)
 /*********************************************************
    get_line - returns a line of any length.  out_line
               is set to null if eof.
+   @param[in] fp
+   @param[out] out_line
 *********************************************************/
 
-krb5_error_code get_line (fp, out_line)
-/* IN */
-    FILE *fp;
-    /* OUT */
-    char **out_line;
+krb5_error_code
+get_line(FILE *fp, char **out_line)
 {
     char * line, *r, *newline , *line_ptr;
     int chunk_count = 1;
@@ -632,9 +615,8 @@ will be returned as part of the first token.
 Note: this routine reuses the space pointed to by line
 ******************************************************/
 
-char *  get_first_token (line, lnext)
-    char *line;
-    char **lnext;
+char *
+get_first_token(char *line, char **lnext)
 {
 
     char * lptr, * out_ptr;
@@ -668,8 +650,8 @@ Note: that this function modifies the stream
       lnext to the next tocken.
 **********************************************************/
 
-char *  get_next_token (lnext)
-    char **lnext;
+char *
+get_next_token(char **lnext)
 {
     char * lptr, * out_ptr;
 
@@ -694,10 +676,8 @@ char *  get_next_token (lnext)
     return out_ptr;
 }
 
-static void auth_cleanup(users_fp, login_fp, princname)
-    FILE *users_fp;
-    FILE *login_fp;
-    char *princname;
+static void
+auth_cleanup(FILE *users_fp, FILE *login_fp, char *princname)
 {
 
     free (princname);
@@ -707,8 +687,8 @@ static void auth_cleanup(users_fp, login_fp, princname)
         fclose(login_fp);
 }
 
-void init_auth_names(pw_dir)
-    char *pw_dir;
+void
+init_auth_names(char *pw_dir)
 {
     const char *sep;
     int r1, r2;

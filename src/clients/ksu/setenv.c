@@ -40,13 +40,13 @@
 #include <string.h>
 #include "autoconf.h"
 
-static char *_findenv(char *, int *);
+static char *_findenv(char *name, int *offset);
 
 #ifndef HAVE_SETENV
-extern int setenv(char *, char *, int);
+extern int setenv(char *name, char *value, int rewrite);
 #endif
 #ifndef HAVE_UNSETENV
-extern void unsetenv(char *);
+extern void unsetenv(char *name);
 #endif
 
 /*
@@ -56,9 +56,7 @@ extern void unsetenv(char *);
  */
 #ifndef HAVE_SETENV
 int
-setenv(name, value, rewrite)
-    register char *name, *value;
-    int rewrite;
+setenv(char *name, char *value, int rewrite)
 {
     extern char **environ;
     static int alloced;                     /* if allocated space before */
@@ -115,8 +113,7 @@ setenv(name, value, rewrite)
  */
 #ifndef HAVE_UNSETENV
 void
-unsetenv(name)
-    char    *name;
+unsetenv(char *name)
 {
     extern  char    **environ;
     register char   **P;
@@ -137,8 +134,7 @@ unsetenv(name)
  */
 #ifndef HAVE_GETENV
 char *
-getenv(name)
-    char *name;
+getenv(char *name)
 {
     int offset;
 
@@ -155,9 +151,7 @@ getenv(name)
  *
  */
 static char *
-_findenv(name, offset)
-    register char *name;
-    int *offset;
+_findenv(char *name, int *offset)
 {
     extern char **environ;
     register int len;
