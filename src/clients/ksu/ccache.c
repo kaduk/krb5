@@ -34,12 +34,9 @@
 static krb5_error_code store_all_creds(krb5_context context, krb5_ccache cc,
                                        krb5_creds **creds_def,
                                        krb5_creds **creds_other);
-static krb5_boolean compare_creds(krb5_context context, krb5_creds *cred1,
-                                  krb5_creds *cred2);
 static krb5_error_code get_nonexp_tkts(krb5_context, krb5_ccache,
                                        krb5_creds ***);
 static char *flags_string(krb5_creds *cred);
-static krb5_error_code get_login_princ(const char *luser, char ***princ_list);
 static void show_credential(krb5_context context, krb5_creds *cred,
                             krb5_ccache cc);
 static krb5_error_code store_some_creds(krb5_context context, krb5_ccache cc,
@@ -50,10 +47,6 @@ static krb5_error_code store_some_creds(krb5_context context, krb5_ccache cc,
 static krb5_boolean find_princ_in_cred_list(krb5_context context,
                                             krb5_creds **creds_list,
                                             krb5_principal princ);
-static krb5_error_code find_princ_in_cache(krb5_context context,
-                                           krb5_ccache cc,
-                                           krb5_principal princ,
-                                           krb5_boolean *found);
 static void printtime(time_t);
 
 /******************************************************************
@@ -177,36 +170,6 @@ store_all_creds(krb5_context context, krb5_ccache cc, krb5_creds **creds_def,
     else { /* both arrays have elements in them */
 
         return  KRB5KRB_ERR_GENERIC;
-
-/************   while(creds_other[i]){
-                        cmp = FALSE;
-                        j = 0;
-                        while(creds_def[j]){
-                           cmp = compare_creds(creds_other[i],creds_def[j]);
-
-                           if( cmp == TRUE) break;
-
-                           j++;
-                        }
-                        if (cmp == FALSE){
-                                if (retval= krb5_cc_store_cred(context, cc,
-                                                         creds_other[i])){
-                                                return retval;
-                                }
-                        }
-                        i ++;
-                }
-
-                i=0;
-                while(creds_def[i]){
-                        if (retval= krb5_cc_store_cred(context, cc,
-                                                       creds_def[i])){
-                                return retval;
-                        }
-                        i++;
-                }
-
-**************/
     }
     return 0;
 }
@@ -373,95 +336,6 @@ printtime(time_t tv)
                                     &fill))
         printf("%s", fmtbuf);
 }
-
-
-static krb5_error_code
-get_login_princ(const char *luser, char ***princ_list)
-{
-    struct stat sbuf;
-    struct passwd *pwd;
-    char pbuf[MAXPATHLEN];
-    FILE *fp;
-    char * linebuf;
-    char *newline;
-    int gobble, result;
-    char ** buf_out;
-    struct stat st_temp;
-    int count = 0, chunk_count = 1;
-
-    /* no account => no access */
-
-    if ((pwd = getpwnam(luser)) == NULL) {
-        return 0;
-    }
-    result = snprintf(pbuf, sizeof(pbuf), "%s/.k5login", pwd->pw_dir);
-    if (SNPRINTF_OVERFLOW(result, sizeof(pbuf))) {
-        fprintf(stderr, _("home directory path for %s too long\n"), luser);
-        exit (1);
-    }
-
-    if (stat(pbuf, &st_temp)) {  /* not accessible */
-        return 0;
-    }
-
-
-    /* open ~/.k5login */
-    if ((fp = fopen(pbuf, "r")) == NULL) {
-        return 0;
-    }
-    /*
-     * For security reasons, the .k5login file must be owned either by
-     * the user himself, or by root.  Otherwise, don't grant access.
-     */
-    if (fstat(fileno(fp), &sbuf)) {
-        fclose(fp);
-        return 0;
-    }
-    if ((sbuf.st_uid != pwd->pw_uid) && sbuf.st_uid) {
-        fclose(fp);
-        return 0;
-    }
-
-    /* check each line */
-
-
-    if( !(linebuf = (char *) calloc (BUFSIZ, sizeof(char)))) return ENOMEM;
-
-    if (!(buf_out = (char **) malloc( CHUNK * sizeof(char *)))) return ENOMEM;
-
-    while ( fgets(linebuf, BUFSIZ, fp) != NULL) {
-        /* null-terminate the input string */
-        linebuf[BUFSIZ-1] = '\0';
-        newline = NULL;
-        /* nuke the newline if it exists */
-        if ((newline = strchr(linebuf, '\n')))
-            *newline = '\0';
-
-        buf_out[count] = linebuf;
-        count ++;
-
-        if (count == (chunk_count * CHUNK -1)){
-            chunk_count ++;
-            if (!(buf_out = (char **) realloc(buf_out,
-                                              chunk_count * CHUNK * sizeof(char *)))){
-                return ENOMEM;
-            }
-        }
-
-        /* clean up the rest of the line if necessary */
-        if (!newline)
-            while (((gobble = getc(fp)) != EOF) && gobble != '\n');
-
-        if( !(linebuf = (char *) calloc (BUFSIZ, sizeof(char)))) return ENOMEM;
-    }
-
-    buf_out[count] = NULL;
-    *princ_list = buf_out;
-    fclose(fp);
-    return 0;
-}
-
-
 
 static void
 show_credential(krb5_context context, krb5_creds *cred, krb5_ccache cc)
@@ -791,25 +665,4 @@ find_princ_in_cred_list(krb5_context context, krb5_creds **creds_list,
     }
 
     return temp_stored;
-}
-
-static krb5_error_code
-find_princ_in_cache(krb5_context context, krb5_ccache cc,
-                         krb5_principal princ, krb5_boolean *found)
-{
-    krb5_error_code retval;
-    krb5_creds ** creds_list = NULL;
-    const char * cc_name;
-    struct stat st_temp;
-
-    cc_name = krb5_cc_get_name(context, cc);
-
-    if ( ! stat(cc_name, &st_temp)){
-        if ((retval = get_nonexp_tkts(context, cc, &creds_list))){
-            return retval;
-        }
-    }
-
-    *found = find_princ_in_cred_list(context, creds_list, princ);
-    return 0;
 }
