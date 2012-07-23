@@ -28,6 +28,11 @@
 
 #include "ksu.h"
 
+static krb5_boolean fast_auth(krb5_context context, krb5_principal client,
+                              krb5_principal server, char *target_user,
+                              krb5_ccache cc);
+static krb5_error_code get_best_principal(krb5_context context, char **plist,
+                                          krb5_principal *client);
 
 void plain_dump_principal(krb5_context context, krb5_principal p);
 
@@ -77,7 +82,7 @@ krb5_auth_check(krb5_context context, krb5_principal client_pname,
     /* check if ticket is already in the cache, if it is
        then use it.
     */
-    if( krb5_fast_auth(context, client, server, target_user, cc) == TRUE){
+    if( fast_auth(context, client, server, target_user, cc) == TRUE){
         if (auth_debug ){
             fprintf (stderr,"Authenticated via fast_auth \n");
         }
@@ -190,12 +195,12 @@ krb5_auth_check(krb5_context context, krb5_principal client_pname,
     return (TRUE);
 }
 
-/* krb5_fast_auth checks if ticket for the end server is already in
+/* fast_auth checks if ticket for the end server is already in
    the cache, if it is, we don't need a tgt */
 
-krb5_boolean
-krb5_fast_auth(krb5_context context, krb5_principal client,
-               krb5_principal server, char *target_user, krb5_ccache cc)
+static krb5_boolean
+fast_auth(krb5_context context, krb5_principal client, krb5_principal server,
+          char *target_user, krb5_ccache cc)
 {
 
     krb5_creds tgt, tgtq;
@@ -362,7 +367,7 @@ A principal is picked that has the best chance of getting in.
 **********************************************************************/
 
 
-krb5_error_code
+static krb5_error_code
 get_best_principal(krb5_context context, char **plist, krb5_principal *client)
 {
     krb5_error_code retval =0;

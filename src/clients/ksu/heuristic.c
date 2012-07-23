@@ -32,17 +32,36 @@
 #include <unistd.h>
 #endif
 
+static void close_time(int k5users_flag, FILE *users_fp, int k5login_flag,
+                       FILE *login_fp);
+static krb5_boolean find_str_in_list(char **list, char *elm);
+static krb5_error_code get_all_princ_from_file(FILE *fp, char ***plist);
+static krb5_error_code get_authorized_princ_names(const char *luser,
+                                                  char *cmd,
+                                                  char ***princ_list);
+static krb5_error_code get_closest_principal(krb5_context context,
+                                             char **plist,
+                                             krb5_principal *client,
+                                             krb5_boolean *found);
+static krb5_error_code find_either_ticket(krb5_context context,
+                                          krb5_ccache cc,
+                                          krb5_principal client,
+                                          krb5_principal end_server,
+                                          krb5_boolean *found);
+static krb5_error_code find_ticket(krb5_context context, krb5_ccache cc,
+                                   krb5_principal client,
+                                   krb5_principal server, krb5_boolean *found);
+static krb5_error_code find_princ_in_list(krb5_context context,
+                                          krb5_principal princ, char **plist,
+                                          krb5_boolean *found);
 
 /*******************************************************************
 get_all_princ_from_file - retrieves all principal names
                         from file pointed to by fp.
 
 *******************************************************************/
-static void close_time(int k5users_flag, FILE *users_fp, int k5login_flag,
-                       FILE *login_fp);
-static krb5_boolean find_str_in_list(char **list, char *elm);
 
-krb5_error_code
+static krb5_error_code
 get_all_princ_from_file(FILE *fp, char ***plist)
 {
 
@@ -188,7 +207,7 @@ filter(FILE *fp, char *cmd, char **k5users_list, char ***k5users_filt_list)
     return 0;
 }
 
-krb5_error_code
+static krb5_error_code
 get_authorized_princ_names(const char *luser, char *cmd, char ***princ_list)
 {
 
@@ -309,7 +328,7 @@ A principal is picked that has the best chance of getting in.
 **********************************************************************/
 
 
-krb5_error_code
+static krb5_error_code
 get_closest_principal(krb5_context context, char **plist,
                       krb5_principal *client, krb5_boolean *found)
 {
@@ -378,7 +397,7 @@ find_either_ticket checks to see whether there is a ticket for the
    end server or tgt, if neither is there the return FALSE,
 *****************************************************************/
 
-krb5_error_code
+static krb5_error_code
 find_either_ticket(krb5_context context, krb5_ccache cc, krb5_principal client,
                    krb5_principal end_server, krb5_boolean *found)
 {
@@ -419,7 +438,7 @@ find_either_ticket(krb5_context context, krb5_ccache cc, krb5_principal client,
 }
 
 
-krb5_error_code
+static krb5_error_code
 find_ticket(krb5_context context, krb5_ccache cc, krb5_principal client,
             krb5_principal server, krb5_boolean *found)
 {
@@ -463,7 +482,7 @@ find_ticket(krb5_context context, krb5_ccache cc, krb5_principal client,
 
 
 
-krb5_error_code
+static krb5_error_code
 find_princ_in_list(krb5_context context, krb5_principal princ, char **plist,
                    krb5_boolean *found)
 {

@@ -82,9 +82,6 @@ typedef struct opt_info{
 krb5_boolean krb5_auth_check(krb5_context, krb5_principal, char *, opt_info *,
                              char *, krb5_ccache, int *, uid_t);
 
-krb5_boolean krb5_fast_auth(krb5_context, krb5_principal, krb5_principal,
-                            char *, krb5_ccache);
-
 krb5_boolean krb5_get_tkt_via_passwd(krb5_context, krb5_ccache *,
                                      krb5_principal, krb5_principal,
                                      opt_info *, krb5_boolean *);
@@ -93,58 +90,23 @@ void dump_principal(krb5_context, char *, krb5_principal);
 
 void plain_dump_principal(krb5_context, krb5_principal);
 
-
-krb5_error_code krb5_parse_lifetime(char *, long *);
-
-krb5_error_code get_best_principal(krb5_context, char **, krb5_principal *);
-
 /* ccache.c */
 krb5_error_code krb5_ccache_copy(krb5_context, krb5_ccache, char *,
                                  krb5_principal, krb5_ccache *, krb5_boolean *,
                                  uid_t);
 
-krb5_error_code krb5_store_all_creds(krb5_context, krb5_ccache, krb5_creds **,
-                                     krb5_creds **);
-
-krb5_error_code krb5_store_all_creds(krb5_context, krb5_ccache, krb5_creds **,
-                                     krb5_creds **);
-
-krb5_boolean compare_creds(krb5_context, krb5_creds *, krb5_creds *);
-
-krb5_error_code krb5_get_nonexp_tkts(krb5_context, krb5_ccache,
-                                     krb5_creds ***);
-
 krb5_error_code krb5_check_exp(krb5_context, krb5_ticket_times);
-
-char *flags_string(krb5_creds *);
-
-krb5_error_code krb5_get_login_princ(const char *, char ***);
-
-void show_credential(krb5_context, krb5_creds *, krb5_ccache);
 
 int gen_sym(void);
 
 krb5_error_code krb5_ccache_overwrite(krb5_context, krb5_ccache, krb5_ccache,
                                       krb5_principal);
 
-krb5_error_code krb5_store_some_creds(krb5_context, krb5_ccache, krb5_creds **,
-                                      krb5_creds **, krb5_principal,
-                                      krb5_boolean *);
-
 krb5_error_code krb5_ccache_copy_restricted(krb5_context, krb5_ccache, char *,
                                             krb5_principal, krb5_ccache *,                                                  krb5_boolean *, uid_t);
 
-krb5_error_code krb5_ccache_refresh(krb5_context, krb5_ccache);
-
-krb5_error_code krb5_ccache_filter(krb5_context, krb5_ccache, krb5_principal);
-
-krb5_boolean krb5_find_princ_in_cred_list(krb5_context, krb5_creds **,
-                                          krb5_principal);
-
-krb5_error_code krb5_find_princ_in_cache(krb5_context, krb5_ccache,
-                                         krb5_principal, krb5_boolean *);
-
-void printtime(time_t);
+krb5_error_code krb5_ccache_filter(krb5_context context, krb5_ccache cc,
+                              krb5_principal prst);
 
 /* authorization.c */
 krb5_boolean fowner(FILE *, uid_t);
@@ -152,22 +114,8 @@ krb5_boolean fowner(FILE *, uid_t);
 krb5_error_code krb5_authorization(krb5_context, krb5_principal, const char *,
                                    char *, krb5_boolean *, char **);
 
-krb5_error_code k5login_lookup(FILE *, char *, krb5_boolean *);
-
 krb5_error_code k5users_lookup(FILE *, char *, char *, krb5_boolean *,
                                char **);
-
-krb5_boolean fcmd_resolve(char *, char ***, char **);
-
-krb5_boolean cmd_single(char *);
-
-int cmd_arr_cmp_postfix(char **, char *);
-
-int cmd_arr_cmp(char **, char *);
-
-krb5_boolean find_first_cmd_that_exists(char **, char **, char **);
-
-int match_commands(char *, char *, krb5_boolean *, char **, char **);
 
 krb5_error_code get_line(FILE *, char **);
 
@@ -177,36 +125,10 @@ char *get_next_token(char **);
 
 void init_auth_names(char *);
 
-/* main.c */
-void usage(void);
-
-int standard_shell(char *);
-
-krb5_error_code get_params(int *, int, char **, char ***);
-
-char *get_dir_of_file(const char *);
-
 /* heuristic.c */
-krb5_error_code get_all_princ_from_file(FILE *, char ***);
-
 krb5_error_code list_union(char **, char **, char ***);
 
 krb5_error_code filter(FILE *, char *, char **, char ***);
-
-krb5_error_code get_authorized_princ_names(const char *, char *, char ***);
-
-krb5_error_code get_closest_principal(krb5_context, char **, krb5_principal *,
-                                      krb5_boolean *);
-
-krb5_error_code find_either_ticket(krb5_context, krb5_ccache, krb5_principal,
-                                   krb5_principal, krb5_boolean *);
-
-krb5_error_code find_ticket(krb5_context, krb5_ccache, krb5_principal,
-                            krb5_principal, krb5_boolean *);
-
-
-krb5_error_code find_princ_in_list(krb5_context, krb5_principal, char **,
-                                   krb5_boolean *);
 
 krb5_error_code get_best_princ_for_target(krb5_context, uid_t, uid_t, char *,
                                           char *, krb5_ccache, opt_info *,
@@ -221,9 +143,6 @@ krb5_error_code ksu_tgtname(krb5_context, const krb5_data *, const krb5_data *,
 #endif /* min */
 
 
-extern char *krb5_lname_file;  /* Note: print this out just be sure
-                                  that it gets set */
-
 void *xmalloc(size_t);
 void *xrealloc(void *, size_t);
 void *xcalloc(size_t, size_t);
@@ -231,5 +150,5 @@ char *xstrdup(const char *);
 char *xasprintf(const char *format, ...);
 
 #ifndef HAVE_UNSETENV
-                             void unsetenv (char *);
+void unsetenv (char *);
 #endif

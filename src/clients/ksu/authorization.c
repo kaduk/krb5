@@ -28,7 +28,17 @@
 
 #include "ksu.h"
 
-static void auth_cleanup (FILE *, FILE *, char *);
+static void auth_cleanup(FILE *users_fp, FILE *login_fp, char *princname);
+static krb5_error_code k5login_lookup(FILE *fp, char *princname,
+                                      krb5_boolean *found);
+static krb5_boolean fcmd_resolve(char *fcmd, char ***out_fcmd, char **out_err);
+static krb5_boolean cmd_single(char *cmd);
+static int cmd_arr_cmp_postfix(char **fcmd_arr, char *cmd);
+static int cmd_arr_cmp(char **fcmd_arr, char *cmd);
+static krb5_boolean find_first_cmd_that_exists(char **fcmd_arr, char **cmd_out,
+                                               char **err_out);
+static int match_commands(char *fcmd, char *cmd, krb5_boolean *match,
+                          char **cmd_out, char **err_out);
 
 krb5_boolean
 fowner(FILE *fp, uid_t uid)
@@ -194,7 +204,7 @@ any tokens after the principal name  FALSE is returned.
 
 ***********************************************************/
 
-krb5_error_code
+static krb5_error_code
 k5login_lookup(FILE *fp, char *princname, krb5_boolean *found)
 {
     krb5_error_code retval;
@@ -338,7 +348,7 @@ resolves it into a full path name.
 
 ************************************************/
 
-krb5_boolean
+static krb5_boolean
 fcmd_resolve(char *fcmd, char ***out_fcmd, char **out_err)
 {
     char * err;
@@ -415,7 +425,7 @@ cmd_single - checks if cmd consists of a path
 
 ********************************************/
 
-krb5_boolean
+static krb5_boolean
 cmd_single(char *cmd)
 {
 
@@ -431,7 +441,7 @@ cmd_arr_cmp_postfix - compares a command with the postfix
          of fcmd
 ********************************************/
 
-int
+static int
 cmd_arr_cmp_postfix(char **fcmd_arr, char *cmd)
 {
     char  * temp_fcmd;
@@ -464,7 +474,7 @@ cmd_arr_cmp - checks if cmd matches any
 
 **********************************************/
 
-int
+static int
 cmd_arr_cmp(char **fcmd_arr, char *cmd)
 {
     int result =1;
@@ -481,7 +491,7 @@ cmd_arr_cmp(char **fcmd_arr, char *cmd)
 }
 
 
-krb5_boolean
+static krb5_boolean
 find_first_cmd_that_exists(char **fcmd_arr, char **cmd_out, char **err_out)
 {
     struct stat st_temp;
@@ -521,7 +531,7 @@ returns 1 if there is an error, 0 if no error.
 
 ***************************************************************/
 
-int
+static int
 match_commands(char *fcmd, char *cmd, krb5_boolean *match, char **cmd_out,
                char **err_out)
 {

@@ -51,13 +51,16 @@ static void print_status(const char *fmt, ...)
     __attribute__ ((__format__ (__printf__, 1, 2)))
 #endif
     ;
-char *get_dir_of_file(const char *path);
+static void usage(void);
+static char *get_dir_of_file(const char *path);
+static int standard_shell(char *sh);
+static krb5_error_code get_params(int *, int, char **, char ***);
 
 /* Note -e and -a options are mutually exclusive */
 /* insure the proper specification of target user as well as catching
    ill specified arguments to commands */
 
-void
+static void
 usage(void)
 {
     fprintf(stderr,
@@ -836,7 +839,7 @@ main(int argc, char *argv[])
 
 #ifdef HAVE_GETUSERSHELL
 
-int
+static int
 standard_shell(char *sh)
 {
     register char *cp;
@@ -910,7 +913,7 @@ get_params is to be called for the -a option or -e option to
            shell.
 *****************************************************************/
 
-krb5_error_code
+static krb5_error_code
 get_params(int *optindex, int pargc, char **pargv, char ***params)
 {
 
@@ -944,7 +947,7 @@ print_status(const char *fmt, ...)
 }
 
 
-char *
+static char *
 get_dir_of_file(const char *path)
 {
     char * temp_path;

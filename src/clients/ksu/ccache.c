@@ -31,6 +31,31 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+static krb5_error_code store_all_creds(krb5_context context, krb5_ccache cc,
+                                       krb5_creds **creds_def,
+                                       krb5_creds **creds_other);
+static krb5_boolean compare_creds(krb5_context context, krb5_creds *cred1,
+                                  krb5_creds *cred2);
+static krb5_error_code get_nonexp_tkts(krb5_context, krb5_ccache,
+                                       krb5_creds ***);
+static char *flags_string(krb5_creds *cred);
+static krb5_error_code get_login_princ(const char *luser, char ***princ_list);
+static void show_credential(krb5_context context, krb5_creds *cred,
+                            krb5_ccache cc);
+static krb5_error_code store_some_creds(krb5_context context, krb5_ccache cc,
+                                        krb5_creds **creds_def,
+                                        krb5_creds **creds_other,
+                                        krb5_principal prst,
+                                        krb5_boolean *stored);
+static krb5_boolean find_princ_in_cred_list(krb5_context context,
+                                            krb5_creds **creds_list,
+                                            krb5_principal princ);
+static krb5_error_code find_princ_in_cache(krb5_context context,
+                                           krb5_ccache cc,
+                                           krb5_principal princ,
+                                           krb5_boolean *found);
+static void printtime(time_t);
+
 /******************************************************************
 krb5_cache_copy
 
@@ -38,8 +63,6 @@ gets rid of any expired tickets in the secondary cache,
 copies the default cache into the secondary cache,
 
 ************************************************************************/
-
-void show_credential(krb5_context context, krb5_creds *cred, krb5_ccache cc);
 
 /* modifies only the cc_other, the algorithm may look a bit funny,
    but I had to do it this way, since remove function did not come
@@ -78,12 +101,12 @@ krb5_ccache_copy(krb5_context context, krb5_ccache cc_def, char *cc_other_tag,
     cc_other_name = krb5_cc_get_name(context, *cc_other);
 
     if ( ! stat(cc_def_name, &st_temp)){
-        if((retval = krb5_get_nonexp_tkts(context,cc_def,&cc_def_creds_arr))){
+        if((retval = get_nonexp_tkts(context,cc_def,&cc_def_creds_arr))){
             return retval;
         }
     }
 
-    *stored = krb5_find_princ_in_cred_list(context, cc_def_creds_arr,
+    *stored = find_princ_in_cred_list(context, cc_def_creds_arr,
                                            primary_principal);
 
     if (!lstat( cc_other_name, &st_temp))
@@ -98,7 +121,7 @@ krb5_ccache_copy(krb5_context context, krb5_ccache cc_def, char *cc_other_tag,
         return retval;
     }
 
-    retval = krb5_store_all_creds(context, * cc_other, cc_def_creds_arr,
+    retval = store_all_creds(context, * cc_other, cc_def_creds_arr,
                                   cc_other_creds_arr);
 
     if (cc_def_creds_arr){
@@ -122,9 +145,9 @@ krb5_ccache_copy(krb5_context context, krb5_ccache cc_def, char *cc_other_tag,
 }
 
 
-krb5_error_code
-krb5_store_all_creds(krb5_context context, krb5_ccache cc,
-                     krb5_creds **creds_def, krb5_creds **creds_other)
+static krb5_error_code
+store_all_creds(krb5_context context, krb5_ccache cc, krb5_creds **creds_def,
+                krb5_creds **creds_other)
 {
 
     int i = 0;
@@ -188,7 +211,7 @@ krb5_store_all_creds(krb5_context context, krb5_ccache cc,
     return 0;
 }
 
-krb5_boolean
+static krb5_boolean
 compare_creds(krb5_context context, krb5_creds *cred1, krb5_creds *cred2)
 {
     krb5_boolean retval;
@@ -204,8 +227,8 @@ compare_creds(krb5_context context, krb5_creds *cred1, krb5_creds *cred2)
 
 
 
-krb5_error_code
-krb5_get_nonexp_tkts(krb5_context context, krb5_ccache cc,
+static krb5_error_code
+get_nonexp_tkts(krb5_context context, krb5_ccache cc,
                      krb5_creds ***creds_array)
 {
 
@@ -352,8 +375,8 @@ printtime(time_t tv)
 }
 
 
-krb5_error_code
-krb5_get_login_princ(const char *luser, char ***princ_list)
+static krb5_error_code
+get_login_princ(const char *luser, char ***princ_list)
 {
     struct stat sbuf;
     struct passwd *pwd;
@@ -440,7 +463,7 @@ krb5_get_login_princ(const char *luser, char ***princ_list)
 
 
 
-void
+static void
 show_credential(krb5_context context, krb5_creds *cred, krb5_ccache cc)
 {
     krb5_error_code retval;
@@ -534,7 +557,7 @@ krb5_ccache_overwrite(krb5_context context, krb5_ccache ccs, krb5_ccache cct,
     cct_name = krb5_cc_get_name(context, cct);
 
     if ( ! stat(ccs_name, &st_temp)){
-        if ((retval = krb5_get_nonexp_tkts(context,  ccs, &ccs_creds_arr))){
+        if ((retval = get_nonexp_tkts(context,  ccs, &ccs_creds_arr))){
             return retval;
         }
     }
@@ -551,7 +574,7 @@ krb5_ccache_overwrite(krb5_context context, krb5_ccache ccs, krb5_ccache cct,
         return retval;
     }
 
-    retval = krb5_store_all_creds(context, cct, ccs_creds_arr, NULL);
+    retval = store_all_creds(context, cct, ccs_creds_arr, NULL);
 
     if (ccs_creds_arr){
         while (ccs_creds_arr[i]){
@@ -563,8 +586,8 @@ krb5_ccache_overwrite(krb5_context context, krb5_ccache ccs, krb5_ccache cct,
     return retval;
 }
 
-krb5_error_code
-krb5_store_some_creds(krb5_context context, krb5_ccache cc,
+static krb5_error_code
+store_some_creds(krb5_context context, krb5_ccache cc,
                       krb5_creds **creds_def, krb5_creds **creds_other,
                       krb5_principal prst, krb5_boolean *stored)
 {
@@ -655,7 +678,7 @@ krb5_ccache_copy_restricted(krb5_context context, krb5_ccache cc_def,
     cc_other_name = krb5_cc_get_name(context, *cc_other);
 
     if ( ! stat(cc_def_name, &st_temp)){
-        if((retval = krb5_get_nonexp_tkts(context,cc_def,&cc_def_creds_arr))){
+        if((retval = get_nonexp_tkts(context,cc_def,&cc_def_creds_arr))){
             return retval;
         }
 
@@ -674,7 +697,7 @@ krb5_ccache_copy_restricted(krb5_context context, krb5_ccache cc_def,
         return retval;
     }
 
-    retval = krb5_store_some_creds(context, * cc_other,
+    retval = store_some_creds(context, * cc_other,
                                    cc_def_creds_arr, cc_other_creds_arr, prst, stored);
 
 
@@ -719,7 +742,7 @@ krb5_ccache_filter(krb5_context context, krb5_ccache cc, krb5_principal prst)
             fprintf(stderr,"putting cache %s through a filter for -z option\n",                     cc_name);
         }
 
-        if ((retval = krb5_get_nonexp_tkts(context, cc, &cc_creds_arr))){
+        if ((retval = get_nonexp_tkts(context, cc, &cc_creds_arr))){
             return retval;
         }
 
@@ -731,7 +754,7 @@ krb5_ccache_filter(krb5_context context, krb5_ccache cc, krb5_principal prst)
             return retval;
         }
 
-        if ((retval = krb5_store_some_creds(context, cc, cc_creds_arr,
+        if ((retval = store_some_creds(context, cc, cc_creds_arr,
                                             NULL, prst, &stored))){
             return retval;
         }
@@ -746,8 +769,8 @@ krb5_ccache_filter(krb5_context context, krb5_ccache cc, krb5_principal prst)
     return 0;
 }
 
-krb5_boolean
-krb5_find_princ_in_cred_list(krb5_context context, krb5_creds **creds_list,
+static krb5_boolean
+find_princ_in_cred_list(krb5_context context, krb5_creds **creds_list,
                              krb5_principal princ)
 {
 
@@ -770,8 +793,8 @@ krb5_find_princ_in_cred_list(krb5_context context, krb5_creds **creds_list,
     return temp_stored;
 }
 
-krb5_error_code
-krb5_find_princ_in_cache(krb5_context context, krb5_ccache cc,
+static krb5_error_code
+find_princ_in_cache(krb5_context context, krb5_ccache cc,
                          krb5_principal princ, krb5_boolean *found)
 {
     krb5_error_code retval;
@@ -782,11 +805,11 @@ krb5_find_princ_in_cache(krb5_context context, krb5_ccache cc,
     cc_name = krb5_cc_get_name(context, cc);
 
     if ( ! stat(cc_name, &st_temp)){
-        if ((retval = krb5_get_nonexp_tkts(context, cc, &creds_list))){
+        if ((retval = get_nonexp_tkts(context, cc, &creds_list))){
             return retval;
         }
     }
 
-    *found = krb5_find_princ_in_cred_list(context, creds_list, princ);
+    *found = find_princ_in_cred_list(context, creds_list, princ);
     return 0;
 }
