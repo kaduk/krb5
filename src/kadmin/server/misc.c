@@ -109,6 +109,7 @@ schpw_util_wrapper(void *server_handle,
     kadm5_server_handle_t       handle = server_handle;
     krb5_boolean                access_granted;
     krb5_boolean                self;
+    krb5_principal              old_caller;
 
     /*
      * If no target is explicitly provided, then the target principal
@@ -142,6 +143,16 @@ schpw_util_wrapper(void *server_handle,
         access_granted = TRUE;
     }
 
+    /*
+     * We only get here through process_chpw_request() which prints
+     * credentials for kadmin/changepw on a connection made just as
+     * 'kadmind@REALM'.  Use the real calling prinicpal  here so that
+     * the logs do not show changes as having been made by 'kadmin@REALM',
+     * which is not very useful.
+     */
+    old_caller = handle->current_caller;
+    handle->current_caller = client;
+
     if (access_granted) {
         ret = kadm5_chpass_principal_util(server_handle,
                                           target,
@@ -151,6 +162,9 @@ schpw_util_wrapper(void *server_handle,
         ret = KADM5_AUTH_CHANGEPW;
         strlcpy(msg_ret, "Unauthorized request", msg_len);
     }
+
+    /* Restore the original current_caller so as to not leave any tracks. */
+    handle->current_caller = old_caller;
 
     return ret;
 }
