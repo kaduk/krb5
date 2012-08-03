@@ -39,7 +39,7 @@ int auth_debug =0;
 char k5login_path[MAXPATHLEN];
 char k5users_path[MAXPATHLEN];
 char * gb_err = NULL;
-int quiet = 0;
+static int quiet = 0;
 /***********/
 
 #define _DEF_CSH "/bin/csh"
