@@ -137,9 +137,6 @@ krb5_error_code get_best_princ_for_target(krb5_context, uid_t, uid_t, char *,
 krb5_error_code ksu_tgtname(krb5_context, const krb5_data *, const krb5_data *,
                             krb5_principal *tgtprinc);
 
-#ifndef min
-#define min(a,b) ((a) > (b) ? (b) : (a))
-#endif /* min */
 
 
 void *xmalloc(size_t);
