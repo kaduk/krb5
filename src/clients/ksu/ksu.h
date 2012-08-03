@@ -65,7 +65,6 @@ extern char * optarg;
 /* globals */
 extern char * prog_name;
 extern int auth_debug;
-extern int quiet;
 extern char k5login_path[MAXPATHLEN];
 extern char k5users_path[MAXPATHLEN];
 extern char * gb_err;
