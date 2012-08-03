@@ -551,32 +551,6 @@ main(int argc, char *argv[])
             exit(1);
         }
 
-#if 0
-        /* At best, this avoids a single kdc request
-           It is hard to implement dealing with file permissions and
-           is unnecessary.  It is important
-           to properly handle races in chown if this code is ever re-enabled.
-        */
-        /* cache the tickets if possible in the source cache */
-        if (!path_passwd){
-
-            if ((retval = krb5_ccache_overwrite(ksu_context, cc_target, cc_source,
-                                                client))){
-                com_err (prog_name, retval,
-                         "while copying cache %s to %s",
-                         krb5_cc_get_name(ksu_context, cc_target),
-                         krb5_cc_get_name(ksu_context, cc_source));
-                sweep_up(ksu_context, cc_target);
-                exit(1);
-            }
-            if (chown(cc_source_tag_tmp, source_uid, source_gid)){
-                com_err(prog_name, errno,
-                        "while changing owner for %s",
-                        cc_source_tag_tmp);
-                exit(1);
-            }
-        }
-#endif /*0*/
 
         if ((retval = krb5_unparse_name(ksu_context, client, &client_name))) {
             com_err(prog_name, retval, _("When unparsing name"));
