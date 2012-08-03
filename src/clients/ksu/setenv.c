@@ -59,51 +59,61 @@ int
 setenv(char *name, char *value, int rewrite)
 {
     extern char **environ;
-    static int alloced;                     /* if allocated space before */
+    /* if we've allocated space before */
+    static int alloced;
     register char *C;
     int l_value, offset;
 
-    if (*value == '=')                      /* no `=' in value */
+    /* Clean up from callers that left `=' in value. */
+    if (*value == '=')
         ++value;
     l_value = strlen(value);
-    if ((C = _findenv(name, &offset))) {    /* find if already exists */
+    /* find it if it already exists */
+    C = _findenv(name, &offset);
+    if (C != NULL) {
         if (!rewrite)
-            return(0);
-        if (strlen(C) >= l_value) {     /* old larger; copy over */
-            while ((*C++ = *value++));
+            return 0;
+        if (strlen(C) >= l_value) {
+            /* The old one is larger; just copy -- keep the trailing NUL. */
+            strncpy(C, value, l_value + 1);
             return(0);
         }
-    }
-    else {                                  /* create new slot */
-        register int    cnt;
-        register char   **P;
+    } else {
+        /* Create a new slot. */
+        register int cnt;
+        register char **P;
 
-        for (P = environ, cnt = 0; *P; ++P, ++cnt);
-        if (alloced) {                  /* just increase size */
-            environ = (char **)realloc((char *)environ,
-                                       (u_int)(sizeof(char *) * (cnt + 2)));
-            if (!environ)
-                return(-1);
-        }
-        else {                          /* get new space */
-            alloced = 1;            /* copy old entries into it */
-            P = (char **)malloc((u_int)(sizeof(char *) *
-                                        (cnt + 2)));
-            if (!P)
-                return(-1);
+        for (P = environ, cnt = 0; *P != NULL; ++P, ++cnt);
+        if (alloced) {
+            /* Just increase the size. */
+            environ = realloc(environ, sizeof(char *) * (cnt + 2));
+            if (environ == NULL)
+                return -1;
+        } else {
+            /* Get new space and copy old entries into it. */
+            P = malloc((sizeof(char *) * (cnt + 2)));
+            if (P == NULL)
+                return -1;
             memcpy(P, environ, cnt * sizeof(char *));
             environ = P;
         }
         environ[cnt + 1] = NULL;
         offset = cnt;
     }
-    for (C = name; *C && *C != '='; ++C);   /* no `=' in name */
-    if (!(environ[offset] =                 /* name + `=' + value */
-          malloc((u_int)((int)(C - name) + l_value + 2))))
-        return(-1);
-    for (C = environ[offset]; (*C = *name++) &&( *C != '='); ++C);
+    /* Trim any `=' from name. */
+    for (C = name; *C != '\0' && *C != '='; ++C);
+    /* name + '=' + value + '\0' */
+    environ[offset] = malloc((size_t)(C - name) + l_value + 2);
+    if (environ == NULL)
+        return -1;
+    for (C = environ[offset]; *name != '\0' && *name != '='; ++C, ++name)
+        *C = *name;
     for (*C++ = '='; (*C++ = *value++) != NULL;);
-    return(0);
+    *C = '=';
+    ++C;
+    /* Need the NUL, too. */
+    strncpy(C, value, l_value + 1);
+    return 0;
 }
 #endif
 
@@ -115,14 +125,18 @@ setenv(char *name, char *value, int rewrite)
 void
 unsetenv(char *name)
 {
-    extern  char    **environ;
-    register char   **P;
-    int     offset;
+    extern char **environ;
+    register char **P;
+    int offset;
 
-    while (_findenv(name, &offset))         /* if set multiple times */
-        for (P = &environ[offset];; ++P)
-            if (!(*P = *(P + 1)))
+    /* Loop since it may be set multiple times. */
+    while (_findenv(name, &offset) != NULL) {
+        for (P = &environ[offset];; ++P) {
+            *P = *(P + 1);
+            if (*P == NULL)
                 break;
+        }
+    }
 }
 #endif
 
@@ -138,7 +152,7 @@ getenv(char *name)
 {
     int offset;
 
-    return(_findenv(name, &offset));
+    return _findenv(name, &offset);
 }
 #endif
 
@@ -157,12 +171,16 @@ _findenv(char *name, int *offset)
     register int len;
     register char **P, *C;
 
-    for (C = name, len = 0; *C && *C != '='; ++C, ++len);
-    for (P = environ; *P; ++P)
-        if (!strncmp(*P, name, len))
+    /* Get the length of the key we're looking up. */
+    for (C = name, len = 0; *C != '\0' && *C != '='; ++C, ++len);
+    /* Look for the name in the environ. */
+    for (P = environ; *P != NULL; ++P) {
+        if (!strncmp(*P, name, len)) {
             if (*(C = *P + len) == '=') {
                 *offset = P - environ;
                 return(++C);
             }
+        }
+    }
     return(NULL);
 }

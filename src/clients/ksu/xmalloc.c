@@ -31,10 +31,10 @@
 void *
 xmalloc(size_t sz)
 {
-    void *ret = malloc (sz);
+    void *ret = malloc(sz);
     if (ret == 0 && sz != 0) {
-        perror (prog_name);
-        exit (1);
+        perror(prog_name);
+        exit(1);
     }
     return ret;
 }
@@ -42,10 +42,10 @@ xmalloc(size_t sz)
 void *
 xrealloc(void *old, size_t newsz)
 {
-    void *ret = realloc (old, newsz);
+    void *ret = realloc(old, newsz);
     if (ret == 0 && newsz != 0) {
-        perror (prog_name);
-        exit (1);
+        perror(prog_name);
+        exit(1);
     }
     return ret;
 }
@@ -53,10 +53,10 @@ xrealloc(void *old, size_t newsz)
 void *
 xcalloc(size_t nelts, size_t eltsz)
 {
-    void *ret = calloc (nelts, eltsz);
+    void *ret = calloc(nelts, eltsz);
     if (ret == 0 && nelts != 0 && eltsz != 0) {
-        perror (prog_name);
-        exit (1);
+        perror(prog_name);
+        exit(1);
     }
     return ret;
 }
@@ -64,9 +64,9 @@ xcalloc(size_t nelts, size_t eltsz)
 char *
 xstrdup(const char *src)
 {
-    size_t len = strlen (src) + 1;
-    char *dst = xmalloc (len);
-    memcpy (dst, src, len);
+    size_t len = strlen(src) + 1;
+    char *dst = xmalloc(len);
+    memcpy(dst, src, len);
     return dst;
 }
 
@@ -76,10 +76,10 @@ xasprintf(const char *format, ...)
     char *out;
     va_list args;
 
-    va_start (args, format);
+    va_start(args, format);
     if (vasprintf(&out, format, args) < 0) {
-        perror (prog_name);
-        exit (1);
+        perror(prog_name);
+        exit(1);
     }
     va_end(args);
     return out;
