@@ -53,7 +53,9 @@ static void print_status(const char *fmt, ...)
     ;
 static void usage(void);
 static char *get_dir_of_file(const char *path);
+#ifdef HAVE_GETUSERSHELL
 static int standard_shell(char *sh);
+#endif
 static krb5_error_code get_params(int *, int, char **, char ***);
 
 /* Note -e and -a options are mutually exclusive */
