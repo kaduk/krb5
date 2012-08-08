@@ -158,7 +158,7 @@ main(int argc, char *argv[])
     openlog(prog_name, LOG_PID | LOG_NDELAY, LOG_AUTH);
 #endif /* 4.2 syslog */
 
-    if ((argc == 1) || (argv[1][0] == '-')) {
+    if (argc == 1 || argv[1][0] == '-') {
         target_user = xstrdup("root");
         pargc = argc;
         pargv = argv;
@@ -327,9 +327,12 @@ main(int argc, char *argv[])
     source_user = getlogin();
 
     /* Verify that that the user exists and get his passwd structure */
-    if (source_user == NULL || (pwd = getpwnam(source_user)) == NULL ||
-        pwd->pw_uid != ruid) {
+    if (source_user == NULL) {
         pwd = getpwuid(ruid);
+    } else {
+        pwd = getpwnam(source_user);
+        if (pwd == NULL || pwd->pw_uid != ruid)
+            pwd = getpwuid(ruid);
     }
     if (pwd == NULL) {
         fprintf(stderr, _("ksu: who are you?\n"));

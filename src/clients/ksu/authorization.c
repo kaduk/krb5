@@ -137,8 +137,8 @@ krb5_authorization(krb5_context context, krb5_principal principal,
         if(k5users_flag) {
             return 0; /* if kusers does not exist -> done */
         } else {
-            if (retval = k5users_lookup(users_fp,princname,
-                                        cmd,&retbool,out_fcmd)) {
+            retval = k5users_lookup(users_fp,princname, cmd,&retbool,out_fcmd);
+            if (retval) {
                 auth_cleanup(users_fp, login_fp, princname);
                 return retval;
             } else {
@@ -173,7 +173,7 @@ krb5_authorization(krb5_context context, krb5_principal principal,
         }
     }
 
-    if ((!k5users_flag) && (retbool == FALSE)) {
+    if (!k5users_flag && retbool == FALSE) {
         retval = k5users_lookup(users_fp, princname, cmd, &retbool, out_fcmd);
         if(retval) {
             auth_cleanup(users_fp, login_fp, princname);
@@ -182,11 +182,10 @@ krb5_authorization(krb5_context context, krb5_principal principal,
     }
 
     if (k5login_flag && k5users_flag) {
-
         char *kuser = xcalloc(strlen(princname), sizeof(char));
-        if (!(krb5_aname_to_localname(context, principal,
-                                      strlen(princname), kuser)) &&
-            (strcmp(kuser, luser) == 0)) {
+        if (!krb5_aname_to_localname(context, principal,
+                                     strlen(princname), kuser) &&
+            strcmp(kuser, luser) == 0) {
             retbool = TRUE;
         }
 
@@ -217,11 +216,11 @@ k5login_lookup(FILE *fp, char *princname, krb5_boolean *found)
     if (retval)
         return retval;
 
-    while (line) {
+    while (line != NULL) {
         fprinc = get_first_token(line, &lp);
 
-        if (fprinc && (!strcmp(princname, fprinc))) {
-            if(get_next_token(&lp)){
+        if (fprinc != NULL && !strcmp(princname, fprinc)) {
+            if (get_next_token(&lp) != NULL) {
                 free(line);
                 break;  /* nothing should follow princname*/
             } else {
@@ -270,25 +269,25 @@ k5users_lookup(FILE *fp, char *princname, char *cmd, krb5_boolean *found,
     if (retval)
         return retval;
 
-    while (line) {
+    while (line != NULL) {
         fprinc = get_first_token(line, &lp);
 
-        if (fprinc && (!strcmp(princname, fprinc))) {
+        if (fprinc != NULL && !strcmp(princname, fprinc)) {
             fcmd = get_next_token(&lp);
 
-            if ((fcmd) && (!strcmp(fcmd, PERMIT_ALL_COMMANDS))) {
+            if (fcmd != NULL && !strcmp(fcmd, PERMIT_ALL_COMMANDS)) {
                 if (get_next_token(&lp) == NULL) {
                     loc_fcmd = cmd ? xstrdup(cmd): NULL;
                     loc_found = TRUE;
                 }
-                free (line);
+                free(line);
                 break;
             }
 
             if (cmd == NULL) {
                 if (fcmd == NULL)
                     loc_found = TRUE;
-                free (line);
+                free(line);
                 break;
 
             } else {
@@ -310,8 +309,8 @@ k5users_lookup(FILE *fp, char *princname, char *cmd, krb5_boolean *found,
                                 break;
                             }
                         }
-
-                    } while ((fcmd = get_next_token(&lp)));
+                        fcmd = get_next_token(&lp);
+                    } while (fcmd != NULL);
                 }
                 free(line);
                 break;
@@ -347,7 +346,7 @@ fcmd_resolve(char *fcmd, char ***out_fcmd, char **out_err)
     char *lp, *tc;
     int i = 0;
 
-    tmp_fcmd = xcalloc (MAX_CMD, sizeof(char *));
+    tmp_fcmd = xcalloc(MAX_CMD, sizeof(char *));
 
     if (*fcmd == '/') {  /* must be full path */
         tmp_fcmd[0] = xstrdup(fcmd);
@@ -375,7 +374,7 @@ fcmd_resolve(char *fcmd, char ***out_fcmd, char **out_err)
         path = xstrdup(CMD_PATH);
         path_ptr = path;
 
-        while ((*path_ptr == ' ') || (*path_ptr == '\t')) {
+        while (*path_ptr == ' ' || *path_ptr == '\t') {
             path_ptr++;
         }
 
@@ -400,7 +399,8 @@ fcmd_resolve(char *fcmd, char ***out_fcmd, char **out_err)
 
             tmp_fcmd[i] = xasprintf("%s/%s", tc, fcmd);
             i++;
-        } while ((tc = get_next_token (&lp)));
+            tc = get_next_token (&lp);
+        } while (tc != NULL);
 
         tmp_fcmd[i] = NULL;
         *out_fcmd = tmp_fcmd;
@@ -436,8 +436,9 @@ cmd_arr_cmp_postfix(char **fcmd_arr, char *cmd)
     int result = 1;
     int i = 0;
 
-    while (fcmd_arr[i]) {
-        if ((ptr = strrchr( fcmd_arr[i], '/')) == NULL) {
+    while (fcmd_arr[i] != NULL) {
+        ptr = strrchr(fcmd_arr[i], '/');
+        if (ptr == NULL) {
             temp_fcmd = fcmd_arr[i];
         } else {
             temp_fcmd = ptr + 1;
@@ -463,7 +464,7 @@ cmd_arr_cmp(char **fcmd_arr, char *cmd)
     int result = 1;
     int i = 0;
 
-    while (fcmd_arr[i]) {
+    while (fcmd_arr[i] != NULL) {
         result = strcmp(fcmd_arr[i], cmd);
         if (result == 0) {
             break;
@@ -483,7 +484,7 @@ find_first_cmd_that_exists(char **fcmd_arr, char **cmd_out, char **err_out)
     int j = 0;
     struct k5buf buf;
 
-    while (fcmd_arr[i]) {
+    while (fcmd_arr[i] != NULL) {
         if (!stat(fcmd_arr[i], &st_temp)) {
             *cmd_out = xstrdup(fcmd_arr[i]);
             retbool = TRUE;
@@ -569,22 +570,25 @@ get_line(FILE *fp, char **out_line)
     line_ptr = line;
     line[0] = '\0';
 
-    while ((r = fgets(line_ptr, BUFSIZ , fp)) != NULL) {
+    r = fgets(line_ptr, BUFSIZ , fp);
+    while (r != NULL) {
         newline = strchr(line_ptr, '\n');
         if (newline) {
             *newline = '\0';
             break;
         } else {
             chunk_count ++;
-            if (!(line = realloc(line, chunk_count * sizeof(char) * BUFSIZ))) {
+            line = realloc(line, chunk_count * sizeof(char) * BUFSIZ);
+            if (line == NULL) {
                 return  ENOMEM;
             }
 
             line_ptr = line + (BUFSIZ -1) * (chunk_count - 1);
         }
+        r = fgets(line_ptr, BUFSIZ , fp);
     }
 
-    if ((r == NULL) && (strlen(line) == 0)) {
+    if (r == NULL && strlen(line) == 0) {
         *out_line = NULL;
     } else {
         *out_line = line;
@@ -609,7 +613,7 @@ get_first_token(char *line, char **lnext)
     out_ptr = line;
     lptr = line;
 
-    while ((*lptr == ' ') || (*lptr == '\t')) {
+    while (*lptr == ' ' || *lptr == '\t') {
         lptr++;
     }
 
@@ -617,7 +621,7 @@ get_first_token(char *line, char **lnext)
         return NULL;
     }
 
-    while ((*lptr != ' ') && (*lptr != '\t') && (*lptr != '\0')) {
+    while (*lptr != ' ' && *lptr != '\t' && *lptr != '\0') {
         lptr++;
     }
 
@@ -646,7 +650,7 @@ get_next_token(char **lnext)
     char *lptr, *out_ptr;
 
     lptr = *lnext;
-    while ((*lptr == ' ') || (*lptr == '\t')) {
+    while (*lptr == ' ' || *lptr == '\t') {
         lptr++;
     }
 
@@ -656,7 +660,7 @@ get_next_token(char **lnext)
 
     out_ptr = lptr;
 
-    while ((*lptr != ' ') && (*lptr != '\t') && (*lptr != '\0')) {
+    while (*lptr != ' ' && *lptr != '\t' && *lptr != '\0') {
         lptr++;
     }
 
@@ -674,10 +678,10 @@ static void
 auth_cleanup(FILE *users_fp, FILE *login_fp, char *princname)
 {
     free(princname);
-    if (users_fp) {
+    if (users_fp != NULL) {
         fclose(users_fp);
     }
-    if (login_fp) {
+    if (login_fp != NULL) {
         fclose(login_fp);
     }
 }
@@ -688,7 +692,7 @@ init_auth_names(char *pw_dir)
     const char *sep;
     int r1, r2;
 
-    if ((strlen(pw_dir) == 1) && (*pw_dir == '/')) {
+    if (strlen(pw_dir) == 1 && *pw_dir == '/') {
         sep = "";
     } else {
         sep = "/";

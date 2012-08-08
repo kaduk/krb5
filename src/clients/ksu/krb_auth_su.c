@@ -58,10 +58,9 @@ krb5_auth_check(krb5_context context, krb5_principal client_pname,
         return FALSE;
     }
 
-    if (auth_debug) {
+    if (auth_debug)
         dump_principal(context, "krb5_auth_check: Client principal name",
                        client);
-    }
 
     retval = krb5_sname_to_principal(context, hostname, NULL, KRB5_NT_SRV_HST,
                                      &server);
@@ -72,16 +71,14 @@ krb5_auth_check(krb5_context context, krb5_principal client_pname,
         return FALSE;
     }
 
-    if (auth_debug) {
+    if (auth_debug)
         dump_principal(context, "krb5_auth_check: Server principal name",
                        server);
-    }
 
     /* Check if ticket is already in the cache; if it is, then use it. */
     if (fast_auth(context, client, server, target_user, cc) == TRUE) {
-        if (auth_debug) {
+        if (auth_debug)
             fprintf (stderr,"Authenticated via fast_auth \n");
-        }
         return TRUE;
     }
 
@@ -101,9 +98,8 @@ krb5_auth_check(krb5_context context, krb5_principal client_pname,
         return FALSE;
     }
 
-    if (auth_debug) {
+    if (auth_debug)
         dump_principal(context, "local tgt principal name", tgtq.server );
-    }
     retval = krb5_cc_retrieve_cred(context, cc,
                                    KRB5_TC_MATCH_SRV_NAMEONLY | KRB5_TC_SUPPORTED_KTYPES,
                                    &tgtq, &tgt);
@@ -384,7 +380,7 @@ get_best_principal(krb5_context context, char **plist, krb5_principal *client)
                                 "get_best_principal: compare with %s\n",
                                 plist[i]);
                     }
-                    if (best_client) {
+                    if (best_client != NULL) {
                         if (krb5_princ_size(context, best_client) >
                             krb5_princ_size(context, temp_client)) {
                             best_client = temp_client;

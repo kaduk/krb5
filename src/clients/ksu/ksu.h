@@ -119,11 +119,11 @@ krb5_error_code get_best_princ_for_target(krb5_context, uid_t, uid_t, char *,
 krb5_error_code ksu_tgtname(krb5_context, const krb5_data *, const krb5_data *,
                             krb5_principal *tgtprinc);
 
-void * xmalloc(size_t);
-void * xrealloc(void *, size_t);
-void * xcalloc(size_t, size_t);
-char * xstrdup(const char *);
-char * xasprintf(const char *format, ...);
+void *xmalloc(size_t);
+void *xrealloc(void *, size_t);
+void *xcalloc(size_t, size_t);
+char *xstrdup(const char *);
+char *xasprintf(const char *format, ...);
 
 #ifndef HAVE_UNSETENV
 void unsetenv(char *);

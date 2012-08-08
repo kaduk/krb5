@@ -73,13 +73,13 @@ get_all_princ_from_file(FILE *fp, char ***plist)
     if (retval)
         return retval;
 
-    while (line) {
+    while (line != NULL) {
         fprinc = get_first_token (line, &lp);
         if (fprinc != NULL) {
             temp_list[count] = xstrdup(fprinc);
             count++;
         }
-        if (count == ((chunk_count * CHUNK) - 1)) {
+        if (count == chunk_count * CHUNK - 1) {
             chunk_count++;
             temp_list = realloc(temp_list, chunk_count * CHUNK *
                                 sizeof(char *));
@@ -301,7 +301,7 @@ find_str_in_list(char **list, char *elm)
     if (list == NULL)
         return found;
 
-    while (list[i]) {
+    while (list[i] != NULL) {
         if (strcmp(list[i], elm) == 0) {
             found = TRUE;
             break;
@@ -349,13 +349,13 @@ get_closest_principal(krb5_context context, char **plist,
                 krb5_data *p1 = krb5_princ_component(context, *client, j);
                 krb5_data *p2 = krb5_princ_component(context, temp_client, j);
 
-                if ((p1 == NULL) || (p2 == NULL) || !data_eq(*p1, *p2)) {
+                if (p1 == NULL || p2 == NULL || !data_eq(*p1, *p2)) {
                     got_one = FALSE;
                     break;
                 }
             }
             if (got_one == TRUE) {
-                if (best_client) {
+                if (best_client != NULL) {
                     if (krb5_princ_size(context, best_client) >
                         krb5_princ_size(context, temp_client)) {
                         best_client = temp_client;
@@ -544,7 +544,7 @@ get_best_princ_for_target(krb5_context context, uid_t source_uid,
             *client = target_client; /* this will be used to restrict
                                         the cache copty */
         } else {
-            if (cc_def_princ)
+            if (cc_def_princ != NULL)
                 *client = cc_def_princ;
             else
                 *client = target_client;
@@ -574,7 +574,7 @@ get_best_princ_for_target(krb5_context context, uid_t source_uid,
     }
 
     /* if .k5users and .k5login do not exist */
-    if ((stat(k5login_path, &tb) != 0) && (stat(k5users_path, &tb) != 0)) {
+    if (stat(k5login_path, &tb) != 0 && stat(k5users_path, &tb) != 0) {
         *client = target_client;
 
         if (cmd != NULL)
@@ -590,7 +590,7 @@ get_best_princ_for_target(krb5_context context, uid_t source_uid,
             return retval;
 
         /* .k5users or .k5login exist, but no authorization */
-        if ((aplist == NULL) || (aplist[0] == NULL)) {
+        if (aplist == NULL || aplist[0] == NULL) {
             *path_out = NOT_AUTHORIZED;
             if (auth_debug)
                 printf("GET_best_princ_for_target: via empty auth files path\n");
@@ -707,7 +707,7 @@ get_best_princ_for_target(krb5_context context, uid_t source_uid,
     }
 #endif /* PRINC_LOOK_AHEAD */
 
-    if(auth_debug)
+    if (auth_debug)
         printf( "GET_best_princ_for_target: out of luck, can't get appropriate default principal\n");
 
     *path_out = NOT_AUTHORIZED;
