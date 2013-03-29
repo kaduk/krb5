@@ -58,6 +58,9 @@
 #define MAX_CMD 2048 /* this is temp, should use realloc instead,
                         as done in most of the code */
 
+#ifndef MAXPATHLEN
+#define MAXPATHLEN 4096
+#endif
 
 extern int optind;
 extern char * optarg;
