@@ -11,7 +11,7 @@ ticket: 7162
 
 Patch-Category: upstream
 ---
- src/lib/krb5/krb/vfy_increds.c |    1 -
+ src/lib/krb5/krb/vfy_increds.c | 1 -
  1 file changed, 1 deletion(-)
 
 diff --git a/src/lib/krb5/krb/vfy_increds.c b/src/lib/krb5/krb/vfy_increds.c

@@ -1,19 +1,19 @@
 From 0ccf8ffcef6cdb00e8e8d714619a09727646f561 Mon Sep 17 00:00:00 2001
 From: ghudson <ghudson@dc483132-0cff-0310-8789-dd5450dbe970>
 Date: Thu, 22 Mar 2012 14:07:44 +0000
-Subject: =?UTF-8?q?Suppress=20some=20gcc=20uninitialized=20variable=20warnin?=
- =?UTF-8?q?gs=0Aticket:=207107=0Agcc=204.6.2=20reportedly=20finds=20some=20s?=
- =?UTF-8?q?purious=20maybe-uninitialized=20warnings.=0ASuppress=20them.=20=20?=
- =?UTF-8?q?Patch=20from=20Eray=20Aslan=20with=20some=20adjustment.?=
+Subject: =?UTF-8?q?Suppress=20some=20gcc=20uninitialized=20variable=20warn?=
+ =?UTF-8?q?ings=0Aticket:=207107=0Agcc=204.6.2=20reportedly=20finds=20some?=
+ =?UTF-8?q?=20spurious=20maybe-uninitialized=20warnings.=0ASuppress=20them?=
+ =?UTF-8?q?.=20=20Patch=20from=20Eray=20Aslan=20with=20some=20adjustment.?=
 
 git-svn-id: svn://anonsvn.mit.edu/krb5/trunk@25783 dc483132-0cff-0310-8789-dd5450dbe970
 (cherry picked from commit 254c31d2be4e5250932e7701c68d23a27edec8de)
 
 Patch-Category: upstream
 ---
- src/kdc/do_as_req.c           |    1 +
- src/lib/kadm5/srv/svr_iters.c |    2 +-
- src/slave/kprop.c             |    5 +++--
+ src/kdc/do_as_req.c           | 1 +
+ src/lib/kadm5/srv/svr_iters.c | 2 +-
+ src/slave/kprop.c             | 5 +++--
  3 files changed, 5 insertions(+), 3 deletions(-)
 
 diff --git a/src/kdc/do_as_req.c b/src/kdc/do_as_req.c

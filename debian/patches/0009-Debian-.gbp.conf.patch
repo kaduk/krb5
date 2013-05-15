@@ -4,7 +4,7 @@ Date: Tue, 27 Dec 2011 05:27:08 -0500
 Subject: Debian: .gbp.conf
 
 ---
- .gbp.conf |    5 +++++
+ .gbp.conf | 5 +++++
  1 file changed, 5 insertions(+)
  create mode 100644 .gbp.conf
 

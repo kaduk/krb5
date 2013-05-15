@@ -7,7 +7,7 @@ Per upstream ticket #7124, avoid getting PTR lookups when they are
 not requested.  This addresses part of #697662.
 This is upstream's revision c3ab5fe0b.
 ---
- src/lib/krb5/os/sn2princ.c |    2 +-
+ src/lib/krb5/os/sn2princ.c | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/src/lib/krb5/os/sn2princ.c b/src/lib/krb5/os/sn2princ.c

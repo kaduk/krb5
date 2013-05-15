@@ -13,8 +13,8 @@ git-svn-id: svn://anonsvn.mit.edu/krb5/trunk@25665 dc483132-0cff-0310-8789-dd545
 (cherry picked from commit 18e303107321c7f565d90111bf54d2ecb4901f4b)
 Patch-Category: upstream
 ---
- src/lib/krb5/krb/deltat.c   |   47 ++++++++++++++++++++++---------------------
- src/lib/krb5/krb/x-deltat.y |    1 +
+ src/lib/krb5/krb/deltat.c   | 47 +++++++++++++++++++++++----------------------
+ src/lib/krb5/krb/x-deltat.y |  1 +
  2 files changed, 25 insertions(+), 23 deletions(-)
 
 diff --git a/src/lib/krb5/krb/deltat.c b/src/lib/krb5/krb/deltat.c

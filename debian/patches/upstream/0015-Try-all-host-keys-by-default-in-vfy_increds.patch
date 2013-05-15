@@ -18,11 +18,11 @@ git-svn-id: svn://anonsvn.mit.edu/krb5/trunk@25845 dc483132-0cff-0310-8789-dd545
 (cherry picked from commit 2198b0504fdc84152a81fff3743c7d22c1f821dc)
 Patch-Category: upstream
 ---
- src/include/krb5/krb5.hin         |   31 +++---
- src/lib/krb5/krb/t_vfy_increds.c  |   34 ++++--
- src/lib/krb5/krb/t_vfy_increds.py |   55 +++++++++-
- src/lib/krb5/krb/vfy_increds.c    |  205 +++++++++++++++++++++++++------------
- src/util/k5test.py                |    4 +
+ src/include/krb5/krb5.hin         |  31 +++---
+ src/lib/krb5/krb/t_vfy_increds.c  |  34 +++++--
+ src/lib/krb5/krb/t_vfy_increds.py |  55 +++++++++-
+ src/lib/krb5/krb/vfy_increds.c    | 205 ++++++++++++++++++++++++++------------
+ src/util/k5test.py                |   4 +
  5 files changed, 239 insertions(+), 90 deletions(-)
 
 diff --git a/src/include/krb5/krb5.hin b/src/include/krb5/krb5.hin

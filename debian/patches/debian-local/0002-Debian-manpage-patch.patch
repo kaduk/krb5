@@ -9,17 +9,17 @@ Remove edirectory support which is not built on Debian from LDAP man pages.
 
 Patch-Category: debian-local
 ---
- src/clients/kinit/kinit.M                       |    2 +-
- src/clients/ksu/ksu.M                           |   30 ++--
- src/config-files/kdc.conf.M                     |    6 +-
- src/config-files/krb5.conf.M                    |    4 +-
- src/kadmin/cli/kadmin.M                         |   10 +-
- src/kadmin/server/kadmind.M                     |    2 +-
- src/krb5-config.M                               |   23 +--
- src/plugins/kdb/ldap/ldap_util/kdb5_ldap_util.M |  201 -----------------------
- src/slave/kprop.M                               |    4 +-
- src/slave/kpropd.M                              |   10 +-
- src/slave/kproplog.M                            |    2 +-
+ src/clients/kinit/kinit.M                       |   2 +-
+ src/clients/ksu/ksu.M                           |  30 ++--
+ src/config-files/kdc.conf.M                     |   6 +-
+ src/config-files/krb5.conf.M                    |   4 +-
+ src/kadmin/cli/kadmin.M                         |  10 +-
+ src/kadmin/server/kadmind.M                     |   2 +-
+ src/krb5-config.M                               |  23 +--
+ src/plugins/kdb/ldap/ldap_util/kdb5_ldap_util.M | 201 ------------------------
+ src/slave/kprop.M                               |   4 +-
+ src/slave/kpropd.M                              |  10 +-
+ src/slave/kproplog.M                            |   2 +-
  11 files changed, 47 insertions(+), 247 deletions(-)
 
 diff --git a/src/clients/kinit/kinit.M b/src/clients/kinit/kinit.M

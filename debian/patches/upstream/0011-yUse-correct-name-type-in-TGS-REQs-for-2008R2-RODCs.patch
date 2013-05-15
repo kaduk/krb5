@@ -20,8 +20,8 @@ git-svn-id: svn://anonsvn.mit.edu/krb5/trunk@25839 dc483132-0cff-0310-8789-dd545
 (cherry picked from commit c87074d47185f2844780bc2c0f7eefeb1e3297e0)
 Patch-Category: upstream
 ---
- src/lib/krb5/krb/fwd_tgt.c |   12 ++++--------
- src/lib/krb5/krb/tgtname.c |   19 +++++++++++++++----
+ src/lib/krb5/krb/fwd_tgt.c | 12 ++++--------
+ src/lib/krb5/krb/tgtname.c | 19 +++++++++++++++----
  2 files changed, 19 insertions(+), 12 deletions(-)
 
 diff --git a/src/lib/krb5/krb/fwd_tgt.c b/src/lib/krb5/krb/fwd_tgt.c

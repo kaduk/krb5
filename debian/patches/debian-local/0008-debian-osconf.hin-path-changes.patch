@@ -5,7 +5,7 @@ Subject: debian: osconf.hin path changes
 
 Patch-Category: debian-local
 ---
- src/include/osconf.hin |    4 ++--
+ src/include/osconf.hin | 4 ++--
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/src/include/osconf.hin b/src/include/osconf.hin

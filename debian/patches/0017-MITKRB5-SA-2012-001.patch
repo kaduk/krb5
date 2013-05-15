@@ -36,10 +36,10 @@ CVSSv2 Vector: AV:N/AC:L/Au:N/C:P/I:P/A:C/E:POC/RL:OF/RC:C
 CVSSv2 Base Score:      9
 CVSSv2 Temporal Score:  7
 ---
- src/kdc/do_as_req.c       |    3 ++-
- src/kdc/kdc_preauth.c     |    3 ++-
- src/kdc/kdc_util.c        |    1 +
- src/lib/kdb/kdb_default.c |    3 +++
+ src/kdc/do_as_req.c       | 3 ++-
+ src/kdc/kdc_preauth.c     | 3 ++-
+ src/kdc/kdc_util.c        | 1 +
+ src/lib/kdb/kdb_default.c | 3 +++
  4 files changed, 8 insertions(+), 2 deletions(-)
 
 diff --git a/src/kdc/do_as_req.c b/src/kdc/do_as_req.c
