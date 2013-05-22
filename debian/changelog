@@ -1,4 +1,4 @@
-krb5 (1.10.1+dfsg-6) unstable; urgency=high
+krb5 (1.10.1+dfsg-5wheezy1) stable-security; urgency=high
 
   * Fix UDP ping-pong in kpasswd server [CVE-2002-2443], Closes: #708267
 
