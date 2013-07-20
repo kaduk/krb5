@@ -2,8 +2,8 @@
 /* kdc/do_as_req.c */
 /*
  * Portions Copyright (C) 2007 Apple Inc.
- * Copyright 1990,1991,2007,2008,2009 by the Massachusetts Institute of Technology.
- * All Rights Reserved.
+ * Copyright 1990, 1991, 2007, 2008, 2009, 2013 by the Massachusetts Institute
+ * of Technology.  All Rights Reserved.
  *
  * Export of this software from the United States of America may
  *   require a specific license from the United States Government.
@@ -68,6 +68,7 @@
 #endif /* HAVE_NETINET_IN_H */
 
 #include "kdc_util.h"
+#include "kdc_audit.h"
 #include "policy.h"
 #include <kadm5/admin.h>
 #include "adm_proto.h"
@@ -121,6 +122,7 @@ struct as_req_state {
     krb5_error_code preauth_err;
 
     kdc_realm_t *active_realm;
+    krb5_audit_state *au_state;
 };
 
 static void
@@ -137,6 +139,7 @@ finish_process_as_req(struct as_req_state *state, krb5_error_code errcode)
     loop_respond_fn oldrespond;
     void *oldarg;
     kdc_realm_t *kdc_active_realm = state->active_realm;
+    krb5_audit_state *au_state = state->au_state;
 
     assert(state);
     oldrespond = state->respond;
@@ -144,6 +147,8 @@ finish_process_as_req(struct as_req_state *state, krb5_error_code errcode)
 
     if (errcode)
         goto egress;
+
+    au_state->stage = ENCR_REP;
 
     if ((errcode = validate_forwardable(state->request, *state->client,
                                         *state->server, state->kdc_time,
@@ -277,6 +282,12 @@ finish_process_as_req(struct as_req_state *state, krb5_error_code errcode)
         state->status = "ENCRYPTING_TICKET";
         goto egress;
     }
+
+    errcode = kau_make_tkt_id(kdc_context, &state->ticket_reply,
+                              &au_state->tkt_out_id);
+    if (errcode)
+        goto egress;
+
     state->ticket_reply.enc_part.kvno = server_key->key_data_kvno;
     errcode = kdc_fast_response_handle_padata(state->rstate,
                                               state->request,
@@ -332,6 +343,13 @@ finish_process_as_req(struct as_req_state *state, krb5_error_code errcode)
 egress:
     if (errcode != 0)
         assert (state->status != 0);
+
+    au_state->status = state->status;
+    au_state->reply = &state->reply;
+    kau_asreq(kdc_context,
+              (errcode || state->preauth_err) ? FALSE : TRUE, au_state);
+    kau_free_kdc_req(au_state);
+
     free_padata_context(kdc_context, state->pa_context);
     if (as_encrypting_key)
         krb5_free_keyblock(kdc_context, as_encrypting_key);
@@ -456,6 +474,7 @@ process_as_req(krb5_kdc_req *request, krb5_data *req_pkt,
     krb5_data encoded_req_body;
     krb5_enctype useenctype;
     struct as_req_state *state;
+    krb5_audit_state *au_state = NULL;
 
     state = k5alloc(sizeof(*state), &errcode);
     if (state == NULL) {
@@ -474,11 +493,21 @@ process_as_req(krb5_kdc_req *request, krb5_data *req_pkt,
         (*respond)(arg, errcode, NULL);
         return;
     }
+
+    /* Initialize audit state. */
+    errcode = kau_init_kdc_req(kdc_context, state->request, from, &au_state);
+    if (errcode)
+        goto errout;
+    state->au_state = au_state;
+
     if (state->request->msg_type != KRB5_AS_REQ) {
         state->status = "msg_type mismatch";
         errcode = KRB5_BADMSGTYPE;
         goto errout;
     }
+
+    kau_asreq(kdc_context, TRUE, au_state);
+
     if (fetch_asn1_field((unsigned char *) req_pkt->data,
                          1, 4, &encoded_req_body) != 0) {
         errcode = ASN1_BAD_ID;
@@ -500,6 +529,7 @@ process_as_req(krb5_kdc_req *request, krb5_data *req_pkt,
             goto errout;
         }
     }
+    au_state->request = state->request;
     state->rock.request = state->request;
     state->rock.inner_body = state->inner_body;
     state->rock.rstate = state->rstate;
@@ -559,9 +589,12 @@ process_as_req(krb5_kdc_req *request, krb5_data *req_pkt,
     if (!is_local_principal(kdc_active_realm, state->client->princ)) {
         /* Entry is a referral to another realm */
         state->status = "REFERRAL";
+        au_state->cl_realm = &state->client->princ->realm;
         errcode = KRB5KDC_ERR_WRONG_REALM;
         goto errout;
     }
+
+    au_state->stage = SRVC_PRINC;
 
     if (!state->request->server) {
         state->status = "NULL_SERVER";
@@ -593,6 +626,8 @@ process_as_req(krb5_kdc_req *request, krb5_data *req_pkt,
         goto errout;
     }
 
+    au_state->stage = VALIDATE_POL;
+
     if ((errcode = krb5_timeofday(kdc_context, &state->kdc_time))) {
         state->status = "TIMEOFDAY";
         goto errout;
@@ -608,6 +643,8 @@ process_as_req(krb5_kdc_req *request, krb5_data *req_pkt,
         errcode += ERROR_TABLE_BASE_krb5;
         goto errout;
     }
+
+    au_state->stage = ISSUE_TKT;
 
     /*
      * Select the keytype for the ticket session key.
@@ -722,6 +759,7 @@ process_as_req(krb5_kdc_req *request, krb5_data *req_pkt,
         }
         state->enc_tkt_reply.client = state->request->client;
         setflag(state->client->attributes, KRB5_KDB_REQUIRES_PRE_AUTH);
+        au_state->request = state->request;
     }
 
     /*
