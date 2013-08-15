@@ -38,11 +38,17 @@
 
 #include <krb5/locate_plugin.h>
 
+typedef enum {
+    TCP_OR_UDP = 0,
+    TCP,
+    UDP,
+} k5_transport;
+
 /* A single server hostname or address. */
 struct server_entry {
     char *hostname;             /* NULL -> use addrlen/addr instead */
     int port;                   /* Used only if hostname set */
-    int socktype;               /* May be 0 for UDP/TCP if hostname set */
+    k5_transport transport;     /* May be 0 for UDP/TCP if hostname set */
     int family;                 /* May be 0 (aka AF_UNSPEC) if hostname set */
     size_t addrlen;
     struct sockaddr_storage addr;
@@ -100,7 +106,7 @@ int _krb5_conf_boolean (const char *);
 
 krb5_error_code k5_sendto(krb5_context context, const krb5_data *message,
                           const struct serverlist *addrs,
-                          int socktype1, int socktype2,
+                          k5_transport transport1, k5_transport transport2,
                           struct sendto_callback_info *callback_info,
                           krb5_data *reply, struct sockaddr *remoteaddr,
                           socklen_t *remoteaddrlen, int *server_used,
