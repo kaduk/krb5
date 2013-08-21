@@ -52,10 +52,6 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#if TARGET_OS_MAC
-#pragma pack(push,2)
-#endif
-
 #if defined(_WIN32)
 #define CCACHE_API      __declspec(dllexport)
 
@@ -1593,10 +1589,6 @@ CCACHE_API cc_int32 cc_initialize (cc_context_t  *out_context,
 #define         cc_credentials_iterator_clone(iterator, new_iterator)   \
     ((iterator) -> functions -> clone (iterator, new_iterator))
 /*!@}*/
-
-#if TARGET_OS_MAC
-#pragma pack(pop)
-#endif
 
 #ifdef __cplusplus
 }

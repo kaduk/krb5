@@ -78,14 +78,6 @@ typedef struct gic_opt_private_st {
     void *responder_data;
 } gic_opt_private;
 
-/*
- * On the Mac, ensure that the layout of krb5_gic_opt_ext matches that
- * of krb5_get_init_creds_opt.
- */
-#if TARGET_OS_MAC
-#    pragma pack(push,2)
-#endif
-
 typedef struct _krb5_gic_opt_ext {
     krb5_flags flags;
     krb5_deltat tkt_life;
@@ -105,10 +97,6 @@ typedef struct _krb5_gic_opt_ext {
      */
     gic_opt_private *opt_private;
 } krb5_gic_opt_ext;
-
-#if TARGET_OS_MAC
-#    pragma pack(pop)
-#endif
 
 krb5_error_code
 k5_gic_opt_to_opte(krb5_context context, krb5_get_init_creds_opt *opt,

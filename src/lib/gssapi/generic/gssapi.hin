@@ -39,10 +39,6 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#if TARGET_OS_MAC
-#    pragma pack(push,2)
-#endif
-
 #if defined(_MSDOS) || defined(_WIN32)
 #include <win-mac.h>
 #endif
@@ -812,10 +808,6 @@ gss_set_neg_mechs(
     OM_uint32 *,        /* minor_status */
     gss_cred_id_t,      /* cred_handle */
     const gss_OID_set); /* mech_set */
-
-#if TARGET_OS_MAC
-#    pragma pack(pop)
-#endif
 
 #ifdef __cplusplus
 }

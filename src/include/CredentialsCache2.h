@@ -50,10 +50,6 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#if TARGET_OS_MAC
-#pragma pack(push,2)
-#endif
-
 /* Some old types get directly mapped to new types */
 
 typedef cc_context_d apiCB;
@@ -314,10 +310,6 @@ cc_lock_request (apiCB          *in_context,
                  const ccache_p *in_ccache,
                  const cc_int32  in_lock_type)
     CCAPI_DEPRECATED;
-
-#if TARGET_OS_MAC
-#pragma pack(pop)
-#endif
 
 #ifdef __cplusplus
 }
