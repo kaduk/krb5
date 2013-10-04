@@ -178,26 +178,27 @@ kau_make_tkt_id(krb5_context context,
 krb5_error_code
 kau_init_kdc_req(krb5_context context,
                  krb5_kdc_req *request, const krb5_fulladdr *from,
-                 krb5_audit_state **state)
+                 krb5_audit_state **state_out)
 {
     krb5_error_code ret = 0;
-    krb5_audit_state *state_tmp = NULL;
+    krb5_audit_state *state = NULL;
 
-    state_tmp = k5calloc(1, sizeof(*state_tmp), &ret);
-    if (state_tmp == NULL)
+    *state_out = NULL;
+    state = k5calloc(1, sizeof(*state), &ret);
+    if (state == NULL)
         return ret;
 
-    state_tmp->request = request;
-    state_tmp->cl_addr = from->address;
-    state_tmp->cl_port = from->port;
-    state_tmp->stage = AUTHN_REQ_CL;
-    ret = krb5int_random_string(context, state_tmp->req_id,
-                                sizeof(state_tmp->req_id));
+    state->request = request;
+    state->cl_addr = from->address;
+    state->cl_port = from->port;
+    state->stage = AUTHN_REQ_CL;
+    ret = krb5int_random_string(context, state->req_id,
+                                sizeof(state->req_id));
     if (ret) {
-        free(state_tmp);
+        free(state);
         return ret;
     }
-    *state = state_tmp;
+    *state_out = state;
 
     return 0;
 }
