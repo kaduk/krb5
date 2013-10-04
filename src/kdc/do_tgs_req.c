@@ -798,17 +798,14 @@ process_tgs_req(struct server_handle *handle, krb5_data *pkt,
                                   subkey ? 1 : 0,
                                   reply_key,
                                   &reply, response);
-    if (errcode) {
+    retval = kau_make_tkt_id(kdc_context, &ticket_reply, &au_state->tkt_out_id);
+
+    if (retaval ) {
+        status = "GENERATE_TICKET_ID";
+    } else if (errcode) {
         status = "ENCODE_KDC_REP";
     } else {
         status = "ISSUE";
-    }
-
-    if (!errcode) {
-        errcode = kau_make_tkt_id(kdc_context, &ticket_reply,
-                                  &au_state->tkt_out_id);
-        if (errcode)
-	    status = "GENERATE_TICKET_ID";
     }
 
     memset(ticket_reply.enc_part.ciphertext.data, 0,
