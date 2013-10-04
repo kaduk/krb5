@@ -1779,7 +1779,7 @@ krb5_verify_checksum(krb5_context context, krb5_cksumtype ctype,
 #define KRB5_LRQ_ALL_ACCT_EXPTIME       7
 #define KRB5_LRQ_ONE_ACCT_EXPTIME       (-7)
 
-/* PADATA types */
+/* PADATA types.  Changes should be propagated to plugins/audit/kdc_j_encode.c */
 #define KRB5_PADATA_NONE                0
 #define KRB5_PADATA_AP_REQ              1
 #define KRB5_PADATA_TGS_REQ             KRB5_PADATA_AP_REQ
