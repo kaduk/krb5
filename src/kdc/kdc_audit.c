@@ -209,6 +209,7 @@ kau_free_kdc_req(krb5_audit_state *state)
 {
     free(state->tkt_in_id);
     free(state->tkt_out_id);
+    free(state->evid_tkt_id);
     free(state);
 }
 
