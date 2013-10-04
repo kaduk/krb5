@@ -501,7 +501,7 @@ process_as_req(krb5_kdc_req *request, krb5_data *req_pkt,
     errcode = kau_init_kdc_req(kdc_context, state->request, from, &au_state);
     if (errcode) {
         (*respond)(arg, errcode, NULL);
-        free(state->rstate);
+        kdc_free_rstate(state->rstate);
         free(state);
         return;
     }
