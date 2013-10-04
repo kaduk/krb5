@@ -804,8 +804,12 @@ process_tgs_req(struct server_handle *handle, krb5_data *pkt,
         status = "ISSUE";
     }
 
-    if (!errcode)
-        kau_make_tkt_id(kdc_context, &ticket_reply, &au_state->tkt_out_id);
+    if (!errcode) {
+        errcode = kau_make_tkt_id(kdc_context, &ticket_reply,
+                                  &au_state->tkt_out_id);
+        if (errcode)
+	    status = "GENERATE_TICKET_ID";
+    }
 
     memset(ticket_reply.enc_part.ciphertext.data, 0,
            ticket_reply.enc_part.ciphertext.length);
