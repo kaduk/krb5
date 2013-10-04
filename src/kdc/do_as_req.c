@@ -761,7 +761,6 @@ process_as_req(krb5_kdc_req *request, krb5_data *req_pkt,
         }
         state->enc_tkt_reply.client = state->request->client;
         setflag(state->client->attributes, KRB5_KDB_REQUIRES_PRE_AUTH);
-        au_state->request = state->request;
     }
 
     /*
