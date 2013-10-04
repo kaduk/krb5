@@ -1045,9 +1045,6 @@ int main(int argc, char **argv)
         /* We get here only in a worker child process; re-initialize realms. */
         initialize_realms(kcontext, argc, argv);
     }
-    krb5_klog_syslog(LOG_INFO, _("commencing operation"));
-    if (nofork)
-        fprintf(stderr, _("%s: starting...\n"), kdc_progname);
 
     /* Initialize audit system and audit KDC startup. */
     retval = load_audit_modules(kcontext);
@@ -1056,6 +1053,9 @@ int main(int argc, char **argv)
         finish_realms();
         return 1;
     }
+    krb5_klog_syslog(LOG_INFO, _("commencing operation"));
+    if (nofork)
+        fprintf(stderr, _("%s: starting...\n"), kdc_progname);
     kau_kdc_start(kcontext, TRUE);
 
     verto_run(ctx);
