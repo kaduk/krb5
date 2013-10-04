@@ -279,8 +279,8 @@ process_tgs_req(struct server_handle *handle, krb5_data *pkt,
     if (s4u_x509_user != NULL || errcode != 0) {
         if (s4u_x509_user != NULL)
             au_state->s4u2self_user = s4u_x509_user->user_id.user;
-        if (retval == KDC_ERR_POLICY || retval == KDC_ERR_BADOPTION)
-            au_state->violation = PROT_CONSTRAINT;
+        if (errcode)
+            au_state->violation = LOCAL_POLICY;
         au_state->status = status;
         kau_s4u2self(kdc_context, errcode ? FALSE : TRUE, au_state);
         au_state->s4u2self_user = NULL;
@@ -314,9 +314,7 @@ process_tgs_req(struct server_handle *handle, krb5_data *pkt,
                                             header_ticket->enc_part2->client,
                                             request->server,
                                             &status);
-        if (retval == KDC_ERR_POLICY || retval == KDC_ERR_BADOPTION)
-            au_state->violation = PROT_CONSTRAINT;
-        else if (errcode)
+        if (errcode)
             au_state->violation = LOCAL_POLICY;
         au_state->status = status;
         kau_make_tkt_id(kdc_context, request->second_ticket[st_idx],
