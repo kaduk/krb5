@@ -508,6 +508,7 @@ process_as_req(krb5_kdc_req *request, krb5_data *req_pkt,
         goto errout;
     }
 
+    /* Seed the audit trail with the request ID and basic information. */
     kau_as_req(kdc_context, TRUE, au_state);
 
     if (fetch_asn1_field((unsigned char *) req_pkt->data,

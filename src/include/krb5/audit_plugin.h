@@ -63,14 +63,14 @@
 #define KRB5_AU_PLUGIN_H_INCLUDED
 #include <krb5/krb5.h>
 
-/** KDC processing steps. */
+/** KDC processing steps */
 #define AUTHN_REQ_CL 1 /**< Authenticate request and client */
 #define SRVC_PRINC   2 /**< Determine service principal */
 #define VALIDATE_POL 3 /**< Validate local and protocol policies */
 #define ISSUE_TKT    4 /**< Issue ticket */
 #define ENCR_REP     5 /**< Encrypt reply */
 
-/** Type of violations: protocol constraint or local policy problem. */
+/** Types of violations */
 #define PROT_CONSTRAINT 1 /**< Protocol constraint */
 #define LOCAL_POLICY    2 /**< Local policy violation */
 
@@ -119,7 +119,7 @@ typedef krb5_error_code
  * Log KDC-start event.
  *
  * @param [in] auctx       Audit context
- * @param [in] ev_success  Log on success or failure
+ * @param [in] ev_success  Success/failure of the event being audited
  *
  * @note Optional.
  *
@@ -132,7 +132,7 @@ typedef krb5_error_code
  * Log KDC-stop event.
  *
  * @param [in] auctx       Audit context
- * @param [in] ev_success  Log on success or failure
+ * @param [in] ev_success  Success/failure of the event being audited
  *
  * @note Optional.
  *
@@ -145,7 +145,7 @@ typedef krb5_error_code
  * Log AS exchange event.
  *
  * @param [in] auctx       Audit context
- * @param [in] ev_success  Log on success or failure
+ * @param [in] ev_success  Success/failure of the event being audited
  * @param [in] state       AS-request related auditable information
  *
  * The @a state provides the following data:
@@ -167,7 +167,7 @@ typedef krb5_error_code
  * Log TGS exchange event.
  *
  * @param [in] auctx       Audit context
- * @param [in] ev_success  Log on success or failure
+ * @param [in] ev_success  Success/failure of the event being audited
  * @param [in] state       TGS-request related auditable information
  *
  * The @a state provides the following data:

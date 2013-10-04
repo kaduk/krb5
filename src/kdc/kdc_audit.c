@@ -63,9 +63,9 @@ free_handles(audit_module_handle *list)
 }
 
 /*
- * Load all available audit plugin modules and prepare for logging. Store the
- * result into *handles". Use unload_audit_modules() to free resources
- * allocated by this function.
+ * Load all available audit plugin modules and prepare for logging.  The list of
+ * modules is stored as an array in handles.  Use unload_audit_modules() to free
+ * resources allocated by this function.
  */
 krb5_error_code
 load_audit_modules(krb5_context context)

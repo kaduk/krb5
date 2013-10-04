@@ -173,6 +173,7 @@ process_tgs_req(struct server_handle *handle, krb5_data *pkt,
         krb5_free_kdc_req(handle->kdc_err_context, request);
         return errcode;
     }
+    /* Seed the audit trail with the request ID and basic information. */
     kau_tgs_req(kdc_context, TRUE, au_state);
 
     errcode = kdc_process_tgs_req(kdc_active_realm,

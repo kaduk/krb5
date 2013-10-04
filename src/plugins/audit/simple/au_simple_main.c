@@ -32,8 +32,8 @@
 
 /*
  * This is a demo implementation of Audit JSON-based module.
- * It utilized MIT Kerberos <kdc_j_encode.h> routines for JSON processing and
- * Fedora/Debian libaudit library for audit logs.
+ * It utilizes MIT Kerberos <kdc_j_encode.h> routines for JSON processing and
+ * the Fedora/Debian libaudit library for audit logs.
  */
 
 #include <k5-int.h>
