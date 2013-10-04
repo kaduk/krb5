@@ -792,6 +792,12 @@ process_tgs_req(struct server_handle *handle, krb5_data *pkt,
         goto cleanup;
     }
 
+    errcode = kau_make_tkt_id(kdc_context, &ticket_reply, &au_state->tkt_out_id);
+    if (errcode) {
+        status = "GENERATE_TICKET_ID";
+        goto cleanup;
+    }
+
     if (kdc_fast_hide_client(state))
         reply.client = (krb5_principal)krb5_anonymous_principal();
     errcode = krb5_encode_kdc_rep(kdc_context, KRB5_TGS_REP, &reply_encpart,
@@ -803,9 +809,6 @@ process_tgs_req(struct server_handle *handle, krb5_data *pkt,
     } else {
         status = "ISSUE";
     }
-
-    if (!errcode)
-        kau_make_tkt_id(kdc_context, &ticket_reply, &au_state->tkt_out_id);
 
     memset(ticket_reply.enc_part.ciphertext.data, 0,
            ticket_reply.enc_part.ciphertext.length);

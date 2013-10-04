@@ -493,13 +493,18 @@ process_as_req(krb5_kdc_req *request, krb5_data *req_pkt,
     errcode = kdc_make_rstate(kdc_active_realm, &state->rstate);
     if (errcode != 0) {
         (*respond)(arg, errcode, NULL);
+        free(state);
         return;
     }
 
     /* Initialize audit state. */
     errcode = kau_init_kdc_req(kdc_context, state->request, from, &au_state);
-    if (errcode)
-        goto errout;
+    if (errcode) {
+        (*respond)(arg, errcode, NULL);
+        kdc_free_rstate(state->rstate);
+        free(state);
+        return;
+    }
     state->au_state = au_state;
 
     if (state->request->msg_type != KRB5_AS_REQ) {
