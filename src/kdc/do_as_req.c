@@ -285,8 +285,10 @@ finish_process_as_req(struct as_req_state *state, krb5_error_code errcode)
 
     errcode = kau_make_tkt_id(kdc_context, &state->ticket_reply,
                               &au_state->tkt_out_id);
-    if (errcode)
+    if (errcode) {
+	state->status = "GENERATING_TICKET_ID";
         goto egress;
+    }
 
     state->ticket_reply.enc_part.kvno = server_key->key_data_kvno;
     errcode = kdc_fast_response_handle_padata(state->rstate,
