@@ -48,12 +48,12 @@ int32_to_value(krb5_int32 int32, k5_json_object obj, const char *key);
 static krb5_error_code
 bool_to_value(krb5_boolean b, k5_json_object obj, const char *key);
 static krb5_error_code
-addr_to_value(krb5_address *a, k5_json_object obj);
+addr_to_obj(krb5_address *a, k5_json_object obj);
 static krb5_error_code
 eventinfo_to_value(k5_json_object obj, const char *name,
                    const int stage, const krb5_boolean ev_success);
 static krb5_error_code
-fulladdr_to_value(const krb5_address *address, k5_json_object obj,
+addr_to_value(const krb5_address *address, k5_json_object obj,
                   const char *key);
 static krb5_error_code
 req_to_value(krb5_kdc_req *req, const krb5_boolean ev_success,
@@ -153,7 +153,7 @@ kau_j_as_req(const krb5_boolean ev_success, krb5_audit_state *state,
     ret = int32_to_value(state->cl_port, obj, AU_FROMPORT);
     if (ret)
         goto error;
-    ret = fulladdr_to_value(state->cl_addr, obj, AU_FROMADDR);
+    ret = addr_to_value(state->cl_addr, obj, AU_FROMADDR);
     if (ret)
         goto error;
     /* KDC status msg */
@@ -219,7 +219,7 @@ kau_j_tgs_req(const krb5_boolean ev_success, krb5_audit_state *state,
     ret = int32_to_value(state->cl_port, obj, AU_FROMPORT);
     if (ret)
         goto error;
-    ret = fulladdr_to_value(state->cl_addr, obj, AU_FROMADDR);
+    ret = addr_to_value(state->cl_addr, obj, AU_FROMADDR);
     if (ret)
         goto error;
     /* Ticket was renewed, validated. */
@@ -599,7 +599,7 @@ error:
  * Returns 0 on success.
  */
 static krb5_error_code
-addr_to_value(krb5_address *a, k5_json_object obj)
+addr_to_obj(krb5_address *a, k5_json_object obj)
 {
     krb5_error_code ret = 0;
     k5_json_number num = NULL;
@@ -640,11 +640,11 @@ error:
 }
 
 /*
- * Converts krb5_fulladdr into a property of a JSON object.
+ * Converts krb5_address into a property of a JSON object.
  * Returns 0 on success.
  */
 static krb5_error_code
-fulladdr_to_value(const krb5_address *address, k5_json_object obj,
+addr_to_value(const krb5_address *address, k5_json_object obj,
                   const char *key)
 {
     krb5_error_code ret = 0;
@@ -656,7 +656,7 @@ fulladdr_to_value(const krb5_address *address, k5_json_object obj,
     ret = k5_json_object_create(&addr_obj);
     if (ret)
         return ret;
-    ret = addr_to_value((krb5_address *)address, addr_obj);
+    ret = addr_to_obj((krb5_address *)address, addr_obj);
     if (!ret)
         ret = k5_json_object_set(obj, key, addr_obj);
     k5_json_release(addr_obj);
@@ -748,7 +748,7 @@ req_to_value(krb5_kdc_req *req, const krb5_boolean ev_success,
             ret = k5_json_object_create(&tmpa);
             if (ret)
                 goto error;
-            ret = addr_to_value(req->addresses[i], tmpa);
+            ret = addr_to_obj(req->addresses[i], tmpa);
             if (ret)
                 goto error;
             ret = k5_json_array_add(arra, tmpa);
