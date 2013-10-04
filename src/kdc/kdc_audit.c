@@ -154,7 +154,7 @@ kau_make_tkt_id(krb5_context context,
     if (ticket == NULL)
         return EINVAL;
 
-    ret = krb5_c_make_checksum(context, CKSUMTYPE_RSA_MD5, 0, 0,
+    ret = krb5_c_make_checksum(context, CKSUMTYPE_RSA_MD5, NULL, 0,
                                &ticket->enc_part.ciphertext, &cksum);
     if (ret)
         return ret;
