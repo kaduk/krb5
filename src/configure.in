@@ -135,10 +135,10 @@ if test "$withval" = yes; then
 	AC_DEFINE(KRBCONF_VAGUE_ERRORS,1,[Define if the KDC should return only vague error codes to clients])
 fi
 
-# ENABLE_AUDIT_PL
+# Check which (if any) audit plugin to build
 audit_plugin=""
-AC_ARG_ENABLE([audit-pl],
-AC_HELP_STRING([--enable-audit-pl=IMPL],
+AC_ARG_ENABLE([audit-plugin],
+AC_HELP_STRING([--enable-audit-plugin=IMPL],
                [use audit plugin @<:@ do not use audit @:>@]), , enableval=no)
 if test "$enableval" != no; then
     case "$enableval" in
