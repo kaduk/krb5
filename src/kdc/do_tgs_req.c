@@ -820,7 +820,8 @@ cleanup:
         emsg = krb5_get_error_message (kdc_context, errcode);
 
     au_state->status = status;
-    au_state->reply = &reply;
+    if (!errcode)
+	au_state->reply = &reply;
     kau_tgsreq(kdc_context, errcode ? FALSE : TRUE, au_state);
     kau_free_kdc_req(au_state);
 
