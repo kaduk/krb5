@@ -800,7 +800,7 @@ process_tgs_req(struct server_handle *handle, krb5_data *pkt,
                                   &reply, response);
     retval = kau_make_tkt_id(kdc_context, &ticket_reply, &au_state->tkt_out_id);
 
-    if (retaval ) {
+    if (retval ) {
         status = "GENERATE_TICKET_ID";
     } else if (errcode) {
         status = "ENCODE_KDC_REP";
