@@ -248,7 +248,7 @@ kau_kdc_start(krb5_context context, const krb5_boolean ev_success)
 
 /* Call the AS-REQ audit plugin entry point. */
 void
-kau_asreq(krb5_context context, const krb5_boolean ev_success,
+kau_as_req(krb5_context context, const krb5_boolean ev_success,
           krb5_audit_state *state)
 {
     audit_module_handle *hp, hdl;
@@ -265,7 +265,7 @@ kau_asreq(krb5_context context, const krb5_boolean ev_success,
 
 /* Call the TGS-REQ audit plugin entry point. */
 void
-kau_tgsreq(krb5_context context, const krb5_boolean ev_success,
+kau_tgs_req(krb5_context context, const krb5_boolean ev_success,
            krb5_audit_state *state)
 {
     audit_module_handle *hp, hdl;

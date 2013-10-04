@@ -348,7 +348,7 @@ egress:
 
     au_state->status = state->status;
     au_state->reply = &state->reply;
-    kau_asreq(kdc_context,
+    kau_as_req(kdc_context,
               (errcode || state->preauth_err) ? FALSE : TRUE, au_state);
     kau_free_kdc_req(au_state);
 
@@ -508,7 +508,7 @@ process_as_req(krb5_kdc_req *request, krb5_data *req_pkt,
         goto errout;
     }
 
-    kau_asreq(kdc_context, TRUE, au_state);
+    kau_as_req(kdc_context, TRUE, au_state);
 
     if (fetch_asn1_field((unsigned char *) req_pkt->data,
                          1, 4, &encoded_req_body) != 0) {

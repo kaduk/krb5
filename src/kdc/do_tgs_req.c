@@ -173,7 +173,7 @@ process_tgs_req(struct server_handle *handle, krb5_data *pkt,
         krb5_free_kdc_req(handle->kdc_err_context, request);
         return errcode;
     }
-    kau_tgsreq(kdc_context, TRUE, au_state);
+    kau_tgs_req(kdc_context, TRUE, au_state);
 
     errcode = kdc_process_tgs_req(kdc_active_realm,
                                   request, from, pkt, &header_ticket,
@@ -820,7 +820,7 @@ cleanup:
     au_state->status = status;
     if (!errcode)
 	au_state->reply = &reply;
-    kau_tgsreq(kdc_context, errcode ? FALSE : TRUE, au_state);
+    kau_tgs_req(kdc_context, errcode ? FALSE : TRUE, au_state);
     kau_free_kdc_req(au_state);
 
     log_tgs_req(kdc_context, from, request, &reply, cprinc,

@@ -60,11 +60,11 @@ void
 kau_kdc_stop(krb5_context context, const krb5_boolean ev_success);
 
 void
-kau_asreq(krb5_context context, const krb5_boolean ev_success,
+kau_as_req(krb5_context context, const krb5_boolean ev_success,
           krb5_audit_state *state);
 
 void
-kau_tgsreq(krb5_context context, const krb5_boolean ev_success,
+kau_tgs_req(krb5_context context, const krb5_boolean ev_success,
            krb5_audit_state *state);
 
 void
