@@ -194,7 +194,7 @@ process_tgs_req(struct server_handle *handle, krb5_data *pkt,
     errcode = kau_make_tkt_id(kdc_context, header_ticket,
                               &au_state->tkt_in_id);
     if (errcode) {
-        au_state->status = "GENERATE_TICKET_ID";
+        status = "GENERATE_TICKET_ID";
         goto cleanup;
     }
 
@@ -324,7 +324,7 @@ process_tgs_req(struct server_handle *handle, krb5_data *pkt,
         retval = kau_make_tkt_id(kdc_context, request->second_ticket[st_idx],
                                   &au_state->evid_tkt_id);
         if (retval) {
-            au_state->status = "GENERATE_TICKET_ID";
+            status = "GENERATE_TICKET_ID";
             errcode = retval;
             goto cleanup;
         }
