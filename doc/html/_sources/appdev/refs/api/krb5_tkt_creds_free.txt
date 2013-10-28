@@ -41,6 +41,6 @@ krb5_tkt_creds_free -  Free a TGS request context.
 
 .. note::
 
-	 First introduced in 1.9
+	 New in 1.9
  
 

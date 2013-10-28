@@ -12,7 +12,7 @@ krb5_auth_con_setflags -  Set a flags field in a krb5_auth_context structure.
 
 	          **[in]** **context** - Library context
 
-	          **[inout]** **auth_context** - Authentication context
+	          **[in]** **auth_context** - Authentication context
 
 	          **[in]** **flags** - Flags bit mask
 

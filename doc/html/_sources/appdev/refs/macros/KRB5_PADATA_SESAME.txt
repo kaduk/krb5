@@ -11,7 +11,7 @@ KRB5_PADATA_SESAME
 
 Sesame project.
 
-
+RFC 4120
 
 ========================= ======================
 ``KRB5_PADATA_SESAME``       ``7``

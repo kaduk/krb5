@@ -216,10 +216,7 @@ process_chpw_request(krb5_context context, void *server_handle, char *realm,
 
     /* change the password */
 
-    ptr = (char *) malloc(clear.length+1);
-    memcpy(ptr, clear.data, clear.length);
-    ptr[clear.length] = '\0';
-
+    ptr = k5memdup0(clear.data, clear.length, &ret);
     ret = schpw_util_wrapper(server_handle, client, target,
                              (ticket->enc_part2->flags & TKT_FLG_INITIAL) != 0,
                              ptr, NULL, strresult, sizeof(strresult));
@@ -368,7 +365,7 @@ chpwfail:
            to mk_error do. */
         krberror.error = ret;
         krberror.error -= ERROR_TABLE_BASE_krb5;
-        if (krberror.error < 0 || krberror.error > 128)
+        if (krberror.error < 0 || krberror.error > KRB_ERR_MAX)
             krberror.error = KRB_ERR_GENERIC;
 
         krberror.client = NULL;

@@ -11,7 +11,7 @@ KRB5_PADATA_ENC_SANDIA_SECURID
 
 SecurId passcode.
 
-
+RFC 4120
 
 ===================================== ======================
 ``KRB5_PADATA_ENC_SANDIA_SECURID``       ``6``

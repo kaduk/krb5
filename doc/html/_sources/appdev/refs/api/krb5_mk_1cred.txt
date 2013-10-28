@@ -12,7 +12,7 @@ krb5_mk_1cred -  Format a KRB-CRED message for a single set of credentials.
 
 	          **[in]** **context** - Library context
 
-	          **[inout]** **auth_context** - Authentication context
+	          **[in]** **auth_context** - Authentication context
 
 	          **[in]** **pcreds** - Pointer to credentials
 

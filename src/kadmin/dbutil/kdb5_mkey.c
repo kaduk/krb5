@@ -73,7 +73,7 @@ add_new_mkey(krb5_context context, krb5_db_entry *master_entry,
     krb5_error_code retval = 0;
     int old_key_data_count, i;
     krb5_kvno new_mkey_kvno;
-    krb5_key_data tmp_key_data, *old_key_data;
+    krb5_key_data tmp_key_data;
     krb5_mkey_aux_node  *mkey_aux_data_head = NULL, **mkey_aux_data;
     krb5_keylist_node  *keylist_node;
     krb5_keylist_node *master_keylist = krb5_db_mkey_list_alias(context);
@@ -84,9 +84,7 @@ add_new_mkey(krb5_context context, krb5_db_entry *master_entry,
     if (use_mkvno != 0 && new_mkey_kvno != use_mkvno)
         return (KRB5_KDB_KVNONOMATCH);
 
-    /* save the old keydata */
     old_key_data_count = master_entry->n_key_data;
-    old_key_data = master_entry->key_data;
 
     /* alloc enough space to hold new and existing key_data */
     /*
@@ -1052,6 +1050,16 @@ kdb5_update_princ_encryption(int argc, char *argv[])
         }
     }
 
+    if (!data.dry_run) {
+        /* Grab a write lock so we don't have to upgrade to a write lock and
+         * reopen the DB while iterating. */
+        retval = krb5_db_lock(util_context, KRB5_DB_LOCKMODE_EXCLUSIVE);
+        if (retval != 0 && retval != KRB5_PLUGIN_OP_NOTSUPP) {
+            com_err(progname, retval, _("trying to lock database"));
+            exit_status++;
+        }
+    }
+
     retval = krb5_db_iterate(util_context, name_pattern,
                              update_princ_encryption_1, &data);
     /* If exit_status is set, then update_princ_encryption_1 already
@@ -1060,6 +1068,8 @@ kdb5_update_princ_encryption(int argc, char *argv[])
         com_err(progname, retval, _("trying to process principal database"));
         exit_status++;
     }
+    if (!data.dry_run)
+        (void)krb5_db_unlock(util_context);
     (void) krb5_db_fini(util_context);
     if (data.dry_run) {
         printf(_("%u principals processed: %u would be updated, %u already "

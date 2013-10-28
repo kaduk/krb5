@@ -89,9 +89,10 @@ lookup_etypes_for_keytab(krb5_context context, krb5_keytab keytab,
 {
     krb5_kt_cursor cursor;
     krb5_keytab_entry entry;
-    krb5_enctype *p, *etypes = NULL;
-    krb5_kvno max_kvno = 0;
+    krb5_enctype *p, *etypes = NULL, etype;
+    krb5_kvno max_kvno = 0, vno;
     krb5_error_code ret;
+    krb5_boolean match;
     size_t count = 0;
 
     *etypes_out = NULL;
@@ -102,53 +103,46 @@ lookup_etypes_for_keytab(krb5_context context, krb5_keytab keytab,
     if (ret != 0)
         return ret;
 
-    for (;;) {
-        ret = krb5_kt_next_entry(context, keytab, &entry, &cursor);
-        if (ret == KRB5_KT_END)
-            break;
-        if (ret)
-            goto cleanup;
+    while (!(ret = krb5_kt_next_entry(context, keytab, &entry, &cursor))) {
+        /* Extract what we need from the entry and free it. */
+        etype = entry.key.enctype;
+        vno = entry.vno;
+        match = krb5_principal_compare(context, entry.principal, client);
+        krb5_free_keytab_entry_contents(context, &entry);
 
-        if (!krb5_c_valid_enctype(entry.key.enctype)) {
-            krb5_free_keytab_entry_contents(context, &entry);
+        /* Filter out old or non-matching entries and invalid enctypes. */
+        if (vno < max_kvno || !match || !krb5_c_valid_enctype(etype))
             continue;
-        }
-        if (!krb5_principal_compare(context, entry.principal, client)) {
-            krb5_free_keytab_entry_contents(context, &entry);
-            continue;
-        }
-        /* Make sure our list is for the highest kvno found for client. */
-        if (entry.vno > max_kvno) {
+
+        /* Update max_kvno and reset the list if we find a newer kvno. */
+        if (vno > max_kvno) {
+            max_kvno = vno;
             free(etypes);
             etypes = NULL;
             count = 0;
-            max_kvno = entry.vno;
-        } else if (entry.vno != max_kvno) {
-            krb5_free_keytab_entry_contents(context, &entry);
-            continue;
         }
 
         /* Leave room for the terminator and possibly a second entry. */
         p = realloc(etypes, (count + 3) * sizeof(*etypes));
         if (p == NULL) {
-            krb5_free_keytab_entry_contents(context, &entry);
             ret = ENOMEM;
             goto cleanup;
         }
         etypes = p;
-        etypes[count++] = entry.key.enctype;
+        etypes[count++] = etype;
         /* All DES key types work with des-cbc-crc, which is more likely to be
          * accepted by the KDC (since MIT KDCs refuse des-cbc-md5). */
-        if (entry.key.enctype == ENCTYPE_DES_CBC_MD5 ||
-            entry.key.enctype == ENCTYPE_DES_CBC_MD4)
+        if (etype == ENCTYPE_DES_CBC_MD5 || etype == ENCTYPE_DES_CBC_MD4)
             etypes[count++] = ENCTYPE_DES_CBC_CRC;
         etypes[count] = 0;
-        krb5_free_keytab_entry_contents(context, &entry);
     }
-
+    if (ret != KRB5_KT_END)
+        goto cleanup;
     ret = 0;
+
     *etypes_out = etypes;
     etypes = NULL;
+
 cleanup:
     krb5_kt_end_seq_get(context, keytab, &cursor);
     free(etypes);
@@ -271,9 +265,10 @@ krb5_get_init_creds_keytab(krb5_context context,
                            const char *in_tkt_service,
                            krb5_get_init_creds_opt *options)
 {
-    krb5_error_code ret, ret2;
+    krb5_error_code ret;
     int use_master;
     krb5_keytab keytab;
+    struct errinfo errsave = EMPTY_ERRINFO;
 
     if (arg_keytab == NULL) {
         if ((ret = krb5_kt_default(context, &keytab)))
@@ -305,24 +300,18 @@ krb5_get_init_creds_keytab(krb5_context context,
     if (!use_master) {
         use_master = 1;
 
-        ret2 = get_init_creds_keytab(context, creds, client, keytab,
-                                     start_time, in_tkt_service, options,
-                                     &use_master);
-
-        if (ret2 == 0) {
-            ret = 0;
-            goto cleanup;
-        }
-
-        /* if the master is unreachable, return the error from the
-           slave we were able to contact */
-
-        if ((ret2 == KRB5_KDC_UNREACH) ||
-            (ret2 == KRB5_REALM_CANT_RESOLVE) ||
-            (ret2 == KRB5_REALM_UNKNOWN))
+        k5_save_ctx_error(context, ret, &errsave);
+        ret = get_init_creds_keytab(context, creds, client, keytab,
+                                    start_time, in_tkt_service, options,
+                                    &use_master);
+        if (ret == 0)
             goto cleanup;
 
-        ret = ret2;
+        /* If the master is unreachable, return the error from the slave we
+         * were able to contact. */
+        if (ret == KRB5_KDC_UNREACH || ret == KRB5_REALM_CANT_RESOLVE ||
+            ret == KRB5_REALM_UNKNOWN)
+            ret = k5_restore_ctx_error(context, &errsave);
     }
 
     /* at this point, we have a response from the master.  Since we don't
@@ -331,6 +320,7 @@ krb5_get_init_creds_keytab(krb5_context context,
 cleanup:
     if (arg_keytab == NULL)
         krb5_kt_close(context, keytab);
+    k5_clear_error(&errsave);
 
     return(ret);
 }
@@ -348,9 +338,8 @@ krb5_get_in_tkt_with_keytab(krb5_context context, krb5_flags options,
     krb5_principal client_princ, server_princ;
     int use_master = 0;
 
-    retval = krb5int_populate_gic_opt(context, &opts,
-                                      options, addrs, ktypes,
-                                      pre_auth_types, creds);
+    retval = k5_populate_gic_opt(context, &opts, options, addrs, ktypes,
+                                 pre_auth_types, creds);
     if (retval)
         return retval;
 
@@ -366,11 +355,10 @@ krb5_get_in_tkt_with_keytab(krb5_context context, krb5_flags options,
         goto cleanup;
     server_princ = creds->server;
     client_princ = creds->client;
-    retval = krb5int_get_init_creds(context, creds, creds->client,
-                                    krb5_prompter_posix,  NULL,
-                                    0, server, opts,
-                                    get_as_key_keytab, (void *)keytab,
-                                    &use_master, ret_as_reply);
+    retval = k5_get_init_creds(context, creds, creds->client,
+                               krb5_prompter_posix,  NULL, 0, server, opts,
+                               get_as_key_keytab, (void *)keytab, &use_master,
+                               ret_as_reply);
     krb5_free_unparsed_name( context, server);
     if (retval) {
         goto cleanup;

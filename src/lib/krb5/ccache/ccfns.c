@@ -25,6 +25,8 @@
  */
 
 #include "k5-int.h"
+#include "cc-int.h"
+#include "../krb/int-proto.h"
 
 const char * KRB5_CALLCONV
 krb5_cc_get_name(krb5_context context, krb5_ccache cache)
@@ -213,9 +215,9 @@ static const char conf_realm[] = "X-CACHECONF:";
 static const char conf_name[] = "krb5_ccache_conf_data";
 
 krb5_error_code
-krb5int_build_conf_principals(krb5_context context, krb5_ccache id,
-                              krb5_const_principal principal,
-                              const char *name, krb5_creds *cred)
+k5_build_conf_principals(krb5_context context, krb5_ccache id,
+                         krb5_const_principal principal,
+                         const char *name, krb5_creds *cred)
 {
     krb5_principal client;
     krb5_error_code ret;
@@ -250,9 +252,7 @@ krb5_boolean KRB5_CALLCONV
 krb5_is_config_principal(krb5_context context,
                          krb5_const_principal principal)
 {
-    const krb5_data *realm;
-
-    realm = krb5_princ_realm(context, principal);
+    const krb5_data *realm = &principal->realm;
 
     if (realm->length != sizeof(conf_realm) - 1 ||
         memcmp(realm->data, conf_realm, sizeof(conf_realm) - 1) != 0)
@@ -277,22 +277,16 @@ krb5_cc_set_config(krb5_context context, krb5_ccache id,
 
     TRACE_CC_SET_CONFIG(context, id, principal, key, data);
 
-    ret = krb5int_build_conf_principals(context, id, principal, key, &cred);
+    ret = k5_build_conf_principals(context, id, principal, key, &cred);
     if (ret)
         goto out;
 
     if (data == NULL) {
         ret = krb5_cc_remove_cred(context, id, 0, &cred);
     } else {
-        cred.ticket.data = malloc(data->length);
-        if (cred.ticket.data == NULL) {
-            ret = ENOMEM;
-            krb5_set_error_message(context, ret, "malloc: out of memory");
+        ret = krb5int_copy_data_contents(context, data, &cred.ticket);
+        if (ret)
             goto out;
-        }
-        cred.ticket.length = data->length;
-        memcpy(cred.ticket.data, data->data, data->length);
-
         ret = krb5_cc_store_cred(context, id, &cred);
     }
 out:
@@ -311,7 +305,7 @@ krb5_cc_get_config(krb5_context context, krb5_ccache id,
     memset(&cred, 0, sizeof(cred));
     memset(data, 0, sizeof(*data));
 
-    ret = krb5int_build_conf_principals(context, id, principal, key, &mcred);
+    ret = k5_build_conf_principals(context, id, principal, key, &mcred);
     if (ret)
         goto out;
 
@@ -319,14 +313,9 @@ krb5_cc_get_config(krb5_context context, krb5_ccache id,
     if (ret)
         goto out;
 
-    data->data = malloc(cred.ticket.length);
-    if (data->data == NULL) {
-        ret = ENOMEM;
-        krb5_set_error_message(context, ENOMEM, "malloc: out of memory");
+    ret = krb5int_copy_data_contents(context, &cred.ticket, data);
+    if (ret)
         goto out;
-    }
-    data->length = cred.ticket.length;
-    memcpy(data->data, cred.ticket.data, data->length);
 
     TRACE_CC_GET_CONFIG(context, id, principal, key, data);
 

@@ -41,10 +41,10 @@ mk_xorkey(krb5_key origkey, krb5_key *xorkey)
     krb5_keyblock xorkeyblock;
     size_t i = 0;
 
-    xorbytes = malloc(origkey->keyblock.length);
+    xorbytes = k5memdup(origkey->keyblock.contents, origkey->keyblock.length,
+                        &retval);
     if (xorbytes == NULL)
-        return ENOMEM;
-    memcpy(xorbytes, origkey->keyblock.contents, origkey->keyblock.length);
+        return retval;
     for (i = 0; i < origkey->keyblock.length; i++)
         xorbytes[i] ^= 0xf0;
 
@@ -53,7 +53,7 @@ mk_xorkey(krb5_key origkey, krb5_key *xorkey)
     xorkeyblock.contents = xorbytes;
 
     retval = krb5_k_create_key(0, &xorkeyblock, xorkey);
-    zapfree(xorbytes, sizeof(xorbytes));
+    zapfree(xorbytes, origkey->keyblock.length);
     return retval;
 }
 
@@ -83,7 +83,7 @@ krb5int_confounder_checksum(const struct krb5_cksumtypes *ctp,
         return ret;
 
     /* Hash the confounder, then the input data. */
-    hash_iov = k5alloc((num_data + 1) * sizeof(krb5_crypto_iov), &ret);
+    hash_iov = k5calloc(num_data + 1, sizeof(krb5_crypto_iov), &ret);
     if (hash_iov == NULL)
         goto cleanup;
     hash_iov[0].flags = KRB5_CRYPTO_TYPE_DATA;
@@ -118,7 +118,7 @@ krb5_error_code krb5int_confounder_verify(const struct krb5_cksumtypes *ctp,
     krb5_crypto_iov *hash_iov = NULL, iov;
     size_t blocksize = ctp->enc->block_size, hashsize = ctp->hash->hashsize;
 
-    plaintext = k5alloc(input->length, &ret);
+    plaintext = k5memdup(input->data, input->length, &ret);
     if (plaintext == NULL)
         return ret;
 
@@ -129,13 +129,12 @@ krb5_error_code krb5int_confounder_verify(const struct krb5_cksumtypes *ctp,
     /* Decrypt the input checksum. */
     iov.flags = KRB5_CRYPTO_TYPE_DATA;
     iov.data = make_data(plaintext, input->length);
-    memcpy(plaintext, input->data, input->length);
     ret = ctp->enc->decrypt(xorkey, NULL, &iov, 1);
     if (ret != 0)
         goto cleanup;
 
     /* Hash the confounder, then the input data. */
-    hash_iov = k5alloc((num_data + 1) * sizeof(krb5_crypto_iov), &ret);
+    hash_iov = k5calloc(num_data + 1, sizeof(krb5_crypto_iov), &ret);
     if (hash_iov == NULL)
         goto cleanup;
     hash_iov[0].flags = KRB5_CRYPTO_TYPE_DATA;
@@ -149,7 +148,7 @@ krb5_error_code krb5int_confounder_verify(const struct krb5_cksumtypes *ctp,
         goto cleanup;
 
     /* Compare the decrypted hash to the computed one. */
-    *valid = (memcmp(plaintext + blocksize, computed.data, hashsize) == 0);
+    *valid = (k5_bcmp(plaintext + blocksize, computed.data, hashsize) == 0);
 
 cleanup:
     zapfree(plaintext, input->length);

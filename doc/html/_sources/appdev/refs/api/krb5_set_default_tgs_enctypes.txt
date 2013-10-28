@@ -10,7 +10,7 @@ krb5_set_default_tgs_enctypes -  Set default TGS encryption types in a krb5_cont
 
 :param:
 
-	          **[inout]** **context** - Library context
+	          **[in]** **context** - Library context
 
 	          **[in]** **etypes** - Encryption type(s) to set
 

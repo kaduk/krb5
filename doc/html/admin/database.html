@@ -17,7 +17,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '1.11.3',
+        VERSION:     '1.12-alpha1',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -35,171 +35,31 @@
   </head>
   <body>
     <div class="header-wrapper">
-        <div class="header" style="padding-bottom: 0px;">
+        <div class="header">
             
             
-                <h1><a href="../index.html"
-                style="color: #5d1509; font-size: 120%;
-                padding-top: 10px;">MIT Kerberos Documentation</a></h1>
+            <h1><a href="../index.html">MIT Kerberos Documentation</a></h1>
             
             <div class="rel">
-                    <a href="../index.html"
-                    title="Full Table of Contents"
-                    accesskey="C">Contents</a>
-                     |
-                    <a href="realm_config.html"
-                    title="Realm configuration decisions"
-                    accesskey="P">previous</a>
-                     |
-                    <a href="lockout.html"
-                    title="Account lockout"
-                    accesskey="N">next</a>
-                     |
-                    <a href="../genindex.html"
-                    title="General Index"
-                    accesskey="I">index</a>
-                     |
-                    <a href="../search.html"
-                    title="Enter search criteria"
-                    accesskey="S">Search</a>
-                     |
-                <a href="mailto:krb5-bugs@mit.edu?subject=Documentation__Database administration">feedback</a>
+                
+        <a href="../index.html" title="Full Table of Contents"
+            accesskey="C">Contents</a> |
+        <a href="realm_config.html" title="Realm configuration decisions"
+            accesskey="P">previous</a> |
+        <a href="lockout.html" title="Account lockout"
+            accesskey="N">next</a> |
+        <a href="../genindex.html" title="General Index"
+            accesskey="I">index</a> |
+        <a href="../search.html" title="Enter search criteria"
+            accesskey="S">Search</a> |
+    <a href="mailto:krb5-bugs@mit.edu?subject=Documentation__Database administration">feedback</a>
             </div>
         </div>
     </div>
 
     <div class="content-wrapper">
-        <div class="content">
-                <div class="sidebar"
-                    style="float: right; background: #F9F9F9">
-                    <h2>On this page </h2>
-                    <ul>
-<li><a class="reference internal" href="#">Database administration</a><ul>
-<li><a class="reference internal" href="#kadmin-options">kadmin options</a></li>
-<li><a class="reference internal" href="#date-format">Date Format</a></li>
-<li><a class="reference internal" href="#principals">Principals</a><ul>
-<li><a class="reference internal" href="#adding-modifying-and-deleting-principals">Adding, modifying and deleting principals</a></li>
-<li><a class="reference internal" href="#add-principal">add_principal</a></li>
-<li><a class="reference internal" href="#modify-principal">modify_principal</a></li>
-<li><a class="reference internal" href="#delete-principal">delete_principal</a><ul>
-<li><a class="reference internal" href="#examples">Examples</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#retrieving-information-about-a-principal">Retrieving information about a principal</a></li>
-<li><a class="reference internal" href="#get-principal">get_principal</a></li>
-<li><a class="reference internal" href="#list-principals">list_principals</a></li>
-<li><a class="reference internal" href="#changing-passwords">Changing passwords</a></li>
-<li><a class="reference internal" href="#change-password">change_password</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#policies">Policies</a><ul>
-<li><a class="reference internal" href="#adding-modifying-and-deleting-policies">Adding, modifying and deleting policies</a></li>
-<li><a class="reference internal" href="#add-policy">add_policy</a></li>
-<li><a class="reference internal" href="#modify-policy">modify_policy</a></li>
-<li><a class="reference internal" href="#delete-policy">delete_policy</a></li>
-<li><a class="reference internal" href="#retrieving-policies">Retrieving policies</a></li>
-<li><a class="reference internal" href="#get-policy">get_policy</a></li>
-<li><a class="reference internal" href="#list-policies">list_policies</a></li>
-<li><a class="reference internal" href="#updating-the-history-key">Updating the history key</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#privileges">Privileges</a></li>
-<li><a class="reference internal" href="#operations-on-the-kerberos-database">Operations on the Kerberos database</a><ul>
-<li><a class="reference internal" href="#dumping-a-kerberos-database-to-a-file">Dumping a Kerberos database to a file</a><ul>
-<li><a class="reference internal" href="#id3">Examples</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#restoring-a-kerberos-database-from-a-dump-file">Restoring a Kerberos database from a dump file</a><ul>
-<li><a class="reference internal" href="#id4">Examples</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#creating-a-stash-file">Creating a stash file</a><ul>
-<li><a class="reference internal" href="#example">Example</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#creating-and-destroying-a-kerberos-database">Creating and destroying a Kerberos database</a><ul>
-<li><a class="reference internal" href="#id5">Examples</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li><a class="reference internal" href="#operations-on-the-ldap-database">Operations on the LDAP database</a><ul>
-<li><a class="reference internal" href="#creating-a-kerberos-realm">Creating a Kerberos realm</a></li>
-<li><a class="reference internal" href="#modifying-a-kerberos-realm">Modifying a Kerberos realm</a></li>
-<li><a class="reference internal" href="#destroying-a-kerberos-realm">Destroying a Kerberos realm</a></li>
-<li><a class="reference internal" href="#retrieving-information-about-a-kerberos-realm">Retrieving information about a Kerberos realm</a></li>
-<li><a class="reference internal" href="#listing-available-kerberos-realms">Listing available Kerberos realms</a></li>
-<li><a class="reference internal" href="#stashing-service-object-s-password">Stashing service object&#8217;s password</a></li>
-<li><a class="reference internal" href="#ticket-policy-operations">Ticket Policy operations</a><ul>
-<li><a class="reference internal" href="#creating-a-ticket-policy">Creating a Ticket Policy</a></li>
-<li><a class="reference internal" href="#modifying-a-ticket-policy">Modifying a Ticket Policy</a></li>
-<li><a class="reference internal" href="#retrieving-information-about-a-ticket-policy">Retrieving Information About a Ticket Policy</a></li>
-<li><a class="reference internal" href="#destroying-a-ticket-policy">Destroying a Ticket Policy</a></li>
-<li><a class="reference internal" href="#listing-available-ticket-policies">Listing available Ticket Policies</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li><a class="reference internal" href="#cross-realm-authentication">Cross-realm authentication</a></li>
-<li><a class="reference internal" href="#changing-the-krbtgt-key">Changing the krbtgt key</a></li>
-<li><a class="reference internal" href="#incremental-database-propagation">Incremental database propagation</a><ul>
-<li><a class="reference internal" href="#overview">Overview</a></li>
-<li><a class="reference internal" href="#sun-mit-incremental-propagation-differences">Sun/MIT incremental propagation differences</a></li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-
-                    <br/>
-                    <h2>Table of contents</h2>
-                    <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="../user/index.html">For users</a></li>
-<li class="toctree-l1 current"><a class="reference internal" href="index.html">For administrators</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="install.html">Installation guide</a></li>
-<li class="toctree-l2"><a class="reference internal" href="conf_files/index.html">Configuration Files</a></li>
-<li class="toctree-l2"><a class="reference internal" href="realm_config.html">Realm configuration decisions</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="">Database administration</a><ul class="simple">
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="lockout.html">Account lockout</a></li>
-<li class="toctree-l2"><a class="reference internal" href="conf_ldap.html">Configuring Kerberos with OpenLDAP back-end</a></li>
-<li class="toctree-l2"><a class="reference internal" href="appl_servers.html">Application servers</a></li>
-<li class="toctree-l2"><a class="reference internal" href="host_config.html">Host configuration</a></li>
-<li class="toctree-l2"><a class="reference internal" href="backup_host.html">Backups of secure hosts</a></li>
-<li class="toctree-l2"><a class="reference internal" href="pkinit.html">PKINIT configuration</a></li>
-<li class="toctree-l2"><a class="reference internal" href="princ_dns.html">Principal names and DNS</a></li>
-<li class="toctree-l2"><a class="reference internal" href="enctypes.html">Encryption types</a></li>
-<li class="toctree-l2"><a class="reference internal" href="admin_commands/index.html">Administration  programs</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../mitK5defaults.html">MIT Kerberos defaults</a></li>
-<li class="toctree-l2"><a class="reference internal" href="env_variables.html">Environment variables</a></li>
-<li class="toctree-l2"><a class="reference internal" href="troubleshoot.html">Troubleshooting</a></li>
-<li class="toctree-l2"><a class="reference internal" href="advanced/index.html">Advanced topics</a></li>
-<li class="toctree-l2"><a class="reference internal" href="various_envs.html">Various links</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../appdev/index.html">For application developers</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../plugindev/index.html">For plugin module developers</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../build/index.html">Building Kerberos V5</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../basic/index.html">Kerberos V5 concepts</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../mitK5features.html">MIT Kerberos features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../build_this.html">How to build this documentation from the source</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../about.html">The Kerberos Documentation Set</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../resources.html">Resources</a></li>
-</ul>
-
-                    <br/>
-                    <h4><a href="../index.html">Full Table of Contents
-                    </a></h4>
-                    <h4>Search</h4>
-                    <form class="search" action="../search.html" method="get">
-                        <input type="text" name="q" size="18" />
-                        <input type="submit" value="Go" />
-                        <input type="hidden" name="check_keywords" value="yes" />
-                        <input type="hidden" name="area" value="default" />
-                    </form>
-                </div>
-            <div class="document">
+      <div class="content">
+        <div class="document">
             
       <div class="documentwrapper">
         <div class="bodywrapper">
@@ -339,6 +199,10 @@ this option may expose the password to other users on the
 system via the process list; to avoid this, instead stash the
 password using the <strong>stashsrvpw</strong> command of
 <a class="reference internal" href="admin_commands/kdb5_ldap_util.html#kdb5-ldap-util-8"><em>kdb5_ldap_util</em></a>.</dd>
+<dt><strong>-x debug=</strong><em>level</em></dt>
+<dd>sets the OpenLDAP client library debug level.  <em>level</em> is an
+integer to be interpreted by the library.  Debugging messages
+are printed to standard error.  New in release 1.12.</dd>
 </dl>
 </dd>
 </dl>
@@ -445,8 +309,18 @@ flag.</dd>
 <dt>{-|+}<strong>password_changing_service</strong></dt>
 <dd><strong>+password_changing_service</strong> marks this principal as a password
 change service principal.</dd>
+<dt>{-|+}<strong>ok_to_auth_as_delegate</strong></dt>
+<dd><strong>+ok_to_auth_as_delegate</strong> allows this principal to acquire
+forwardable tickets to itself from arbitrary users, for use with
+constrained delegation.</dd>
+<dt>{-|+}<strong>no_auth_data_required</strong></dt>
+<dd><strong>+no_auth_data_required</strong> prevents PAC or AD-SIGNEDPATH data from
+being added to service tickets for the principal.</dd>
 <dt><strong>-randkey</strong></dt>
 <dd>Sets the key of the principal to a random value.</dd>
+<dt><strong>-nokey</strong></dt>
+<dd>Causes the principal to be created with no key.  New in release
+1.12.</dd>
 <dt><strong>-pw</strong> <em>password</em></dt>
 <dd>Sets the password of the principal to the specified string and
 does not prompt for a password.  Note: using this option in a
@@ -857,6 +731,13 @@ kadmin:</pre>
 </div>
 </div></blockquote>
 </div>
+<div class="section" id="policies-and-principals">
+<h3>Policies and principals<a class="headerlink" href="#policies-and-principals" title="Permalink to this headline">¶</a></h3>
+<p>Policies can be applied to principals as they are created by using
+the <strong>-policy</strong> flag to <a class="reference internal" href="admin_commands/kadmin_local.html#add-principal"><em>add_principal</em></a>. Existing principals can
+be modified by using the <strong>-policy</strong> or <strong>-clearpolicy</strong> flag to
+<a class="reference internal" href="admin_commands/kadmin_local.html#modify-principal"><em>modify_principal</em></a>.</p>
+</div>
 <div class="section" id="updating-the-history-key">
 <h3>Updating the history key<a class="headerlink" href="#updating-the-history-key" title="Permalink to this headline">¶</a></h3>
 <p>If a policy specifies a number of old keys kept of two or more, the
@@ -945,20 +826,14 @@ list.</dd>
 <p>To dump a Kerberos database into a file, use the <a class="reference internal" href="admin_commands/kdb5_util.html#kdb5-util-8"><em>kdb5_util</em></a>
 <strong>dump</strong> command on one of the KDCs.</p>
 <blockquote>
-<div><strong>dump</strong> [<strong>-old</strong>|<strong>-b6</strong>|<strong>-b7</strong>|<strong>-ov</strong>|<strong>-r13</strong>]
-[<strong>-verbose</strong>] [<strong>-mkey_convert</strong>] [<strong>-new_mkey_file</strong> <em>mkey_file</em>]
-[<strong>-rev</strong>] [<strong>-recurse</strong>] [<em>filename</em> [<em>principals</em>...]]</div></blockquote>
+<div><strong>dump</strong> [<strong>-b7</strong>|<strong>-ov</strong>|<strong>-r13</strong>] [<strong>-verbose</strong>]
+[<strong>-mkey_convert</strong>] [<strong>-new_mkey_file</strong> <em>mkey_file</em>] [<strong>-rev</strong>]
+[<strong>-recurse</strong>] [<em>filename</em> [<em>principals</em>...]]</div></blockquote>
 <p>Dumps the current Kerberos and KADM5 database into an ASCII file.  By
 default, the database is dumped in current format, &#8220;kdb5_util
 load_dump version 6&#8221;.  If filename is not specified, or is the string
 &#8220;-&#8221;, the dump is sent to standard output.  Options:</p>
 <dl class="docutils">
-<dt><strong>-old</strong></dt>
-<dd>causes the dump to be in the Kerberos 5 Beta 5 and earlier dump
-format (&#8220;kdb5_edit load_dump version 2.0&#8221;).</dd>
-<dt><strong>-b6</strong></dt>
-<dd>causes the dump to be in the Kerberos 5 Beta 6 format (&#8220;kdb5_edit
-load_dump version 3.0&#8221;).</dd>
 <dt><strong>-b7</strong></dt>
 <dd>causes the dump to be in the Kerberos 5 Beta 7 format (&#8220;kdb5_util
 load_dump version 4&#8221;).  This was the dump format produced on
@@ -1028,8 +903,8 @@ the standard output.</p>
 <p>To restore a Kerberos database dump from a file, use the
 <a class="reference internal" href="admin_commands/kdb5_util.html#kdb5-util-8"><em>kdb5_util</em></a> <strong>load</strong> command on one of the KDCs.</p>
 <blockquote>
-<div><strong>load</strong> [<strong>-old</strong>|<strong>-b6</strong>|<strong>-b7</strong>|<strong>-ov</strong>|<strong>-r13</strong>]
-[<strong>-hash</strong>] [<strong>-verbose</strong>] [<strong>-update</strong>] <em>filename</em> [<em>dbname</em>]</div></blockquote>
+<div><strong>load</strong> [<strong>-b7</strong>|<strong>-ov</strong>|<strong>-r13</strong>] [<strong>-hash</strong>]
+[<strong>-verbose</strong>] [<strong>-update</strong>] <em>filename</em> [<em>dbname</em>]</div></blockquote>
 <p>Loads a database dump from the named file into the named database.  If
 no option is given to determine the format of the dump file, the
 format is detected automatically and handled as appropriate.  Unless
@@ -1039,12 +914,6 @@ any previously existing database.  Note that when using the LDAP KDC
 database module, the <strong>-update</strong> flag is required.</p>
 <p>Options:</p>
 <dl class="docutils">
-<dt><strong>-old</strong></dt>
-<dd>requires the database to be in the Kerberos 5 Beta 5 and earlier
-format (&#8220;kdb5_edit load_dump version 2.0&#8221;).</dd>
-<dt><strong>-b6</strong></dt>
-<dd>requires the database to be in the Kerberos 5 Beta 6 format
-(&#8220;kdb5_edit load_dump version 3.0&#8221;).</dd>
 <dt><strong>-b7</strong></dt>
 <dd>requires the database to be in the Kerberos 5 Beta 7 format
 (&#8220;kdb5_util load_dump version 4&#8221;).</dd>
@@ -1744,40 +1613,161 @@ config file, and the per-slave dump files are stored in
           </div>
         </div>
       </div>
-            </div>
-            <div class="clearer" ></div>
         </div>
+        <div class="sidebar">
+    <h2>On this page</h2>
+    <ul>
+<li><a class="reference internal" href="#">Database administration</a><ul>
+<li><a class="reference internal" href="#kadmin-options">kadmin options</a></li>
+<li><a class="reference internal" href="#date-format">Date Format</a></li>
+<li><a class="reference internal" href="#principals">Principals</a><ul>
+<li><a class="reference internal" href="#adding-modifying-and-deleting-principals">Adding, modifying and deleting principals</a></li>
+<li><a class="reference internal" href="#add-principal">add_principal</a></li>
+<li><a class="reference internal" href="#modify-principal">modify_principal</a></li>
+<li><a class="reference internal" href="#delete-principal">delete_principal</a><ul>
+<li><a class="reference internal" href="#examples">Examples</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#retrieving-information-about-a-principal">Retrieving information about a principal</a></li>
+<li><a class="reference internal" href="#get-principal">get_principal</a></li>
+<li><a class="reference internal" href="#list-principals">list_principals</a></li>
+<li><a class="reference internal" href="#changing-passwords">Changing passwords</a></li>
+<li><a class="reference internal" href="#change-password">change_password</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#policies">Policies</a><ul>
+<li><a class="reference internal" href="#adding-modifying-and-deleting-policies">Adding, modifying and deleting policies</a></li>
+<li><a class="reference internal" href="#add-policy">add_policy</a></li>
+<li><a class="reference internal" href="#modify-policy">modify_policy</a></li>
+<li><a class="reference internal" href="#delete-policy">delete_policy</a></li>
+<li><a class="reference internal" href="#retrieving-policies">Retrieving policies</a></li>
+<li><a class="reference internal" href="#get-policy">get_policy</a></li>
+<li><a class="reference internal" href="#list-policies">list_policies</a></li>
+<li><a class="reference internal" href="#policies-and-principals">Policies and principals</a></li>
+<li><a class="reference internal" href="#updating-the-history-key">Updating the history key</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#privileges">Privileges</a></li>
+<li><a class="reference internal" href="#operations-on-the-kerberos-database">Operations on the Kerberos database</a><ul>
+<li><a class="reference internal" href="#dumping-a-kerberos-database-to-a-file">Dumping a Kerberos database to a file</a><ul>
+<li><a class="reference internal" href="#id3">Examples</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#restoring-a-kerberos-database-from-a-dump-file">Restoring a Kerberos database from a dump file</a><ul>
+<li><a class="reference internal" href="#id4">Examples</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#creating-a-stash-file">Creating a stash file</a><ul>
+<li><a class="reference internal" href="#example">Example</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#creating-and-destroying-a-kerberos-database">Creating and destroying a Kerberos database</a><ul>
+<li><a class="reference internal" href="#id5">Examples</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#operations-on-the-ldap-database">Operations on the LDAP database</a><ul>
+<li><a class="reference internal" href="#creating-a-kerberos-realm">Creating a Kerberos realm</a></li>
+<li><a class="reference internal" href="#modifying-a-kerberos-realm">Modifying a Kerberos realm</a></li>
+<li><a class="reference internal" href="#destroying-a-kerberos-realm">Destroying a Kerberos realm</a></li>
+<li><a class="reference internal" href="#retrieving-information-about-a-kerberos-realm">Retrieving information about a Kerberos realm</a></li>
+<li><a class="reference internal" href="#listing-available-kerberos-realms">Listing available Kerberos realms</a></li>
+<li><a class="reference internal" href="#stashing-service-object-s-password">Stashing service object&#8217;s password</a></li>
+<li><a class="reference internal" href="#ticket-policy-operations">Ticket Policy operations</a><ul>
+<li><a class="reference internal" href="#creating-a-ticket-policy">Creating a Ticket Policy</a></li>
+<li><a class="reference internal" href="#modifying-a-ticket-policy">Modifying a Ticket Policy</a></li>
+<li><a class="reference internal" href="#retrieving-information-about-a-ticket-policy">Retrieving Information About a Ticket Policy</a></li>
+<li><a class="reference internal" href="#destroying-a-ticket-policy">Destroying a Ticket Policy</a></li>
+<li><a class="reference internal" href="#listing-available-ticket-policies">Listing available Ticket Policies</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#cross-realm-authentication">Cross-realm authentication</a></li>
+<li><a class="reference internal" href="#changing-the-krbtgt-key">Changing the krbtgt key</a></li>
+<li><a class="reference internal" href="#incremental-database-propagation">Incremental database propagation</a><ul>
+<li><a class="reference internal" href="#overview">Overview</a></li>
+<li><a class="reference internal" href="#sun-mit-incremental-propagation-differences">Sun/MIT incremental propagation differences</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+    <br/>
+    <h2>Table of contents</h2>
+    <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../user/index.html">For users</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">For administrators</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="install.html">Installation guide</a></li>
+<li class="toctree-l2"><a class="reference internal" href="conf_files/index.html">Configuration Files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="realm_config.html">Realm configuration decisions</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="">Database administration</a><ul class="simple">
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="lockout.html">Account lockout</a></li>
+<li class="toctree-l2"><a class="reference internal" href="conf_ldap.html">Configuring Kerberos with OpenLDAP back-end</a></li>
+<li class="toctree-l2"><a class="reference internal" href="appl_servers.html">Application servers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="host_config.html">Host configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="backup_host.html">Backups of secure hosts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pkinit.html">PKINIT configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="otp.html">OTP Preauthentication</a></li>
+<li class="toctree-l2"><a class="reference internal" href="princ_dns.html">Principal names and DNS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="enctypes.html">Encryption types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="admin_commands/index.html">Administration  programs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../mitK5defaults.html">MIT Kerberos defaults</a></li>
+<li class="toctree-l2"><a class="reference internal" href="env_variables.html">Environment variables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshoot.html">Troubleshooting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="advanced/index.html">Advanced topics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="various_envs.html">Various links</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../appdev/index.html">For application developers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../plugindev/index.html">For plugin module developers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../build/index.html">Building Kerberos V5</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../basic/index.html">Kerberos V5 concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../mitK5features.html">MIT Kerberos features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../build_this.html">How to build this documentation from the source</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../about.html">Contributing to the MIT Kerberos Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../resources.html">Resources</a></li>
+</ul>
+
+    <br/>
+    <h4><a href="../index.html">Full Table of Contents</a></h4>
+    <h4>Search</h4>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+        </div>
+        <div class="clearer"></div>
+      </div>
     </div>
- 
-    <div class="footer-wrapper" >
+
+    <div class="footer-wrapper">
         <div class="footer" >
-            <div class="right" ><i>Release: 1.11.3</i><br />
+            <div class="right" ><i>Release: 1.12-alpha1</i><br />
                 &copy; <a href="../copyright.html">Copyright</a> 1985-2013, MIT.
             </div>
-            <div class="left" >
-                    <a href="../index.html"
-                    title="Full Table of Contents"
-                    >Contents</a>
-                     |
-                    <a href="realm_config.html"
-                    title="Realm configuration decisions"
-                    >previous</a>
-                     |
-                    <a href="lockout.html"
-                    title="Account lockout"
-                    >next</a>
-                     |
-                    <a href="../genindex.html"
-                    title="General Index"
-                    >index</a>
-                     |
-                    <a href="../search.html"
-                    title="Enter search criteria"
-                    >Search</a>
-                     |
-                    <a href="mailto:krb5-bugs@mit.edu?subject=Documentation__Database administration">feedback</a>
+            <div class="left">
+                
+        <a href="../index.html" title="Full Table of Contents"
+            >Contents</a> |
+        <a href="realm_config.html" title="Realm configuration decisions"
+            >previous</a> |
+        <a href="lockout.html" title="Account lockout"
+            >next</a> |
+        <a href="../genindex.html" title="General Index"
+            >index</a> |
+        <a href="../search.html" title="Enter search criteria"
+            >Search</a> |
+    <a href="mailto:krb5-bugs@mit.edu?subject=Documentation__Database administration">feedback</a>
             </div>
         </div>
     </div>
+
   </body>
 </html>

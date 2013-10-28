@@ -46,9 +46,9 @@ prf_plus(krb5_context context, krb5_keyblock *k, const char *pepper,
     char *buffer = NULL;
     struct k5buf prf_inbuf;
 
-    krb5int_buf_init_dynamic(&prf_inbuf);
-    krb5int_buf_add_len(&prf_inbuf, "\001", 1);
-    krb5int_buf_add(&prf_inbuf, pepper);
+    k5_buf_init_dynamic(&prf_inbuf);
+    k5_buf_add_len(&prf_inbuf, "\001", 1);
+    k5_buf_add(&prf_inbuf, pepper);
     retval = krb5_c_prf_length( context, k->enctype, &prflen);
     if (retval)
         goto cleanup;
@@ -56,15 +56,15 @@ prf_plus(krb5_context context, krb5_keyblock *k, const char *pepper,
     if (keybytes % prflen != 0)
         iterations++;
     assert(iterations <= 254);
-    buffer = k5alloc(iterations * prflen, &retval);
+    buffer = k5calloc(iterations, prflen, &retval);
     if (retval)
         goto cleanup;
-    if (krb5int_buf_len(&prf_inbuf) == -1) {
+    if (k5_buf_len(&prf_inbuf) == -1) {
         retval = ENOMEM;
         goto cleanup;
     }
-    in_data.length = (krb5_int32) krb5int_buf_len(&prf_inbuf);
-    in_data.data = krb5int_buf_data(&prf_inbuf);
+    in_data.length = (krb5_int32)k5_buf_len(&prf_inbuf);
+    in_data.data = k5_buf_data(&prf_inbuf);
     out_data.length = prflen;
     out_data.data = buffer;
 
@@ -82,7 +82,7 @@ prf_plus(krb5_context context, krb5_keyblock *k, const char *pepper,
 
 cleanup:
     free(buffer);
-    krb5int_free_buf(&prf_inbuf);
+    k5_free_buf(&prf_inbuf);
     return retval;
 }
 
@@ -110,9 +110,10 @@ krb5_c_fx_cf2_simple(krb5_context context,
     out_enctype = find_enctype(out_enctype_num);
     assert(out_enctype != NULL);
     if (out_enctype->prf == NULL) {
-        if (context)
-            krb5int_set_error(&(context->err), KRB5_CRYPTO_INTERNAL,
-                              _("Enctype %d has no PRF"), out_enctype_num);
+        if (context) {
+            k5_set_error(&(context->err), KRB5_CRYPTO_INTERNAL,
+                         _("Enctype %d has no PRF"), out_enctype_num);
+        }
         return KRB5_CRYPTO_INTERNAL;
     }
     keybytes = out_enctype->enc->keybytes;

@@ -400,7 +400,8 @@ print_attr(kdbe_val_t *val, int vverbose)
  * Print the update entry information
  */
 static void
-print_update(kdb_hlog_t *ulog, uint32_t entry, unsigned int verbose)
+print_update(kdb_hlog_t *ulog, uint32_t entry, uint32_t ulogentries,
+             unsigned int verbose)
 {
     XDR                 xdrs;
     uint32_t            start_sno, i, j, indx;
@@ -414,7 +415,7 @@ print_update(kdb_hlog_t *ulog, uint32_t entry, unsigned int verbose)
         start_sno = ulog->kdb_first_sno - 1;
 
     for (i = start_sno; i < ulog->kdb_last_sno; i++) {
-        indx = i % ulog->kdb_num;
+        indx = i % ulogentries;
 
         indx_log = (kdb_ent_header_t *)INDEX(ulog, indx);
 
@@ -566,17 +567,7 @@ main(int argc, char **argv)
     }
 
     if (reset) {
-        ulog->kdb_hmagic = KDB_ULOG_HDR_MAGIC;
-        ulog->db_version_num = KDB_VERSION;
-        ulog->kdb_state = KDB_STABLE;
-        ulog->kdb_block = ULOG_BLOCK;
-        ulog->kdb_first_sno = 0;
-        ulog->kdb_first_time.seconds = 0;
-        ulog->kdb_first_time.useconds = 0;
-        ulog->kdb_last_sno = 0;
-        ulog->kdb_last_time.seconds = 0;
-        ulog->kdb_last_time.useconds = 0;
-        ulog_sync_header(ulog);
+        ulog_init_header(context);
         printf(_("Reinitialized the ulog.\n"));
         exit(0);
     }
@@ -631,7 +622,7 @@ main(int argc, char **argv)
     }
 
     if ((!headeronly) && ulog->kdb_num) {
-        print_update(ulog, entry, verbose);
+        print_update(ulog, entry, params.iprop_ulogsize, verbose);
     }
 
     (void) printf("\n");

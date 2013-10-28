@@ -25,6 +25,7 @@
  */
 
 #include <k5-int.h>
+#include "int-proto.h"
 
 /*
  * It is possible to support sending a request that includes both a FAST and
@@ -179,7 +180,7 @@ krb5int_fast_as_armor(krb5_context context,
     krb5_data *target_realm;
 
     krb5_clear_error_message(context);
-    target_realm = krb5_princ_realm(context, request->server);
+    target_realm = &request->server->realm;
     if (opte->opt_private->fast_ccache_name) {
         TRACE_FAST_ARMOR_CCACHE(context, opte->opt_private->fast_ccache_name);
         state->fast_state_flags |= KRB5INT_FAST_ARMOR_AVAIL;
@@ -193,7 +194,7 @@ krb5int_fast_as_armor(krb5_context context,
             krb5_data config_data;
             config_data.data = NULL;
             retval = krb5_cc_get_config(context, ccache, target_principal,
-                                        KRB5_CONF_FAST_AVAIL, &config_data);
+                                        KRB5_CC_CONF_FAST_AVAIL, &config_data);
             if ((retval == 0) && config_data.data) {
                 TRACE_FAST_CCACHE_CONFIG(context);
                 state->fast_state_flags |= KRB5INT_FAST_DO_FAST;

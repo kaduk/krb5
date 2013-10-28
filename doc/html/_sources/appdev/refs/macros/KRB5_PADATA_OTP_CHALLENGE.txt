@@ -9,7 +9,7 @@ KRB5_PADATA_OTP_CHALLENGE
 .. data:: KRB5_PADATA_OTP_CHALLENGE
 ..
 
-See RFC 6560 section 4.1.
+RFC 6560 section 4.1.
 
 
 

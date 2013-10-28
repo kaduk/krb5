@@ -17,7 +17,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../',
-        VERSION:     '1.11.3',
+        VERSION:     '1.12-alpha1',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -35,116 +35,31 @@
   </head>
   <body>
     <div class="header-wrapper">
-        <div class="header" style="padding-bottom: 0px;">
+        <div class="header">
             
             
-                <h1><a href="../../index.html"
-                style="color: #5d1509; font-size: 120%;
-                padding-top: 10px;">MIT Kerberos Documentation</a></h1>
+            <h1><a href="../../index.html">MIT Kerberos Documentation</a></h1>
             
             <div class="rel">
-                    <a href="../../index.html"
-                    title="Full Table of Contents"
-                    accesskey="C">Contents</a>
-                     |
-                    <a href="krb5_conf.html"
-                    title="krb5.conf"
-                    accesskey="P">previous</a>
-                     |
-                    <a href="kadm5_acl.html"
-                    title="kadm5.acl"
-                    accesskey="N">next</a>
-                     |
-                    <a href="../../genindex.html"
-                    title="General Index"
-                    accesskey="I">index</a>
-                     |
-                    <a href="../../search.html"
-                    title="Enter search criteria"
-                    accesskey="S">Search</a>
-                     |
-                <a href="mailto:krb5-bugs@mit.edu?subject=Documentation__kdc.conf">feedback</a>
+                
+        <a href="../../index.html" title="Full Table of Contents"
+            accesskey="C">Contents</a> |
+        <a href="krb5_conf.html" title="krb5.conf"
+            accesskey="P">previous</a> |
+        <a href="kadm5_acl.html" title="kadm5.acl"
+            accesskey="N">next</a> |
+        <a href="../../genindex.html" title="General Index"
+            accesskey="I">index</a> |
+        <a href="../../search.html" title="Enter search criteria"
+            accesskey="S">Search</a> |
+    <a href="mailto:krb5-bugs@mit.edu?subject=Documentation__kdc.conf">feedback</a>
             </div>
         </div>
     </div>
 
     <div class="content-wrapper">
-        <div class="content">
-                <div class="sidebar"
-                    style="float: right; background: #F9F9F9">
-                    <h2>On this page </h2>
-                    <ul>
-<li><a class="reference internal" href="#">kdc.conf</a><ul>
-<li><a class="reference internal" href="#structure">Structure</a></li>
-<li><a class="reference internal" href="#sections">Sections</a><ul>
-<li><a class="reference internal" href="#kdcdefaults">[kdcdefaults]</a></li>
-<li><a class="reference internal" href="#realms">[realms]</a></li>
-<li><a class="reference internal" href="#dbdefaults">[dbdefaults]</a></li>
-<li><a class="reference internal" href="#dbmodules">[dbmodules]</a></li>
-<li><a class="reference internal" href="#logging">[logging]</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#pkinit-options">PKINIT options</a></li>
-<li><a class="reference internal" href="#encryption-and-salt-types">Encryption and salt types</a></li>
-<li><a class="reference internal" href="#sample-kdc-conf-file">Sample kdc.conf File</a></li>
-<li><a class="reference internal" href="#files">FILES</a></li>
-<li><a class="reference internal" href="#see-also">SEE ALSO</a></li>
-</ul>
-</li>
-</ul>
-
-                    <br/>
-                    <h2>Table of contents</h2>
-                    <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="../../user/index.html">For users</a></li>
-<li class="toctree-l1 current"><a class="reference internal" href="../index.html">For administrators</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="../install.html">Installation guide</a></li>
-<li class="toctree-l2 current"><a class="reference internal" href="index.html">Configuration Files</a><ul class="current">
-<li class="toctree-l3"><a class="reference internal" href="krb5_conf.html">krb5.conf</a></li>
-<li class="toctree-l3 current"><a class="current reference internal" href="">kdc.conf</a></li>
-<li class="toctree-l3"><a class="reference internal" href="kadm5_acl.html">kadm5.acl</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="../realm_config.html">Realm configuration decisions</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../database.html">Database administration</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../lockout.html">Account lockout</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../conf_ldap.html">Configuring Kerberos with OpenLDAP back-end</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../appl_servers.html">Application servers</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../host_config.html">Host configuration</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../backup_host.html">Backups of secure hosts</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../pkinit.html">PKINIT configuration</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../princ_dns.html">Principal names and DNS</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../enctypes.html">Encryption types</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../admin_commands/index.html">Administration  programs</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../mitK5defaults.html">MIT Kerberos defaults</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../env_variables.html">Environment variables</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../troubleshoot.html">Troubleshooting</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../advanced/index.html">Advanced topics</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../various_envs.html">Various links</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../../appdev/index.html">For application developers</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../plugindev/index.html">For plugin module developers</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../build/index.html">Building Kerberos V5</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../basic/index.html">Kerberos V5 concepts</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../mitK5features.html">MIT Kerberos features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../build_this.html">How to build this documentation from the source</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../about.html">The Kerberos Documentation Set</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../resources.html">Resources</a></li>
-</ul>
-
-                    <br/>
-                    <h4><a href="../../index.html">Full Table of Contents
-                    </a></h4>
-                    <h4>Search</h4>
-                    <form class="search" action="../../search.html" method="get">
-                        <input type="text" name="q" size="18" />
-                        <input type="submit" value="Go" />
-                        <input type="hidden" name="check_keywords" value="yes" />
-                        <input type="hidden" name="area" value="default" />
-                    </form>
-                </div>
-            <div class="document">
+      <div class="content">
+        <div class="document">
             
       <div class="documentwrapper">
         <div class="bodywrapper">
@@ -267,8 +182,8 @@ tickets.</dd>
 preauthenticate using a hardware device before receiving any
 tickets.</dd>
 <dt><strong>no-auth-data-required</strong></dt>
-<dd>Enabling this flag prevents PAC data from being added to
-service tickets for the principal.</dd>
+<dd>Enabling this flag prevents PAC or AD-SIGNEDPATH data from
+being added to service tickets for the principal.</dd>
 <dt><strong>ok-as-delegate</strong></dt>
 <dd>If this flag is enabled, it hints the client that credentials
 can and should be delegated when authenticating to the
@@ -312,9 +227,10 @@ authentication process that was used to obtain the TGT.</dd>
 </dd>
 <dt><strong>dict_file</strong></dt>
 <dd>(String.)  Location of the dictionary file containing strings that
-are not allowed as passwords.  If none is specified or if there is
-no policy assigned to the principal, no dictionary checks of
-passwords will be performed.</dd>
+are not allowed as passwords.  The file should contain one string
+per line, with no additional whitespace.  If none is specified or
+if there is no policy assigned to the principal, no dictionary
+checks of passwords will be performed.</dd>
 <dt><strong>host_based_services</strong></dt>
 <dd>(Whitespace- or comma-separated list.)  Lists services which will
 get host-based referral processing even if the server principal is
@@ -338,7 +254,7 @@ slave configuration files.</dd>
 <dd>(Delta time string.)  Specifies the amount of time to wait for a
 full propagation to complete.  This is optional in configuration
 files, and is used by slave KDCs only.  The default value is 5
-minutes (<tt class="docutils literal"><span class="pre">5m</span></tt>).</dd>
+minutes (<tt class="docutils literal"><span class="pre">5m</span></tt>).  New in release 1.11.</dd>
 <dt><strong>iprop_logfile</strong></dt>
 <dd>(File name.)  Specifies where the update log file for the realm
 database is to be stored.  The default is to use the
@@ -398,7 +314,7 @@ disable referral processing altogether.</dd>
 principals support des-cbc-crc for session key enctype negotiation
 purposes.  If <strong>allow_weak_crypto</strong> in <a class="reference internal" href="krb5_conf.html#libdefaults"><em>[libdefaults]</em></a> is
 false, or if des-cbc-crc is not a permitted enctype, then this
-variable has no effect.  Defaults to true.</dd>
+variable has no effect.  Defaults to true.  New in release 1.11.</dd>
 <dt><strong>reject_bad_transit</strong></dt>
 <dd><p class="first">(Boolean value.)  If set to true, the KDC will check the list of
 transited realms for cross-realm tickets against the transit path
@@ -423,7 +339,7 @@ requests from anonymous principals to service principals other
 than the realm&#8217;s ticket-granting service.  This option allows
 anonymous PKINIT to be enabled for use as FAST armor tickets
 without allowing anonymous authentication to services.  The
-default value is false.</dd>
+default value is false.  New in release 1.9.</dd>
 <dt><strong>supported_enctypes</strong></dt>
 <dd>(List of <em>key</em>:<em>salt</em> strings.)  Specifies the default key/salt
 combinations of principals for this realm.  Any principals created
@@ -475,13 +391,13 @@ authentication&#8221; field of principal entries requiring
 preauthentication.  Setting this flag may improve performance.
 (Principal entries which do not require preauthentication never
 update the &#8220;Last successful authentication&#8221; field.).  First
-introduced in version 1.9.</dd>
+introduced in release 1.9.</dd>
 <dt><strong>disable_lockout</strong></dt>
 <dd>If set to <tt class="docutils literal"><span class="pre">true</span></tt>, suppresses KDC updates to the &#8220;Last failed
 authentication&#8221; and &#8220;Failed password attempts&#8221; fields of principal
 entries requiring preauthentication.  Setting this flag may
 improve performance, but also disables account lockout.  First
-introduced in version 1.9.</dd>
+introduced in release 1.9.</dd>
 <dt><strong>ldap_conns_per_server</strong></dt>
 <dd>This LDAP-specific tag indicates the number of connections to be
 maintained per LDAP server.</dd>
@@ -568,6 +484,63 @@ administrative server will be appended to the file
     kdc = SYSLOG:INFO:DAEMON
     admin_server = FILE:/var/adm/kadmin.log
     admin_server = DEVICE=/dev/tty04</pre>
+</div>
+</div></blockquote>
+</div>
+<div class="section" id="otp">
+<span id="id5"></span><h3>[otp]<a class="headerlink" href="#otp" title="Permalink to this headline">¶</a></h3>
+<p>Each subsection of [otp] is the name of an OTP token type.  The tags
+within the subsection define the configuration required to forward a
+One Time Password request to a RADIUS server.</p>
+<p>For each token type, the following tags may be specified:</p>
+<dl class="docutils">
+<dt><strong>server</strong></dt>
+<dd>This is the server to send the RADIUS request to.  It can be a
+hostname with optional port, an ip address with optional port, or
+a Unix domain socket address.  The default is
+<a class="reference internal" href="../../mitK5defaults.html#paths"><em>LOCALSTATEDIR</em></a><tt class="docutils literal"><span class="pre">/krb5kdc</span></tt><tt class="docutils literal"><span class="pre">/&lt;name&gt;.socket</span></tt>.</dd>
+<dt><strong>secret</strong></dt>
+<dd>This tag indicates a filename (which may be relative to <a class="reference internal" href="../../mitK5defaults.html#paths"><em>LOCALSTATEDIR</em></a><tt class="docutils literal"><span class="pre">/krb5kdc</span></tt>)
+containing the secret used to encrypt the RADIUS packets.  The
+secret should appear in the first line of the file by itself;
+leading and trailing whitespace on the line will be removed.  If
+the value of <strong>server</strong> is a Unix domain socket address, this tag
+is optional, and an empty secret will be used if it is not
+specified.  Otherwise, this tag is required.</dd>
+<dt><strong>timeout</strong></dt>
+<dd>An integer which specifies the time in seconds during which the
+KDC should attempt to contact the RADIUS server.  This tag is the
+total time across all retries and should be less than the time
+which an OTP value remains valid for.  The default is 5 seconds.</dd>
+<dt><strong>retries</strong></dt>
+<dd>This tag specifies the number of retries to make to the RADIUS
+server.  The default is 3 retries (4 tries).</dd>
+<dt><strong>strip_realm</strong></dt>
+<dd>If this tag is <tt class="docutils literal"><span class="pre">true</span></tt>, the principal without the realm will be
+passed to the RADIUS server.  Otherwise, the realm will be
+included.  The default value is <tt class="docutils literal"><span class="pre">true</span></tt>.</dd>
+</dl>
+<p>In the following example, requests are sent to a remote server via UDP.</p>
+<blockquote>
+<div><div class="highlight-python"><pre>[otp]
+    MyRemoteTokenType = {
+        server = radius.mydomain.com:1812
+        secret = SEmfiajf42$
+        timeout = 15
+        retries = 5
+        strip_realm = true
+    }</pre>
+</div>
+</div></blockquote>
+<p>An implicit default token type named <tt class="docutils literal"><span class="pre">DEFAULT</span></tt> is defined for when
+the per-principal configuration does not specify a token type.  Its
+configuration is shown below.  You may override this token type to
+something applicable for your situation.</p>
+<blockquote>
+<div><div class="highlight-python"><pre>[otp]
+    DEFAULT = {
+        strip_realm = false
+    }</pre>
 </div>
 </div></blockquote>
 </div>
@@ -675,7 +648,7 @@ policy is such that up-to-date CRLs must be present for every CA.</p>
 </dl>
 </div>
 <div class="section" id="encryption-and-salt-types">
-<span id="id5"></span><h2>Encryption and salt types<a class="headerlink" href="#encryption-and-salt-types" title="Permalink to this headline">¶</a></h2>
+<span id="id6"></span><h2>Encryption and salt types<a class="headerlink" href="#encryption-and-salt-types" title="Permalink to this headline">¶</a></h2>
 <p>Any tag in the configuration files which requires a list of encryption
 types can be set to some combination of the following strings.
 Encryption types marked as &#8220;weak&#8221; are available for compatibility but
@@ -842,40 +815,106 @@ something called a salt.  The supported salt types are as follows:</p>
           </div>
         </div>
       </div>
-            </div>
-            <div class="clearer" ></div>
         </div>
+        <div class="sidebar">
+    <h2>On this page</h2>
+    <ul>
+<li><a class="reference internal" href="#">kdc.conf</a><ul>
+<li><a class="reference internal" href="#structure">Structure</a></li>
+<li><a class="reference internal" href="#sections">Sections</a><ul>
+<li><a class="reference internal" href="#kdcdefaults">[kdcdefaults]</a></li>
+<li><a class="reference internal" href="#realms">[realms]</a></li>
+<li><a class="reference internal" href="#dbdefaults">[dbdefaults]</a></li>
+<li><a class="reference internal" href="#dbmodules">[dbmodules]</a></li>
+<li><a class="reference internal" href="#logging">[logging]</a></li>
+<li><a class="reference internal" href="#otp">[otp]</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#pkinit-options">PKINIT options</a></li>
+<li><a class="reference internal" href="#encryption-and-salt-types">Encryption and salt types</a></li>
+<li><a class="reference internal" href="#sample-kdc-conf-file">Sample kdc.conf File</a></li>
+<li><a class="reference internal" href="#files">FILES</a></li>
+<li><a class="reference internal" href="#see-also">SEE ALSO</a></li>
+</ul>
+</li>
+</ul>
+
+    <br/>
+    <h2>Table of contents</h2>
+    <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../user/index.html">For users</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">For administrators</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../install.html">Installation guide</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="index.html">Configuration Files</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="krb5_conf.html">krb5.conf</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="">kdc.conf</a></li>
+<li class="toctree-l3"><a class="reference internal" href="kadm5_acl.html">kadm5.acl</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../realm_config.html">Realm configuration decisions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../database.html">Database administration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../lockout.html">Account lockout</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../conf_ldap.html">Configuring Kerberos with OpenLDAP back-end</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../appl_servers.html">Application servers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../host_config.html">Host configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../backup_host.html">Backups of secure hosts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../pkinit.html">PKINIT configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../otp.html">OTP Preauthentication</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../princ_dns.html">Principal names and DNS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../enctypes.html">Encryption types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../admin_commands/index.html">Administration  programs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../mitK5defaults.html">MIT Kerberos defaults</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../env_variables.html">Environment variables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../troubleshoot.html">Troubleshooting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../advanced/index.html">Advanced topics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../various_envs.html">Various links</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../appdev/index.html">For application developers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../plugindev/index.html">For plugin module developers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../build/index.html">Building Kerberos V5</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../basic/index.html">Kerberos V5 concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../mitK5features.html">MIT Kerberos features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../build_this.html">How to build this documentation from the source</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../about.html">Contributing to the MIT Kerberos Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../resources.html">Resources</a></li>
+</ul>
+
+    <br/>
+    <h4><a href="../../index.html">Full Table of Contents</a></h4>
+    <h4>Search</h4>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+        </div>
+        <div class="clearer"></div>
+      </div>
     </div>
- 
-    <div class="footer-wrapper" >
+
+    <div class="footer-wrapper">
         <div class="footer" >
-            <div class="right" ><i>Release: 1.11.3</i><br />
+            <div class="right" ><i>Release: 1.12-alpha1</i><br />
                 &copy; <a href="../../copyright.html">Copyright</a> 1985-2013, MIT.
             </div>
-            <div class="left" >
-                    <a href="../../index.html"
-                    title="Full Table of Contents"
-                    >Contents</a>
-                     |
-                    <a href="krb5_conf.html"
-                    title="krb5.conf"
-                    >previous</a>
-                     |
-                    <a href="kadm5_acl.html"
-                    title="kadm5.acl"
-                    >next</a>
-                     |
-                    <a href="../../genindex.html"
-                    title="General Index"
-                    >index</a>
-                     |
-                    <a href="../../search.html"
-                    title="Enter search criteria"
-                    >Search</a>
-                     |
-                    <a href="mailto:krb5-bugs@mit.edu?subject=Documentation__kdc.conf">feedback</a>
+            <div class="left">
+                
+        <a href="../../index.html" title="Full Table of Contents"
+            >Contents</a> |
+        <a href="krb5_conf.html" title="krb5.conf"
+            >previous</a> |
+        <a href="kadm5_acl.html" title="kadm5.acl"
+            >next</a> |
+        <a href="../../genindex.html" title="General Index"
+            >index</a> |
+        <a href="../../search.html" title="Enter search criteria"
+            >Search</a> |
+    <a href="mailto:krb5-bugs@mit.edu?subject=Documentation__kdc.conf">feedback</a>
             </div>
         </div>
     </div>
+
   </body>
 </html>

@@ -47,6 +47,6 @@ Use :c:func:`krb5_free_string()` to free *fullname_out* when it is no longer nee
 
 .. note::
 
-	 First introduced in 1.10
+	 New in 1.10
  
 

@@ -12,7 +12,7 @@ krb5_cc_store_cred -  Store credentials in a credential cache.
 
 	          **[in]** **context** - Library context
 
-	          **[inout]** **cache** - Credential cache handle
+	          **[in]** **cache** - Credential cache handle
 
 	          **[in]** **creds** - Credentials to be stored in cache
 

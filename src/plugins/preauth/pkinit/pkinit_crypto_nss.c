@@ -126,6 +126,7 @@ struct _pkinit_identity_crypto_context {
     SECMODModule *pem_module;   /* used for FILE: and DIR: */
     struct _pkinit_identity_crypto_module {
         char *name;
+        char *spec;
         SECMODModule *module;
     } **id_modules;             /* used for PKCS11: */
     struct _pkinit_identity_crypto_userdb {
@@ -148,7 +149,11 @@ struct _pkinit_identity_crypto_context {
         krb5_context context;
         krb5_prompter_fct prompter;
         void *prompter_data;
+        const char *identity;
     } pwcb_args;
+    krb5_boolean defer_id_prompt;
+    pkinit_deferred_id *deferred_ids;
+    krb5_boolean defer_with_dummy_password;
 };
 
 struct _pkinit_cert_info {      /* aka _pkinit_cert_handle */
@@ -573,7 +578,8 @@ cmsdump(unsigned char *data, unsigned int length)
 
 /* A password-prompt callback for NSS that calls the libkrb5 callback. */
 static char *
-crypto_pwfn(const char *what, PRBool retry, void *arg)
+crypto_pwfn(const char *what, PRBool is_hardware, CK_FLAGS token_flags,
+            PRBool retry, void *arg)
 {
     int ret;
     pkinit_identity_crypto_context id;
@@ -581,6 +587,7 @@ crypto_pwfn(const char *what, PRBool retry, void *arg)
     krb5_prompt_type prompt_types[2];
     krb5_data reply;
     char *text, *answer;
+    const char *warning, *password;
     size_t text_size;
     void *data;
 
@@ -591,6 +598,56 @@ crypto_pwfn(const char *what, PRBool retry, void *arg)
     if (arg == NULL)
         return NULL;
     id = arg;
+
+    /* If we need to warn about the PIN, figure out the text. */
+    if (token_flags & CKF_USER_PIN_LOCKED)
+        warning = "PIN locked";
+    else if (token_flags & CKF_USER_PIN_FINAL_TRY)
+        warning = "PIN final try";
+    else if (token_flags & CKF_USER_PIN_COUNT_LOW)
+        warning = "PIN count low";
+    else
+        warning = NULL;
+
+    /*
+     * If we have the name of an identity here, then we're either supposed to
+     * save its name, or attempt to use a password, if one was supplied.
+     */
+    if (id->pwcb_args.identity != NULL) {
+        if (id->defer_id_prompt) {
+            /* If we're in the defer-prompts step, just save the identity name
+             * and "fail". */
+            if (!is_hardware)
+                token_flags = 0;
+            pkinit_set_deferred_id(&id->deferred_ids, id->pwcb_args.identity,
+                                   token_flags, NULL);
+            if (id->defer_with_dummy_password) {
+                /* Return a useless result. */
+                answer = PR_Malloc(1);
+                if (answer != NULL) {
+                    *answer = '\0';
+                    return answer;
+                }
+            }
+        } else {
+            /* Check if we already have a password for this identity.  If so,
+             * just return a copy of it. */
+            password = pkinit_find_deferred_id(id->deferred_ids,
+                                               id->pwcb_args.identity);
+            if (password != NULL) {
+                /* The result will be freed with PR_Free, so return a copy. */
+                text_size = strlen(password) + 1;
+                answer = PR_Malloc(text_size);
+                if (answer != NULL) {
+                    memcpy(answer, password, text_size);
+                    pkiDebug("%s: returning %ld-char answer\n", __FUNCTION__,
+                             (long)strlen(answer));
+                    return answer;
+                }
+            }
+        }
+    }
+
     if (id->pwcb_args.prompter == NULL)
         return NULL;
 
@@ -601,7 +658,14 @@ crypto_pwfn(const char *what, PRBool retry, void *arg)
         pkiDebug("out of memory");
         return NULL;
     }
-    snprintf(text, text_size, "Password for %s", what);
+    if (is_hardware) {
+        if (warning != NULL)
+            snprintf(text, text_size, "%s PIN (%s)", what, warning);
+        else
+            snprintf(text, text_size, "%s PIN", what);
+    } else {
+        snprintf(text, text_size, "%s %s", _("Pass phrase for"), what);
+    }
     memset(&prompt, 0, sizeof(prompt));
     prompt.prompt = text;
     prompt.hidden = 1;
@@ -646,16 +710,33 @@ crypto_pwfn(const char *what, PRBool retry, void *arg)
 static char *
 crypto_pwcb(PK11SlotInfo *slot, PRBool retry, void *arg)
 {
-    return crypto_pwfn(PK11_GetTokenName(slot), retry, arg);
+    pkinit_identity_crypto_context id;
+    const char *what = NULL;
+    CK_TOKEN_INFO tinfo;
+    CK_FLAGS tflags;
+
+    if (PK11_GetTokenInfo(slot, &tinfo) == SECSuccess)
+        tflags = tinfo.flags;
+    else
+        tflags = 0;
+    if (arg != NULL) {
+        id = arg;
+        what = id->pwcb_args.identity;
+    }
+    return crypto_pwfn((what != NULL) ? what : PK11_GetTokenName(slot),
+                       PK11_IsHW(slot), tflags, retry, arg);
 }
 
-/* Make sure we're using our callback, and set up the callback data. */
+/*
+ * Make sure we're using our callback, and set up the callback data.
+ */
 static void *
 crypto_pwcb_prep(pkinit_identity_crypto_context id_cryptoctx,
-                 krb5_context context)
+                 const char *identity, krb5_context context)
 {
     PK11_SetPasswordFunc(crypto_pwcb);
     id_cryptoctx->pwcb_args.context = context;
+    id_cryptoctx->pwcb_args.identity = identity;
     return id_cryptoctx;
 }
 
@@ -745,7 +826,7 @@ crypto_get_p12_slot(struct _pkinit_identity_crypto_context *id)
                          __FUNCTION__, configdir, strerror(errno));
             else {
                 while ((ent = readdir(dir)) != NULL) {
-                    if ((strcmp(ent->d_name, ".") == 0) &&
+                    if ((strcmp(ent->d_name, ".") == 0) ||
                         (strcmp(ent->d_name, "..") == 0)) {
                         continue;
                     }
@@ -767,11 +848,11 @@ crypto_get_p12_slot(struct _pkinit_identity_crypto_context *id)
 
 /* Close the slot which we've been using for holding imported PKCS12
  * certificates and keys. */
-static int
+static void
 crypto_close_p12_slot(struct _pkinit_identity_crypto_context *id)
 {
-    SECMOD_CloseUserDB(id->id_p12_slot.slot);
-    return 0;
+    PK11_FreeSlot(id->id_p12_slot.slot);
+    id->id_p12_slot.slot = NULL;
 }
 
 void
@@ -782,31 +863,34 @@ pkinit_fini_identity_crypto(pkinit_identity_crypto_context id_cryptoctx)
     pkiDebug("%s\n", __FUNCTION__);
     /* The order of cleanup here is intended to ensure that nothing gets
      * freed before anything that might have a reference to it. */
+    if (id_cryptoctx->deferred_ids != NULL)
+        pkinit_free_deferred_ids(id_cryptoctx->deferred_ids);
     if (id_cryptoctx->id_cert != NULL)
         CERT_DestroyCertificate(id_cryptoctx->id_cert);
     CERT_DestroyCertList(id_cryptoctx->ca_certs);
     CERT_DestroyCertList(id_cryptoctx->id_certs);
     if (id_cryptoctx->id_objects != NULL)
         for (i = 0; id_cryptoctx->id_objects[i] != NULL; i++) {
-            PK11_DestroyGenericObjects(id_cryptoctx->id_objects[i]->obj);
             if (id_cryptoctx->id_objects[i]->cert != NULL)
                 CERT_DestroyCertificate(id_cryptoctx->id_objects[i]->cert);
+            PK11_DestroyGenericObject(id_cryptoctx->id_objects[i]->obj);
         }
     if (id_cryptoctx->id_p12_slot.slot != NULL)
-        if ((i = crypto_close_p12_slot(id_cryptoctx)) != 0)
-            pkiDebug("%s: error closing pkcs12 slot: %s\n",
-                     __FUNCTION__, strerror(i));
+        crypto_close_p12_slot(id_cryptoctx);
     if (id_cryptoctx->id_userdbs != NULL)
         for (i = 0; id_cryptoctx->id_userdbs[i] != NULL; i++)
-            SECMOD_CloseUserDB(id_cryptoctx->id_userdbs[i]->userdb);
-    if (id_cryptoctx->id_modules != NULL)
-        for (i = 0; id_cryptoctx->id_modules[i] != NULL; i++)
-            SECMOD_UnloadUserModule(id_cryptoctx->id_modules[i]->module);
+            PK11_FreeSlot(id_cryptoctx->id_userdbs[i]->userdb);
+    if (id_cryptoctx->id_modules != NULL) {
+        for (i = 0; id_cryptoctx->id_modules[i] != NULL; i++) {
+            if (id_cryptoctx->id_modules[i]->module != NULL)
+                SECMOD_DestroyModule(id_cryptoctx->id_modules[i]->module);
+        }
+    }
     if (id_cryptoctx->id_crls != NULL)
         for (i = 0; id_cryptoctx->id_crls[i] != NULL; i++)
             CERT_UncacheCRL(CERT_GetDefaultCertDB(), id_cryptoctx->id_crls[i]);
     if (id_cryptoctx->pem_module != NULL)
-        SECMOD_UnloadUserModule(id_cryptoctx->pem_module);
+        SECMOD_DestroyModule(id_cryptoctx->pem_module);
     PORT_FreeArena(id_cryptoctx->pool, PR_TRUE);
 }
 
@@ -1393,7 +1477,7 @@ client_create_dh(krb5_context context,
 
     /* Generate a public value and a private key. */
     slot = PK11_GetBestSlot(CKM_DH_PKCS_KEY_PAIR_GEN,
-                            crypto_pwcb_prep(id_cryptoctx, context));
+                            crypto_pwcb_prep(id_cryptoctx, NULL, context));
     if (slot == NULL) {
         PORT_FreeArena(pool, PR_TRUE);
         pkiDebug("%s: error selecting slot\n", __FUNCTION__);
@@ -1402,7 +1486,7 @@ client_create_dh(krb5_context context,
     pub = NULL;
     priv = PK11_GenerateKeyPair(slot, CKM_DH_PKCS_KEY_PAIR_GEN,
                                 &dh_param, &pub, PR_FALSE, PR_FALSE,
-                                crypto_pwcb_prep(id_cryptoctx, context));
+                                crypto_pwcb_prep(id_cryptoctx, NULL, context));
 
     /* Finish building the return values. */
     memset(&encoded, 0, sizeof(encoded));
@@ -1482,7 +1566,7 @@ client_process_dh(krb5_context context,
     /* Generate the shared value using our private key and the KDC's
      * public key. */
     slot = PK11_GetBestSlot(CKM_DH_PKCS_KEY_PAIR_GEN,
-                            crypto_pwcb_prep(id_cryptoctx, context));
+                            crypto_pwcb_prep(id_cryptoctx, NULL, context));
     if (slot == NULL) {
         SECKEY_DestroyPublicKey(pub);
         PORT_FreeArena(pool, PR_TRUE);
@@ -1493,7 +1577,7 @@ client_process_dh(krb5_context context,
                          CKM_DH_PKCS_DERIVE,
                          CKM_TLS_MASTER_KEY_DERIVE_DH,
                          CKA_DERIVE,
-                         0, crypto_pwcb_prep(id_cryptoctx, context));
+                         0, crypto_pwcb_prep(id_cryptoctx, NULL, context));
     if (sym == NULL) {
         PK11_FreeSlot(slot);
         SECKEY_DestroyPublicKey(pub);
@@ -1617,7 +1701,7 @@ server_process_dh(krb5_context context,
 
     /* Generate a public value and a private key using the parameters. */
     slot = PK11_GetBestSlot(CKM_DH_PKCS_KEY_PAIR_GEN,
-                            crypto_pwcb_prep(id_cryptoctx, context));
+                            crypto_pwcb_prep(id_cryptoctx, NULL, context));
     if (slot == NULL) {
         PORT_FreeArena(pool, PR_TRUE);
         return ENOMEM;
@@ -1625,7 +1709,7 @@ server_process_dh(krb5_context context,
     pub = NULL;
     priv = PK11_GenerateKeyPair(slot, CKM_DH_PKCS_KEY_PAIR_GEN,
                                 &dh_params, &pub, PR_FALSE, PR_FALSE,
-                                crypto_pwcb_prep(id_cryptoctx, context));
+                                crypto_pwcb_prep(id_cryptoctx, NULL, context));
     if (priv == NULL) {
         PK11_FreeSlot(slot);
         PORT_FreeArena(pool, PR_TRUE);
@@ -1652,7 +1736,7 @@ server_process_dh(krb5_context context,
                          CKM_DH_PKCS_DERIVE,
                          CKM_TLS_MASTER_KEY_DERIVE_DH,
                          CKA_DERIVE,
-                         0, crypto_pwcb_prep(id_cryptoctx, context));
+                         0, crypto_pwcb_prep(id_cryptoctx, NULL, context));
     if (sym == NULL) {
         SECKEY_DestroyPrivateKey(priv);
         SECKEY_DestroyPublicKey(pub);
@@ -1893,7 +1977,8 @@ cert_maybe_add_to_list(CERTCertList *list, CERTCertificate *cert)
 static SECStatus
 cert_load_ca_certs_from_slot(krb5_context context,
                              pkinit_identity_crypto_context id,
-                             PK11SlotInfo *slot)
+                             PK11SlotInfo *slot,
+                             const char *identity)
 {
     CERTCertificate *cert;
     CERTCertList *list;
@@ -1902,14 +1987,17 @@ cert_load_ca_certs_from_slot(krb5_context context,
     SECStatus status;
 
     /* Log in if the slot requires it. */
-    if (!PK11_IsLoggedIn(slot, crypto_pwcb_prep(id, context)) &&
+    PK11_TokenRefresh(slot);
+    if (!PK11_IsLoggedIn(slot, crypto_pwcb_prep(id, identity, context)) &&
         PK11_NeedLogin(slot)) {
         pkiDebug("%s: logging in to token \"%s\"\n",
                  __FUNCTION__, PK11_GetTokenName(slot));
         if (PK11_Authenticate(slot, PR_TRUE,
-                              crypto_pwcb_prep(id, context)) != SECSuccess) {
-            pkiDebug("%s: error logging into \"%s\", skipping\n",
-                     __FUNCTION__, PK11_GetTokenName(slot));
+                              crypto_pwcb_prep(id, identity,
+                                               context)) != SECSuccess) {
+            pkiDebug("%s: error logging into \"%s\": %s, skipping\n",
+                     __FUNCTION__, PK11_GetTokenName(slot),
+                     PORT_ErrorToName(PORT_GetError()));
             return SECFailure;
         }
     }
@@ -1948,7 +2036,7 @@ cert_load_ca_certs_from_slot(krb5_context context,
               CERTDB_TRUSTED_CLIENT_CA | CERTDB_NS_TRUSTED_CA)) == 0)
             continue;
         /* DestroyCertList frees all of the certs in the list,
-         * so we need to create a copy that it can own. */
+         * so we need to create a copy that we can own. */
         cert = CERT_DupCertificate(node->cert);
         /* Add it to the list. */
         if (cert_maybe_add_to_list(id->ca_certs, cert) != SECSuccess)
@@ -1964,7 +2052,9 @@ cert_load_certs_with_keys_from_slot(krb5_context context,
                                     pkinit_identity_crypto_context
                                     id_cryptoctx,
                                     PK11SlotInfo *slot,
-                                    const char *label, const char *id)
+                                    const char *cert_label,
+                                    const char *cert_id,
+                                    const char *identity)
 {
     CERTCertificate *cert;
     CERTCertList *clist;
@@ -1973,16 +2063,19 @@ cert_load_certs_with_keys_from_slot(krb5_context context,
     int status;
 
     /* Log in if the slot requires it. */
-    if (!PK11_IsLoggedIn(slot, crypto_pwcb_prep(id_cryptoctx, context)) &&
+    PK11_TokenRefresh(slot);
+    if (!PK11_IsLoggedIn(slot, crypto_pwcb_prep(id_cryptoctx, identity,
+                                                context)) &&
         PK11_NeedLogin(slot)) {
         pkiDebug("%s: logging in to token \"%s\"\n",
                  __FUNCTION__, PK11_GetTokenName(slot));
         if (PK11_Authenticate(slot, PR_TRUE,
-                              crypto_pwcb_prep(id_cryptoctx,
+                              crypto_pwcb_prep(id_cryptoctx, identity,
                                                context)) != SECSuccess) {
-            pkiDebug("%s: error logging into \"%s\", skipping\n",
-                     __FUNCTION__, PK11_GetTokenName(slot));
-            return ENOMEM;
+            pkiDebug("%s: error logging into \"%s\": %s, skipping\n",
+                     __FUNCTION__, PK11_GetTokenName(slot),
+                     PORT_ErrorToName(PORT_GetError()));
+            return id_cryptoctx->defer_id_prompt ? 0 : ENOMEM;
         }
     }
     /* Get the list of certs from the slot. */
@@ -2008,21 +2101,21 @@ cert_load_certs_with_keys_from_slot(krb5_context context,
              !CERT_LIST_END(cnode, clist);
          cnode = CERT_LIST_NEXT(cnode)) {
         if (cnode->cert->nickname != NULL) {
-            if ((label != NULL) && (id != NULL)) {
-                if ((strcmp(id, cnode->cert->nickname) != 0) &&
-                    (strcmp(label, cnode->cert->nickname) != 0))
+            if ((cert_label != NULL) && (cert_id != NULL)) {
+                if ((strcmp(cert_id, cnode->cert->nickname) != 0) &&
+                    (strcmp(cert_label, cnode->cert->nickname) != 0))
                     continue;
-            } else if (label != NULL) {
-                if (strcmp(label, cnode->cert->nickname) != 0)
+            } else if (cert_label != NULL) {
+                if (strcmp(cert_label, cnode->cert->nickname) != 0)
                     continue;
-            } else if (id != NULL) {
-                if (strcmp(id, cnode->cert->nickname) != 0)
+            } else if (cert_id != NULL) {
+                if (strcmp(cert_id, cnode->cert->nickname) != 0)
                     continue;
             }
         }
         key = PK11_FindPrivateKeyFromCert(slot, cnode->cert,
                                           crypto_pwcb_prep(id_cryptoctx,
-                                                           context));
+                                                           identity, context));
         if (key == NULL) {
             pkiDebug("%s: no key for \"%s\", skipping it\n",
                      __FUNCTION__,
@@ -2046,6 +2139,10 @@ cert_load_certs_with_keys_from_slot(krb5_context context,
     return status;
 }
 
+/*
+ * Reassemble the identity as it was supplied by the user or the library
+ * configuration.
+ */
 static char *
 reassemble_pkcs11_name(PLArenaPool *pool, pkinit_identity_opts *idopts)
 {
@@ -2053,39 +2150,71 @@ reassemble_pkcs11_name(PLArenaPool *pool, pkinit_identity_opts *idopts)
     int n = 0;
     char *ret;
 
-    krb5int_buf_init_dynamic(&buf);
-    krb5int_buf_add(&buf, "PKCS11:");
+    k5_buf_init_dynamic(&buf);
+    k5_buf_add(&buf, "PKCS11:");
     n = 0;
     if (idopts->p11_module_name != NULL) {
-        krb5int_buf_add_fmt(&buf, "%smodule_name=%s",
-                            n++ ? "," : "",
-                            idopts->p11_module_name);
+        k5_buf_add_fmt(&buf, "%smodule_name=%s", n++ ? ":" : "",
+                       idopts->p11_module_name);
     }
     if (idopts->token_label != NULL) {
-        krb5int_buf_add_fmt(&buf, "%stoken=%s",
-                            n++ ? "," : "",
-                            idopts->token_label);
+        k5_buf_add_fmt(&buf, "%stoken=%s", n++ ? ":" : "",
+                       idopts->token_label);
     }
     if (idopts->cert_label != NULL) {
-        krb5int_buf_add_fmt(&buf, "%scertlabel=%s",
-                            n++ ? "," : "",
-                            idopts->cert_label);
+        k5_buf_add_fmt(&buf, "%scertlabel=%s", n++ ? ":" : "",
+                       idopts->cert_label);
     }
     if (idopts->cert_id_string != NULL) {
-        krb5int_buf_add_fmt(&buf, "%scertid=%s",
-                            n++ ? "," : "",
-                            idopts->cert_id_string);
+        k5_buf_add_fmt(&buf, "%scertid=%s", n++ ? ":" : "",
+                       idopts->cert_id_string);
     }
     if (idopts->slotid != PK_NOSLOT) {
-        krb5int_buf_add_fmt(&buf, "%sslotid=%ld",
-                            n++ ? "," : "",
-                            (long)idopts->slotid);
+        k5_buf_add_fmt(&buf, "%sslotid=%ld", n++ ? ":" : "",
+                       (long)idopts->slotid);
     }
-    if (krb5int_buf_len(&buf) >= 0)
-        ret = PORT_ArenaStrdup(pool, krb5int_buf_data(&buf));
+    if (k5_buf_len(&buf) >= 0)
+        ret = PORT_ArenaStrdup(pool, k5_buf_data(&buf));
     else
         ret = NULL;
-    krb5int_free_buf(&buf);
+    k5_free_buf(&buf);
+    return ret;
+}
+
+/*
+ * Assemble an identity string that will distinguish this token from any other
+ * that is accessible through the same module, even if the user didn't specify
+ * a token name.
+ */
+static char *
+reassemble_pkcs11_identity(PLArenaPool *pool, pkinit_identity_opts *idopts,
+                           long slotid, const char *tokenname)
+{
+    struct k5buf buf;
+    int n = 0;
+    char *ret;
+
+    k5_buf_init_dynamic(&buf);
+    k5_buf_add(&buf, "PKCS11:");
+    n = 0;
+    if (idopts->p11_module_name != NULL) {
+        k5_buf_add_fmt(&buf, "%smodule_name=%s",
+                       n++ ? ":" : "",
+                       idopts->p11_module_name);
+    }
+
+    if (slotid != PK_NOSLOT)
+        k5_buf_add_fmt(&buf, "%sslotid=%ld", n++ ? ":" : "", slotid);
+
+    if (tokenname != NULL)
+        k5_buf_add_fmt(&buf, "%stoken=%s", n++ ? ":" : "", tokenname);
+
+    if (k5_buf_len(&buf) >= 0)
+        ret = PORT_ArenaStrdup(pool, k5_buf_data(&buf));
+    else
+        ret = NULL;
+    k5_free_buf(&buf);
+
     return ret;
 }
 
@@ -2098,14 +2227,22 @@ crypto_load_pkcs11(krb5_context context,
 {
     struct _pkinit_identity_crypto_module **id_modules, *module;
     PK11SlotInfo *slot;
-    char *spec;
+    CK_TOKEN_INFO tinfo;
+    char *spec, *identity;
     size_t spec_size;
-    const char *label, *id, *slotname, *tokenname;
+    const char *tokenname;
     SECStatus status;
     int i, j;
 
     if (idopts == NULL)
         return SECFailure;
+
+    /* If no module is specified, use the default module from pkinit.h. */
+    if (idopts->p11_module_name == NULL) {
+        idopts->p11_module_name = strdup(PKCS11_MODNAME);
+        if (idopts->p11_module_name == NULL)
+            return SECFailure;
+    }
 
     /* Build the module spec. */
     spec_size = strlen("library=''") + strlen(idopts->p11_module_name) * 2 + 1;
@@ -2133,15 +2270,27 @@ crypto_load_pkcs11(krb5_context context,
     /* Allocate a bigger list. */
     id_modules = PORT_ArenaZAlloc(id_cryptoctx->pool,
                                   sizeof(id_modules[0]) * (i + 2));
+    if (id_modules == NULL)
+        return SECFailure;
     for (j = 0; j < i; j++)
         id_modules[j] = id_cryptoctx->id_modules[j];
 
-    /* Actually load the module. */
+    /* Actually load the module, or just ref an already-loaded copy. */
     module = PORT_ArenaZAlloc(id_cryptoctx->pool, sizeof(*module));
     if (module == NULL)
         return SECFailure;
     module->name = reassemble_pkcs11_name(id_cryptoctx->pool, idopts);
-    module->module = SECMOD_LoadUserModule(spec, NULL, PR_FALSE);
+    if (module->name == NULL)
+        return SECFailure;
+    module->spec = spec;
+    for (j = 0; j < i; j++) {
+        if (strcmp(module->spec, id_modules[j]->spec) == 0)
+            break;
+    }
+    if (j < i)
+        module->module = SECMOD_ReferenceModule(id_modules[j]->module);
+    else
+        module->module = SECMOD_LoadUserModule(spec, NULL, PR_FALSE);
     if (module->module == NULL) {
         pkiDebug("%s: error loading PKCS11 module \"%s\"",
                  __FUNCTION__, idopts->p11_module_name);
@@ -2150,7 +2299,8 @@ crypto_load_pkcs11(krb5_context context,
     if (!module->module->loaded) {
         pkiDebug("%s: error really loading PKCS11 module \"%s\"",
                  __FUNCTION__, idopts->p11_module_name);
-        SECMOD_UnloadUserModule(module->module);
+        SECMOD_DestroyModule(module->module);
+        module->module = NULL;
         return SECFailure;
     }
     SECMOD_UpdateSlotList(module->module);
@@ -2168,29 +2318,54 @@ crypto_load_pkcs11(krb5_context context,
          (i < module->module->slotCount) &&
          ((slot = module->module->slots[i]) != NULL);
          i++) {
-        if (idopts->token_label != NULL) {
-            label = idopts->token_label;
-            slotname = PK11_GetSlotName(slot);
-            tokenname = PK11_GetTokenName(slot);
-            if ((slotname != NULL) && (tokenname != NULL)) {
-                if ((strcmp(label, slotname) != 0) &&
-                    (strcmp(label, tokenname) != 0))
-                    continue;
-            } else if (slotname != NULL) {
-                if (strcmp(label, slotname) != 0)
-                    continue;
-            } else if (tokenname != NULL) {
-                if (strcmp(label, tokenname) != 0)
-                    continue;
-            }
+        PK11_TokenRefresh(slot);
+        if (idopts->slotid != PK_NOSLOT) {
+            if (idopts->slotid != PK11_GetSlotID(slot))
+                continue;
         }
-        /* Load private keys and their certs from this slot. */
-        label = idopts->cert_label;
-        id = idopts->cert_id_string;
+        tokenname = PK11_GetTokenName(slot);
+        if (tokenname == NULL || strlen(tokenname) == 0)
+            continue;
+        /* If we're looking for a specific token, and this isn't it, go on. */
+        if (idopts->token_label != NULL) {
+            if (strcmp(idopts->cert_label, tokenname) != 0)
+                continue;
+        }
+        /* Assemble a useful identity string, in case of an incomplete one. */
+        identity = reassemble_pkcs11_identity(id_cryptoctx->pool, idopts,
+                                              (long)PK11_GetSlotID(slot),
+                                              tokenname);
+        /*
+         * Skip past all of the loading-certificates-and-keys logic, pick up
+         * the token flags, and call it done for now.
+         */
+        if (id_cryptoctx->defer_id_prompt) {
+            if (!PK11_IsLoggedIn(slot, crypto_pwcb_prep(id_cryptoctx, identity,
+                                                        context)) &&
+                PK11_NeedLogin(slot)) {
+                pkiDebug("%s: reading flags for token \"%s\"\n",
+                         __FUNCTION__, PK11_GetTokenName(slot));
+                if (PK11_GetTokenInfo(slot, &tinfo) == SECSuccess) {
+                    pkinit_set_deferred_id(&id_cryptoctx->deferred_ids,
+                                           identity, tinfo.flags, NULL);
+                }
+            }
+            return SECSuccess;
+        }
+        if (!PK11_IsPresent(slot))
+            continue;
+        /* Load private keys and their certs from this token. */
         if (cert_load_certs_with_keys_from_slot(context, id_cryptoctx,
-                                                slot, label, id) == 0)
+                                                slot, idopts->cert_label,
+                                                idopts->cert_id_string,
+                                                identity) == 0)
             status = SECSuccess;
+        /* If no label was specified, then we've looked at a token, so we're
+         * done. */
+        if (idopts->token_label == NULL)
+            break;
     }
+
     return status;
 }
 
@@ -2340,6 +2515,7 @@ crypto_load_pkcs12(krb5_context context,
     SECItem tmp, password;
     PRBool retry;
     int attempt;
+    char *identity;
 
     if ((slot = crypto_get_p12_slot(id_cryptoctx)) == NULL) {
         pkiDebug("%s: skipping identity PKCS12 bundle \"%s\": "
@@ -2365,11 +2541,15 @@ crypto_load_pkcs12(krb5_context context,
     password.len = 2;
     attempt = 0;
     ctx = NULL;
+    identity = reassemble_pkcs12_name(id_cryptoctx->pool, name);
+    if (identity == NULL)
+        return SECFailure;
+    id_cryptoctx->id_p12_slot.p12name = identity;
     do {
         retry = PR_FALSE;
         ctx = SEC_PKCS12DecoderStart(&password,
                                      slot,
-                                     crypto_pwcb_prep(id_cryptoctx,
+                                     crypto_pwcb_prep(id_cryptoctx, identity,
                                                       context),
                                      NULL, NULL, NULL, NULL, NULL);
         if (ctx == NULL) {
@@ -2389,13 +2569,20 @@ crypto_load_pkcs12(krb5_context context,
             unsigned char *ucs2s;
             size_t i, n_ucs2s;
             SECErrorCodes err;
+
             err = PORT_GetError();
             SEC_PKCS12DecoderFinish(ctx);
             switch (err) {
             case SEC_ERROR_BAD_PASSWORD:
+                if (id_cryptoctx->defer_id_prompt) {
+                    pkinit_set_deferred_id(&id_cryptoctx->deferred_ids,
+                                           identity, 0, NULL);
+                    return SECSuccess;
+                }
                 pkiDebug("%s: prompting for password for %s\n",
                          __FUNCTION__, name);
-                newpass = crypto_pwfn(name, (attempt > 0), id_cryptoctx);
+                newpass = crypto_pwfn(name, PR_FALSE, 0, (attempt > 0),
+                                      id_cryptoctx);
                 attempt++;
                 if (newpass != NULL) {
                     /* convert to 16-bit big-endian */
@@ -2415,7 +2602,6 @@ crypto_load_pkcs12(krb5_context context,
                 }
                 break;
             default:
-                SEC_PKCS12DecoderFinish(ctx);
                 break;
             }
             pkiDebug("%s: skipping identity PKCS12 bundle \"%s\": "
@@ -2443,14 +2629,12 @@ crypto_load_pkcs12(krb5_context context,
             free(password.data);
         return SECFailure;
     }
-    id_cryptoctx->id_p12_slot.p12name =
-        reassemble_pkcs12_name(id_cryptoctx->pool, name);
     pkiDebug("%s: imported PKCS12 bundle \"%s\"\n", __FUNCTION__, name);
     SEC_PKCS12DecoderFinish(ctx);
     if (password.data != emptypwd)
         free(password.data);
     if (cert_load_certs_with_keys_from_slot(context, id_cryptoctx, slot,
-                                            NULL, NULL) == 0)
+                                            NULL, NULL, identity) == 0)
         return SECSuccess;
     else
         return SECFailure;
@@ -2498,16 +2682,14 @@ crypto_load_files(krb5_context context,
                   pkinit_identity_crypto_context id_cryptoctx)
 {
     PK11SlotInfo *slot;
-    struct _pkinit_identity_crypto_file *obj, **id_objects;
-    PRBool permanent, match;
-    CERTCertificate *cert;
-    CERTCertList *before, *after;
-    CERTCertListNode *anode, *bnode;
+    struct _pkinit_identity_crypto_file *cobj, *kobj, **id_objects;
+    PRBool permanent;
     SECKEYPrivateKey *key;
     CK_ATTRIBUTE attrs[4];
     CK_BBOOL cktrue = CK_TRUE, cktrust;
     CK_OBJECT_CLASS keyclass = CKO_PRIVATE_KEY, certclass = CKO_CERTIFICATE;
-    SECItem a, b, tmp, *crl, **crls;
+    CERTCertificate *cert;
+    SECItem tmp, *crl, **crls;
     SECStatus status;
     int i, j, n_attrs, n_objs, n_crls;
 
@@ -2525,53 +2707,10 @@ crypto_load_files(krb5_context context,
     }
     if ((certfile == NULL) && (crlfile == NULL))
         return SECFailure;
-    /* If we're told to load a key, then we know for sure that it's a
-     * key+cert combination, so go ahead and try to load the key first.
-     * That way, if we're just guessing that there's a key, and we're
-     * wrong, we'll just skip the cert. */
-    status = SECSuccess;
-    if (keyfile != NULL) {
-        n_attrs = 0;
-        crypto_set_attributes(&attrs[n_attrs++], CKA_CLASS,
-                              &keyclass, sizeof(keyclass));
-        crypto_set_attributes(&attrs[n_attrs++], CKA_TOKEN,
-                              &cktrue, sizeof(cktrue));
-        crypto_set_attributes(&attrs[n_attrs++], CKA_LABEL,
-                              (char *) keyfile, strlen(keyfile) + 1);
-        permanent = PR_FALSE;   /* set lifetime to "session" */
-        obj = PORT_ArenaZAlloc(id_cryptoctx->pool, sizeof(*obj));
-        if (obj == NULL)
-            return SECFailure;
-        obj->obj = PK11_CreateGenericObject(slot, attrs, n_attrs, permanent);
-        if (obj->obj == NULL) {
-            pkiDebug("%s: error loading key \"%s\"\n", __FUNCTION__, keyfile);
-            status = SECFailure;
-        } else {
-            pkiDebug("%s: loaded key \"%s\"\n", __FUNCTION__, keyfile);
-            status = SECSuccess;
-            /* Add it to the list of objects that we're keeping. */
-            if (id_cryptoctx->id_objects != NULL)
-                for (i = 0; id_cryptoctx->id_objects[i] != NULL; i++)
-                    continue;
-            else
-                i = 0;
-            id_objects = PORT_ArenaZAlloc(id_cryptoctx->pool,
-                                          sizeof(id_objects[0]) * (i + 2));
-            if (id_objects != NULL) {
-                n_objs = i;
-                for (i = 0; i < n_objs; i++)
-                    id_objects[i] = id_cryptoctx->id_objects[i];
-                id_objects[i++] = obj;
-                id_objects[i++] = NULL;
-                id_cryptoctx->id_objects = id_objects;
-            }
-        }
-    }
 
-    /* If we loaded a key, or there wasn't one, see if we were told to
-     * load a cert. */
-    if ((status == SECSuccess) && (certfile != NULL)) {
-        before = PK11_ListCertsInSlot(slot);
+    /* Load the certificate first to work around RHBZ#859535. */
+    cobj = NULL;
+    if (certfile != NULL) {
         n_attrs = 0;
         crypto_set_attributes(&attrs[n_attrs++], CKA_CLASS,
                               &certclass, sizeof(certclass));
@@ -2583,15 +2722,18 @@ crypto_load_files(krb5_context context,
         crypto_set_attributes(&attrs[n_attrs++], CKA_TRUST,
                               &cktrust, sizeof(cktrust));
         permanent = PR_FALSE;   /* set lifetime to "session" */
-        obj = PORT_ArenaZAlloc(id_cryptoctx->pool, sizeof(*obj));
-        if (obj == NULL)
+        cobj = PORT_ArenaZAlloc(id_cryptoctx->pool, sizeof(*cobj));
+        if (cobj == NULL)
             return SECFailure;
-        obj->name = reassemble_files_name(id_cryptoctx->pool,
-                                          certfile, keyfile);
-        obj->obj = PK11_CreateGenericObject(slot, attrs, n_attrs, permanent);
-        if (obj->obj == NULL) {
-            pkiDebug("%s: error loading %scertificate \"%s\"\n",
-                     __FUNCTION__, cert_mark_trusted ? "CA " : "", certfile);
+        cobj->name = reassemble_files_name(id_cryptoctx->pool,
+                                           certfile, keyfile);
+        if (cobj->name == NULL)
+            return SECFailure;
+        cobj->obj = PK11_CreateGenericObject(slot, attrs, n_attrs, permanent);
+        if (cobj->obj == NULL) {
+            pkiDebug("%s: error loading %scertificate \"%s\": %s\n",
+                     __FUNCTION__, cert_mark_trusted ? "CA " : "", certfile,
+                     PORT_ErrorToName(PORT_GetError()));
             status = SECFailure;
         } else {
             pkiDebug("%s: loaded %scertificate \"%s\"\n",
@@ -2609,76 +2751,130 @@ crypto_load_files(krb5_context context,
                 n_objs = i;
                 for (i = 0; i < n_objs; i++)
                     id_objects[i] = id_cryptoctx->id_objects[i];
-                id_objects[i++] = obj;
+                id_objects[i++] = cobj;
+                id_objects[i++] = NULL;
+                id_cryptoctx->id_objects = id_objects;
+            }
+            /* Find the certificate that goes with this generic object. */
+            memset(&tmp, 0, sizeof(tmp));
+            status = PK11_ReadRawAttribute(PK11_TypeGeneric, cobj->obj,
+                                           CKA_VALUE, &tmp);
+            if (status == SECSuccess) {
+                cobj->cert = CERT_FindCertByDERCert(CERT_GetDefaultCertDB(),
+                                                    &tmp);
+                SECITEM_FreeItem(&tmp, PR_FALSE);
+            } else {
+                pkiDebug("%s: error locating certificate \"%s\"\n",
+                         __FUNCTION__, certfile);
+            }
+            /* Save a reference to the right list. */
+            if (cobj->cert != NULL) {
+                cert = CERT_DupCertificate(cobj->cert);
+                if (cert == NULL)
+                    return SECFailure;
+                if (cert_self) {
+                    /* Add to the identity list. */
+                    if (cert_maybe_add_to_list(id_cryptoctx->id_certs,
+                                               cert) != SECSuccess)
+                        status = SECFailure;
+                } else if (cert_mark_trusted) {
+                    /* Add to the CA list. */
+                    if (cert_maybe_add_to_list(id_cryptoctx->ca_certs,
+                                               cert) != SECSuccess)
+                        status = SECFailure;
+                } else {
+                    /* Don't just lose the reference. */
+                    CERT_DestroyCertificate(cert);
+                }
+            }
+        }
+    }
+
+    /* Now load what should be the corresponding private key. */
+    kobj = NULL;
+    if (status == SECSuccess && keyfile != NULL) {
+        n_attrs = 0;
+        crypto_set_attributes(&attrs[n_attrs++], CKA_CLASS,
+                              &keyclass, sizeof(keyclass));
+        crypto_set_attributes(&attrs[n_attrs++], CKA_TOKEN,
+                              &cktrue, sizeof(cktrue));
+        crypto_set_attributes(&attrs[n_attrs++], CKA_LABEL,
+                              (char *)keyfile, strlen(keyfile) + 1);
+        permanent = PR_FALSE;   /* set lifetime to "session" */
+        kobj = PORT_ArenaZAlloc(id_cryptoctx->pool, sizeof(*kobj));
+        if (kobj == NULL)
+            return SECFailure;
+        kobj->obj = PK11_CreateGenericObject(slot, attrs, n_attrs, permanent);
+        if (kobj->obj == NULL) {
+            pkiDebug("%s: error loading key \"%s\": %s\n", __FUNCTION__,
+                     keyfile, PORT_ErrorToName(PORT_GetError()));
+            status = SECFailure;
+        } else {
+            pkiDebug("%s: loaded key \"%s\"\n", __FUNCTION__, keyfile);
+            status = SECSuccess;
+            /* Add it to the list of objects that we're keeping. */
+            if (id_cryptoctx->id_objects != NULL) {
+                for (i = 0; id_cryptoctx->id_objects[i] != NULL; i++)
+                    continue;
+            } else {
+                i = 0;
+            }
+            id_objects = PORT_ArenaZAlloc(id_cryptoctx->pool,
+                                          sizeof(id_objects[0]) * (i + 2));
+            if (id_objects != NULL) {
+                n_objs = i;
+                for (i = 0; i < n_objs; i++)
+                    id_objects[i] = id_cryptoctx->id_objects[i];
+                id_objects[i++] = kobj;
                 id_objects[i++] = NULL;
                 id_cryptoctx->id_objects = id_objects;
             }
         }
-        /* Add any certs which are in the slot now, but which weren't
-         * before, to the right list of certs.  (I don't see an API to
-         * get the certificate from the generic object that we just
-         * created, so we do it the hard way.) */
-        after = PK11_ListCertsInSlot(slot);
-        if (after != NULL) {
-            for (anode = CERT_LIST_HEAD(after);
-                 (anode != NULL) &&
-                     (anode->cert != NULL) &&
-                     !CERT_LIST_END(anode, after);
-                 anode = CERT_LIST_NEXT(anode)) {
-                match = PR_FALSE;
-                a = anode->cert->derCert;
-                if (before != NULL) {
-                    for (bnode = CERT_LIST_HEAD(before);
-                         (bnode != NULL) &&
-                             (bnode->cert != NULL) &&
-                             !CERT_LIST_END(bnode, before);
-                         bnode = CERT_LIST_NEXT(bnode)) {
-                        b = bnode->cert->derCert;
-                        if (SECITEM_ItemsAreEqual(&a, &b)) {
-                            match = PR_TRUE;
-                            break;
-                        }
-                    }
-                }
-                if (!match) {
-                    cert = CERT_DupCertificate(anode->cert);
-                    if (cert_self) {
-                        /* Add to the identity list. */
-                        if (cert_maybe_add_to_list
-                            (id_cryptoctx->id_certs, cert) != SECSuccess) {
-                            status = SECFailure;
-                        }
-                        obj->cert = CERT_DupCertificate(cert);
-                    } else if (cert_mark_trusted) {
-                        /* Add to the CA list. */
-                        if (cert_maybe_add_to_list
-                            (id_cryptoctx->ca_certs, cert) != SECSuccess) {
-                            status = SECFailure;
-                        }
-                    } else {
-                        /* Don't just lose the ref. */
-                        CERT_DestroyCertificate(cert);
-                    }
-                }
+
+        /* "Log in" (provide an encryption password) if the PEM slot now
+         * requires it. */
+        PK11_TokenRefresh(slot);
+
+        /*
+         * Unlike most tokens, this one won't self-destruct if we throw wrong
+         * passwords at it, but it will cause the module to clear the
+         * needs-login flag so that we can continue importing PEM items.
+         */
+        if (!PK11_IsLoggedIn(slot, crypto_pwcb_prep(id_cryptoctx, cobj->name,
+                                                    context)) &&
+            PK11_NeedLogin(slot)) {
+            pkiDebug("%s: logging in to token \"%s\"\n",
+                     __FUNCTION__, PK11_GetTokenName(slot));
+            if (PK11_Authenticate(slot, PR_TRUE,
+                                  crypto_pwcb_prep(id_cryptoctx, cobj->name,
+                                                   context)) != SECSuccess) {
+                pkiDebug("%s: error logging into \"%s\": %s, skipping\n",
+                         __FUNCTION__, PK11_GetTokenName(slot),
+                         PORT_ErrorToName(PORT_GetError()));
+                status = SECFailure;
+                PK11_DestroyGenericObject(kobj->obj);
+                kobj->obj = NULL;
             }
-            CERT_DestroyCertList(after);
         }
-        if (before != NULL) {
-            CERT_DestroyCertList(before);
-        }
-        if ((keyfile != NULL) && (obj->cert != NULL)) {
-            key = PK11_FindPrivateKeyFromCert(slot, obj->cert,
+
+        /* If we loaded a key and a certificate, see if they match. */
+        if (cobj != NULL && cobj->cert != NULL && kobj->obj != NULL) {
+            key = PK11_FindPrivateKeyFromCert(slot, cobj->cert,
                                               crypto_pwcb_prep(id_cryptoctx,
+                                                               cobj->name,
                                                                context));
             if (key == NULL) {
-                pkiDebug("%s: no key private found for \"%s\"(%s), "
+                pkiDebug("%s: no private key found for \"%s\"(%s), "
                          "even though we just loaded that key?\n",
                          __FUNCTION__,
-                         obj->cert->nickname ?
-                         obj->cert->nickname : "(no name)",
+                         cobj->cert->nickname ?
+                         cobj->cert->nickname : "(no name)",
                          certfile);
-            } else
-                SECKEY_DestroyPrivateKey(req_cryptoctx->client_dh_privkey);
+                status = SECFailure;
+            } else {
+                /* We don't need this reference to the key. */
+                SECKEY_DestroyPrivateKey(key);
+            }
         }
     }
 
@@ -2858,6 +3054,8 @@ crypto_load_nssdb(krb5_context context,
     if (userdb == NULL)
         return SECFailure;
     userdb->name = reassemble_nssdb_name(id_cryptoctx->pool, configdir);
+    if (userdb->name == NULL)
+        return SECFailure;
     userdb->userdb = SECMOD_OpenUserDB(p);
     if (userdb->userdb == NULL) {
         pkiDebug("%s: error loading NSS cert database \"%s\"\n",
@@ -2872,11 +3070,13 @@ crypto_load_nssdb(krb5_context context,
     id_cryptoctx->id_userdbs = id_userdbs;
 
     /* Load the CAs from the database. */
-    cert_load_ca_certs_from_slot(context, id_cryptoctx, userdb->userdb);
+    cert_load_ca_certs_from_slot(context, id_cryptoctx, userdb->userdb,
+                                 userdb->name);
 
     /* Load the keys from the database. */
     return cert_load_certs_with_keys_from_slot(context, id_cryptoctx,
-                                               userdb->userdb, NULL, NULL);
+                                               userdb->userdb, NULL, NULL,
+                                               userdb->name);
 }
 
 /* Load up a certificate and associated key. */
@@ -2886,12 +3086,16 @@ crypto_load_certs(krb5_context context,
                   pkinit_req_crypto_context req_cryptoctx,
                   pkinit_identity_opts *idopts,
                   pkinit_identity_crypto_context id_cryptoctx,
-                  krb5_principal princ)
+                  krb5_principal princ,
+                  krb5_boolean defer_id_prompts)
 {
     SECStatus status;
 
+    id_cryptoctx->defer_id_prompt = defer_id_prompts;
+
     switch (idopts->idtype) {
     case IDTYPE_FILE:
+        id_cryptoctx->defer_with_dummy_password = TRUE;
         status = crypto_load_files(context,
                                    plg_cryptoctx,
                                    req_cryptoctx,
@@ -2899,50 +3103,57 @@ crypto_load_certs(krb5_context context,
                                    idopts->key_filename,
                                    NULL, PR_TRUE, PR_FALSE, id_cryptoctx);
         if (status != SECSuccess) {
-            pkiDebug("%s: error loading files \"%s\" and \"%s\"\n",
+            pkiDebug("%s: error loading files \"%s\" and \"%s\": %s\n",
                      __FUNCTION__, idopts->cert_filename,
-                     idopts->key_filename);
-            return ENOMEM;
+                     idopts->key_filename, PORT_ErrorToName(PORT_GetError()));
+            return defer_id_prompts ? 0 : ENOMEM;
         }
         return 0;
         break;
     case IDTYPE_NSS:
+        id_cryptoctx->defer_with_dummy_password = FALSE;
         status = crypto_load_nssdb(context,
                                    plg_cryptoctx,
                                    req_cryptoctx,
                                    idopts->cert_filename, id_cryptoctx);
         if (status != SECSuccess) {
-            pkiDebug("%s: error loading NSS certdb \"%s\"\n",
-                     __FUNCTION__, idopts->cert_filename);
+            pkiDebug("%s: error loading NSS certdb \"%s\": %s\n",
+                     __FUNCTION__, idopts->cert_filename,
+                     PORT_ErrorToName(PORT_GetError()));
             return ENOMEM;
         }
         return 0;
         break;
     case IDTYPE_DIR:
+        id_cryptoctx->defer_with_dummy_password = TRUE;
         status = crypto_load_dir(context,
                                  plg_cryptoctx,
                                  req_cryptoctx,
                                  idopts->cert_filename,
                                  PR_TRUE, PR_FALSE, PR_FALSE, id_cryptoctx);
         if (status != SECSuccess) {
-            pkiDebug("%s: error loading directory \"%s\"\n",
-                     __FUNCTION__, idopts->cert_filename);
-            return ENOMEM;
+            pkiDebug("%s: error loading directory \"%s\": %s\n",
+                     __FUNCTION__, idopts->cert_filename,
+                     PORT_ErrorToName(PORT_GetError()));
+            return defer_id_prompts ? 0 : ENOMEM;
         }
         return 0;
         break;
     case IDTYPE_PKCS11:
+        id_cryptoctx->defer_with_dummy_password = FALSE;
         status = crypto_load_pkcs11(context,
                                     plg_cryptoctx,
                                     req_cryptoctx, idopts, id_cryptoctx);
         if (status != SECSuccess) {
-            pkiDebug("%s: error loading module \"%s\"\n",
-                     __FUNCTION__, idopts->p11_module_name);
+            pkiDebug("%s: error loading module \"%s\": %s\n",
+                     __FUNCTION__, idopts->p11_module_name,
+                     PORT_ErrorToName(PORT_GetError()));
             return ENOMEM;
         }
         return 0;
         break;
     case IDTYPE_PKCS12:
+        id_cryptoctx->defer_with_dummy_password = FALSE;
         status = crypto_load_pkcs12(context,
                                     plg_cryptoctx,
                                     req_cryptoctx,
@@ -2967,7 +3178,12 @@ crypto_free_cert_info(krb5_context context,
                       pkinit_req_crypto_context req_cryptoctx,
                       pkinit_identity_crypto_context id_cryptoctx)
 {
-    return 0;   /* Maybe should we nuke the id_certs list here? */
+    /* Mimic the OpenSSL-based implementation's check first. */
+    if (id_cryptoctx == NULL)
+        return EINVAL;
+
+    /* Maybe should we nuke the id_certs list here? */
+    return 0;
 }
 
 /* Count how many candidate "self" certificates and keys we have.  We could as
@@ -3166,12 +3382,8 @@ crypto_cert_get_matching_data(krb5_context context,
     md->ku_bits = cert_get_ku_bits(context, cert_handle->cert);
     md->eku_bits = cert_get_eku_bits(context, cert_handle->cert, PR_FALSE);
     if (cert_retrieve_cert_sans(context, cert_handle->cert,
-                                &md->sans, &md->sans, NULL) != 0) {
-        free(md->subject_dn);
-        free(md->issuer_dn);
-        free(md);
-        return ENOMEM;
-    }
+                                &md->sans, &md->sans, NULL) != 0)
+        md->sans = NULL;
     *ret_data = md;
     return 0;
 }
@@ -3416,7 +3628,7 @@ pkinit_create_td_dh_parameters(krb5_context context,
     SECItem tmp, *oid;
     krb5_algorithm_identifier id[sizeof(oakley_groups) /
                                  sizeof(oakley_groups[0])];
-    const krb5_algorithm_identifier *ids[(sizeof(id) / sizeof(id[0])) + 1];
+    krb5_algorithm_identifier *ids[(sizeof(id) / sizeof(id[0])) + 1];
     unsigned int i, j;
     krb5_data *data;
     krb5_pa_data **typed_data;
@@ -3525,7 +3737,7 @@ pkinit_create_td_invalid_certificate(krb5_context context,
 {
     CERTCertificate *invalid;
     krb5_external_principal_identifier id;
-    const krb5_external_principal_identifier *ids[2];
+    krb5_external_principal_identifier *ids[2];
     struct issuer_and_serial_number isn;
     krb5_data *data;
     SECItem item;
@@ -3591,7 +3803,7 @@ pkinit_create_td_trusted_certifiers(krb5_context context,
                                     pkinit_identity_crypto_context
                                     id_cryptoctx, krb5_pa_data ***pa_data)
 {
-    const krb5_external_principal_identifier **ids;
+    krb5_external_principal_identifier **ids;
     krb5_external_principal_identifier *id;
     struct issuer_and_serial_number isn;
     krb5_data *data;
@@ -3617,7 +3829,7 @@ pkinit_create_td_trusted_certifiers(krb5_context context,
     /* Get the list of tokens.  All of them. */
     slist = PK11_GetAllTokens(CKM_INVALID_MECHANISM, PR_FALSE,
                               PR_FALSE,
-                              crypto_pwcb_prep(id_cryptoctx, context));
+                              crypto_pwcb_prep(id_cryptoctx, NULL, context));
     if (slist == NULL) {
         CERT_DestroyCertList(clist);
         return ENOENT;
@@ -3627,9 +3839,9 @@ pkinit_create_td_trusted_certifiers(krb5_context context,
     i = 0;
     status = SECSuccess;
     for (sle = slist->head; sle != NULL; sle = sle->next) {
-        /* Skip over slots we would still need to log in to use. */
+        /* Skip over slots we would still need to log in to before using. */
         if (!PK11_IsLoggedIn(sle->slot,
-                             crypto_pwcb_prep(id_cryptoctx, context)) &&
+                             crypto_pwcb_prep(id_cryptoctx, NULL, context)) &&
             PK11_NeedLogin(sle->slot)) {
             pkiDebug("%s: skipping token \"%s\"\n",
                      __FUNCTION__, PK11_GetTokenName(sle->slot));
@@ -4389,6 +4601,7 @@ cert_retrieve_cert_sans(krb5_context context,
             break;
         }
     }
+    PORT_FreeArena(pool, PR_TRUE);
 
     return 0;
 }
@@ -4860,6 +5073,7 @@ crypto_check_for_revocation_information(CERTCertificate *cert,
             pkiDebug("%s: have CRL for \"%s\"\n", __FUNCTION__,
                      cert->issuerName);
         } else {
+            SEC_DestroyCrl(crl);
             if (allow_ocsp_checking) {
                 /* Check if the cert points to an OCSP responder. */
                 if (!crypto_cert_has_ocsp_responder(cert)) {
@@ -4879,6 +5093,7 @@ crypto_check_for_revocation_information(CERTCertificate *cert,
         if (crypto_is_cert_trusted(issuer, usage)) {
             pkiDebug("%s: \"%s\" is a trusted CA\n", __FUNCTION__,
                      issuer->subjectName);
+            CERT_DestroyCertificate(issuer);
             return 0;
         }
         /* Move on to the next link in the chain. */
@@ -4887,13 +5102,21 @@ crypto_check_for_revocation_information(CERTCertificate *cert,
         if (issuer == NULL) {
             pkiDebug("%s: unable to find issuer for \"%s\"\n", __FUNCTION__,
                      cert->subjectName);
+            /* Don't leak the reference to the last intermediate. */
+            CERT_DestroyCertificate(cert);
             return -1;
         }
         if (SECITEM_ItemsAreEqual(&cert->derCert, &issuer->derCert)) {
             pkiDebug("%s: \"%s\" is self-signed, but not trusted\n",
                      __FUNCTION__, cert->subjectName);
+            /* Don't leak the references to the self-signed cert. */
+            CERT_DestroyCertificate(issuer);
+            CERT_DestroyCertificate(cert);
             return -1;
         }
+        /* Don't leak the reference to the just-traversed intermediate. */
+        CERT_DestroyCertificate(cert);
+        cert = NULL;
     }
     return -1;
 }
@@ -4945,7 +5168,7 @@ crypto_signeddata_common_verify(krb5_context context,
                                              NULL, NULL,
                                              crypto_pwcb,
                                              crypto_pwcb_prep(id_cryptoctx,
-                                                              context),
+                                                              NULL, context),
                                              NULL, NULL);
         if (ecmsg == NULL) {
             pkiDebug("%s: plain-data not parsable\n", __FUNCTION__);
@@ -5195,7 +5418,8 @@ cms_envelopeddata_verify(krb5_context context,
                                        NULL, NULL,
                                        crypto_pwcb,
                                        crypto_pwcb_prep(id_cryptoctx,
-                                                        context), NULL, NULL);
+                                                        NULL, context),
+                                       NULL, NULL);
     if (msg == NULL)
         return ENOMEM;
 
@@ -5370,7 +5594,8 @@ cms_signeddata_create(krb5_context context,
     if (NSS_CMSDEREncode(msg, &plain, &encoded, pool) != SECSuccess) {
         NSS_CMSMessage_Destroy(msg);
         PORT_FreeArena(pool, PR_TRUE);
-        pkiDebug("%s: error encoding signed-data\n", __FUNCTION__);
+        pkiDebug("%s: error encoding signed-data: %s\n", __FUNCTION__,
+                 PORT_ErrorToName(PORT_GetError()));
         return ENOMEM;
     }
     if (secitem_to_buf_len(&encoded, signed_data, signed_data_len) != 0) {
@@ -5474,7 +5699,8 @@ cms_signeddata_verify(krb5_context context,
                                        NULL, NULL,
                                        crypto_pwcb,
                                        crypto_pwcb_prep(id_cryptoctx,
-                                                        context), NULL, NULL);
+                                                        NULL, context),
+                                       NULL, NULL);
     if (msg == NULL)
         return ENOMEM;
 
@@ -5537,4 +5763,38 @@ cms_signeddata_verify(krb5_context context,
     PORT_FreeArena(pool, PR_TRUE);
 
     return 0;
+}
+
+/*
+ * Add an item to the pkinit_identity_crypto_context's list of deferred
+ * identities.
+ */
+krb5_error_code
+crypto_set_deferred_id(krb5_context context,
+                       pkinit_identity_crypto_context id_cryptoctx,
+                       const char *identity, const char *password)
+{
+    unsigned long ck_flags;
+
+    ck_flags = pkinit_get_deferred_id_flags(id_cryptoctx->deferred_ids,
+                                            identity);
+    return pkinit_set_deferred_id(&id_cryptoctx->deferred_ids,
+                                  identity, ck_flags, password);
+}
+
+/*
+ * Retrieve a read-only copy of the pkinit_identity_crypto_context's list of
+ * deferred identities, sure to be valid only until the next time someone calls
+ * either pkinit_set_deferred_id() or crypto_set_deferred_id().
+ */
+const pkinit_deferred_id *
+crypto_get_deferred_ids(krb5_context context,
+                        pkinit_identity_crypto_context id_cryptoctx)
+{
+    pkinit_deferred_id *deferred;
+    const pkinit_deferred_id *ret;
+
+    deferred = id_cryptoctx->deferred_ids;
+    ret = (const pkinit_deferred_id *)deferred;
+    return ret;
 }

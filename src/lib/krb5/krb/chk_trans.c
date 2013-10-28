@@ -242,7 +242,8 @@ foreach_realm (krb5_error_code (*fn)(krb5_data *comp,void *data), void *data,
                 if (p == transit->data) {
                     if (crealm->length >= MAXLEN)
                         return KRB5KRB_AP_ERR_ILL_CR_TKT;
-                    memcpy (last, crealm->data, crealm->length);
+                    if (crealm->length > 0)
+                        memcpy (last, crealm->data, crealm->length);
                     last[crealm->length] = '\0';
                     last_component.length = crealm->length;
                 }
@@ -298,7 +299,7 @@ check_realm_in_list (krb5_data *realm, void *data)
 
     Tprintf ((".. checking '%.*s'\n", (int) realm->length, realm->data));
     for (i = 0; cdata->tgs[i]; i++) {
-        if (data_eq (*krb5_princ_realm (cdata->ctx, cdata->tgs[i]), *realm))
+        if (data_eq (cdata->tgs[i]->realm, *realm))
             return 0;
     }
     Tprintf (("BAD!\n"));

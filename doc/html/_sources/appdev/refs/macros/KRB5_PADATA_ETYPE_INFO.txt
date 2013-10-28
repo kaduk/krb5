@@ -11,7 +11,7 @@ KRB5_PADATA_ETYPE_INFO
 
 Etype info for preauth.
 
-
+RFC 4120
 
 ============================= ======================
 ``KRB5_PADATA_ETYPE_INFO``       ``11``

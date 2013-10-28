@@ -44,12 +44,12 @@ gss_OID_set_desc mechset_iakerb = { 1, &mech_iakerb };
 static void
 display_status(const char *msg, OM_uint32 code, int type)
 {
-    OM_uint32 maj_stat, min_stat, msg_ctx = 0;
+    OM_uint32 min_stat, msg_ctx = 0;
     gss_buffer_desc buf;
 
     do {
-        maj_stat = gss_display_status(&min_stat, code, type, GSS_C_NULL_OID,
-                                      &msg_ctx, &buf);
+        (void)gss_display_status(&min_stat, code, type, GSS_C_NULL_OID,
+                                 &msg_ctx, &buf);
         fprintf(stderr, "%s: %.*s\n", msg, (int)buf.length, (char *)buf.value);
         (void)gss_release_buffer(&min_stat, &buf);
     } while (msg_ctx != 0);
@@ -106,6 +106,46 @@ import_name(const char *str)
     major = gss_import_name(&minor, &buf, nametype, &name);
     check_gsserr("gss_import_name", major, minor);
     return name;
+}
+
+void
+establish_contexts(gss_OID imech, gss_cred_id_t icred, gss_cred_id_t acred,
+                   gss_name_t tname, OM_uint32 flags, gss_ctx_id_t *ictx,
+                   gss_ctx_id_t *actx, gss_name_t *src_name, gss_OID *amech,
+                   gss_cred_id_t *deleg_cred)
+{
+    OM_uint32 minor, imaj, amaj;
+    gss_buffer_desc itok, atok;
+
+    *ictx = *actx = GSS_C_NO_CONTEXT;
+    imaj = amaj = GSS_S_CONTINUE_NEEDED;
+    itok.value = atok.value = NULL;
+    itok.length = atok.length = 0;
+    for (;;) {
+        (void)gss_release_buffer(&minor, &itok);
+        imaj = gss_init_sec_context(&minor, icred, ictx, tname, imech, flags,
+                                    GSS_C_INDEFINITE,
+                                    GSS_C_NO_CHANNEL_BINDINGS, &atok, NULL,
+                                    &itok, NULL, NULL);
+        check_gsserr("gss_init_sec_context", imaj, minor);
+        if (amaj == GSS_S_COMPLETE)
+            break;
+
+        (void)gss_release_buffer(&minor, &atok);
+        amaj = gss_accept_sec_context(&minor, actx, acred, &itok,
+                                      GSS_C_NO_CHANNEL_BINDINGS, src_name,
+                                      amech, &atok, NULL, NULL, deleg_cred);
+        check_gsserr("gss_accept_sec_context", amaj, minor);
+        (void)gss_release_buffer(&minor, &itok);
+        if (imaj == GSS_S_COMPLETE)
+            break;
+    }
+
+    if (imaj != GSS_S_COMPLETE || amaj != GSS_S_COMPLETE)
+        errout("One side wants to continue after the other is done");
+
+    (void)gss_release_buffer(&minor, &itok);
+    (void)gss_release_buffer(&minor, &atok);
 }
 
 void

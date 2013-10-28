@@ -14,7 +14,7 @@ krb5_cc_end_seq_get -  Finish a series of sequential processing credential cache
 
 	          **[in]** **cache** - Credential cache handle
 
-	          **[inout]** **cursor** - Cursor
+	          **[in]** **cursor** - Cursor
 
 
 ..

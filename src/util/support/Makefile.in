@@ -1,7 +1,6 @@
 mydir=util$(S)support
 BUILDTOP=$(REL)..$(S)..
 RELDIR=../util/support
-DEFS=
 
 ##DOS##BUILDTOP = ..\..
 ##DOS##LIBNAME=$(OUTPRE)k5sprt32.lib
@@ -11,10 +10,6 @@ DEFS=
 ##DOS##WIN64OBJFILE=$(OUTPRE)k5sprt64.lst
 
 SED = sed
-
-KRB5_RUN_ENV= @KRB5_RUN_ENV@
-PROG_LIBPATH=-L$(TOPLIBD)
-PROG_RPATH=$(KRB5_LIBDIR)
 
 LIBBASE=krb5support
 LIBMAJOR=@SUPPORTLIB_MAJOR@
@@ -76,6 +71,7 @@ STLIBOBJS= \
 	path.o \
 	base64.o \
 	json.o \
+	bcmp.o \
 	$(GETTIMEOFDAY_ST_OBJ) \
 	$(IPC_ST_OBJ) \
 	$(STRLCPY_ST_OBJ) \
@@ -97,6 +93,7 @@ LIBOBJS= \
 	$(OUTPRE)path.$(OBJEXT) \
 	$(OUTPRE)base64.$(OBJEXT) \
 	$(OUTPRE)json.$(OBJEXT) \
+	$(OUTPRE)bcmp.$(OBJEXT) \
 	$(GETTIMEOFDAY_OBJ) \
 	$(IPC_OBJ) \
 	$(STRLCPY_OBJ) \
@@ -104,15 +101,10 @@ LIBOBJS= \
 	$(PRINTF_OBJ) \
 	$(MKSTEMP_OBJ)
 
-STOBJLISTS=OBJS.ST
-
-INSTALLFILE = cp
-
-LOCALINCLUDES=-I. -I$(srcdir)
-
 SRCS=\
 	$(srcdir)/threads.c \
 	$(srcdir)/init-addrinfo.c \
+	$(srcdir)/plugins.c \
 	$(srcdir)/errors.c \
 	$(srcdir)/k5buf.c \
 	$(srcdir)/gmt_mktime.c \
@@ -131,13 +123,12 @@ SRCS=\
 	$(srcdir)/zap.c \
 	$(srcdir)/path.c \
 	$(srcdir)/base64.c \
-	$(srcdir)/json.c
+	$(srcdir)/json.c \
+	$(srcdir)/bcmp.c
 
 SHLIB_EXPDEPS =
 # Add -lm if dumping thread stats, for sqrt.
 SHLIB_EXPLIBS= $(LIBS) $(DL_LIB)
-SHLIB_DIRS=
-SHLIB_RDIRS=$(KRB5_LIBDIR)
 
 DEPLIBS=
 
@@ -218,7 +209,7 @@ check-unix:: $(TEST_PROGS)
 clean::
 	$(RM) t_k5buf.o t_k5buf t_unal.o t_unal path_win.o path_win
 	$(RM) t_path_win.o t_path_win t_path.o t_path t_base64.o t_base64
-	$(RM) libkrb5support.exports
+	$(RM) t_json.o t_json libkrb5support.exports
 
 @lib_frag@
 @libobj_frag@

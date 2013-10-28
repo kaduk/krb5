@@ -45,6 +45,6 @@ krb5_kt_have_content -  Check if a keytab exists and contains entries.
 
 .. note::
 
-	 First introduced in 1.11
+	 New in 1.11
  
 

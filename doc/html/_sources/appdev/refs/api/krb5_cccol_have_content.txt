@@ -43,6 +43,6 @@ krb5_cccol_have_content -  Check if the credential cache collection contains any
 
 .. note::
 
-	 First introduced in 1.11
+	 New in 1.11
  
 

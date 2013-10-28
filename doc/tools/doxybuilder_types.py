@@ -35,7 +35,7 @@ exclude_types = [ 'TRUE', 'FALSE', 'KRB5_ATTR_DEPRECATED',
                   'KRB5_GENERAL__', 'KRB5_KEYUSAGE_PA_REFERRAL',
                   'KRB5_OLD_CRYPTO',
                   'KRB5INT_BEGIN_DECLS', 'KRB5INT_END_DECLS',
-                  'krb5_cc_ops', 'krb5_octet_data', 'krb5_responder_context' ]
+                  'krb5_cc_ops', 'krb5_octet_data' ]
 
 class DoxyTypes(object):
     def __init__(self, xmlpath):
@@ -275,6 +275,10 @@ class DoxyTypes(object):
             elif e.getparent().tag == 'ref':
                 if e.is_tail:
                     result.append(e.strip())
+                elif e.strip().find('(') > 0:
+                    result.append(':c:func:`%s`' % e.strip())
+                elif e.isupper():
+                    result.append(':c:data:`%s`' % e.strip())
                 else:
                     result.append(':c:type:`%s`' % e.strip())
             elif e.getparent().tag == 'emphasis':
@@ -289,6 +293,9 @@ class DoxyTypes(object):
                     result.append('*%s*' % e.strip())
             elif  e.getparent().tag == 'defname':
                 result.append('%s, ' % e.strip())
+            elif  e.getparent().tag == 'linebreak':
+                result.append('\n*%s*\n' % e.strip())
+
         result = ' '.join(result)
 
         return result

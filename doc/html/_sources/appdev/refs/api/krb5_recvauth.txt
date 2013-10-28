@@ -12,7 +12,7 @@ krb5_recvauth -  Server function for sendauth protocol.
 
 	          **[in]** **context** - Library context
 
-	          **[inout]** **auth_context** - Authentication context
+	          **[inout]** **auth_context** - Pre-existing or newly created auth context
 
 	          **[in]** **fd** - File descriptor
 
@@ -42,7 +42,7 @@ krb5_recvauth -  Server function for sendauth protocol.
 
 
 
-This function performs the srever side of a sendauth/recvauth exchange by sending and receiving messages over *fd* .
+This function performs the server side of a sendauth/recvauth exchange by sending and receiving messages over *fd* .
 
 
 

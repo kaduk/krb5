@@ -14,7 +14,7 @@ def make_client(name):
 
 def kadmin_as(client, query):
     global realm
-    return realm.run_as_client([kadmin, '-c', client, '-q', query])
+    return realm.run([kadmin, '-c', client, '-q', query])
 
 def delprinc(name):
     global realm
@@ -260,6 +260,9 @@ if 'Operation requires ``modify\'\' privilege' not in out:
 out = kadmin_as(some_modify, 'purgekeys unselected')
 if 'Operation requires ``modify\'\' privilege' not in out:
     fail('purgekeys failure (target)')
+out = kadmin_as(none, 'purgekeys none')
+if 'Old keys for principal "none@KRBTEST.COM" purged' not in out:
+    fail('purgekeys success (self exemption)')
 delprinc('selected')
 delprinc('unselected')
 

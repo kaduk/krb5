@@ -10,7 +10,7 @@ krb5_set_principal_realm -  Set the realm field of a principal.
 
 :param:
 
-	          **[inout]** **context** - Library context
+	          **[in]** **context** - Library context
 
 	          **[in]** **principal** - Principal name
 

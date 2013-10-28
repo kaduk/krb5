@@ -30,6 +30,7 @@
 #ifndef __KRB5_KDC_UTIL__
 #define __KRB5_KDC_UTIL__
 
+#include <krb5/kdcpreauth_plugin.h>
 #include "kdb.h"
 #include "net-server.h"
 #include "realm_data.h"
@@ -304,6 +305,11 @@ kdc_get_ticket_endtime(kdc_realm_t *kdc_active_realm,
                        krb5_timestamp *out_endtime);
 
 void
+kdc_get_ticket_renewtime(kdc_realm_t *realm, krb5_kdc_req *request,
+                         krb5_enc_tkt_part *tgt, krb5_db_entry *client,
+                         krb5_db_entry *server, krb5_enc_tkt_part *tkt);
+
+void
 log_as_req(krb5_context context, const krb5_fulladdr *from,
            krb5_kdc_req *request, krb5_kdc_rep *reply,
            krb5_db_entry *client, const char *cname,
@@ -365,14 +371,15 @@ krb5_error_code kdc_fast_handle_reply_key(struct kdc_request_state *state,
 
 krb5_error_code kdc_preauth_get_cookie(struct kdc_request_state *state,
                                        krb5_pa_data **cookie);
+
+krb5_boolean
+kdc_fast_hide_client(struct kdc_request_state *state);
+
 krb5_error_code
 kdc_handle_protected_negotiation( krb5_context context,
                                   krb5_data *req_pkt, krb5_kdc_req *request,
                                   const krb5_keyblock *reply_key,
                                   krb5_pa_data ***out_enc_padata);
-krb5_error_code
-krb5int_get_domain_realm_mapping(krb5_context context,
-                                 const char *host, char ***realmsp);
 
 /* Information handle for kdcpreauth callbacks.  All pointers are aliases. */
 struct krb5_kdcpreauth_rock_st {
@@ -403,6 +410,10 @@ struct krb5_kdcpreauth_rock_st {
 
 #define NON_TGT_OPTION (KDC_OPT_FORWARDED | KDC_OPT_PROXY | KDC_OPT_RENEW | \
                         KDC_OPT_VALIDATE)
+
+/* TGS-REQ options which are not compatible with referrals */
+#define NO_REFERRAL_OPTION (NON_TGT_OPTION | KDC_OPT_ENC_TKT_IN_SKEY)
+
 int check_anon(kdc_realm_t *kdc_active_realm,
                krb5_principal client, krb5_principal server);
 int errcode_to_protocol(krb5_error_code code);

@@ -16,7 +16,7 @@ krb5_kt_next_entry -  Retrieve the next entry from the key table.
 
 	          **[out]** **entry** - Returned key table entry
 
-	          **[inout]** **cursor** - Key table cursor
+	          **[in]** **cursor** - Key table cursor
 
 
 ..

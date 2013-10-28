@@ -489,7 +489,8 @@ merge_authdata (krb5_context context,
                 krb5_boolean ignore_kdc_issued)
 {
     size_t i, j, nadata = 0;
-    krb5_authdata **authdata = *out_authdata;
+    krb5_authdata **in_copy = NULL, **authdata = *out_authdata;
+    krb5_error_code code;
 
     if (in_authdata == NULL || in_authdata[0] == NULL)
         return 0;
@@ -502,24 +503,17 @@ merge_authdata (krb5_context context,
     for (i = 0; in_authdata[i] != NULL; i++)
         ;
 
-    if (authdata == NULL) {
-        authdata = (krb5_authdata **)calloc(i + 1, sizeof(krb5_authdata *));
-    } else {
-        authdata = (krb5_authdata **)realloc(authdata,
-                                             ((nadata + i + 1) * sizeof(krb5_authdata *)));
-    }
-    if (authdata == NULL)
-        return ENOMEM;
-
     if (copy) {
-        krb5_error_code code;
-        krb5_authdata **tmp;
-
-        code = krb5_copy_authdata(context, in_authdata, &tmp);
+        code = krb5_copy_authdata(context, in_authdata, &in_copy);
         if (code != 0)
             return code;
+        in_authdata = in_copy;
+    }
 
-        in_authdata = tmp;
+    authdata = realloc(authdata, (nadata + i + 1) * sizeof(krb5_authdata *));
+    if (authdata == NULL) {
+        krb5_free_authdata(context, in_copy);
+        return ENOMEM;
     }
 
     for (i = 0, j = 0; in_authdata[i] != NULL; i++) {
@@ -817,7 +811,7 @@ make_ad_signedpath_data(krb5_context context,
         i = 0;
 
     if (i != 0) {
-        sign_authdata = k5alloc((i + 1) * sizeof(krb5_authdata *), &code);
+        sign_authdata = k5calloc(i + 1, sizeof(krb5_authdata *), &code);
         if (sign_authdata == NULL)
             return code;
 
@@ -1024,8 +1018,8 @@ make_ad_signedpath(krb5_context context,
     } else
         i = 0;
 
-    sp.delegated = k5alloc((i + (server ? 1 : 0) + 1) *
-                           sizeof(krb5_principal), &code);
+    sp.delegated = k5calloc(i + (server ? 1 : 0) + 1, sizeof(krb5_principal),
+                            &code);
     if (code != 0)
         goto cleanup;
 
@@ -1165,7 +1159,8 @@ handle_signedpath_authdata (krb5_context context,
 
     /* No point in including signedpath authdata for a cross-realm TGT, since
      * it will be presented to a different KDC. */
-    if (!is_cross_tgs_principal(server->princ) &&
+    if (!isflagset(server->attributes, KRB5_KDB_NO_AUTH_DATA_REQUIRED) &&
+        !is_cross_tgs_principal(server->princ) &&
         !only_pac_p(context, enc_tkt_reply->authorization_data)) {
         code = make_ad_signedpath(context,
                                   for_user_princ,

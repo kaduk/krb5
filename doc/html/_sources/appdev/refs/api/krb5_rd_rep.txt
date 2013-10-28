@@ -12,7 +12,7 @@ krb5_rd_rep -  Parse and decrypt a KRB_AP_REP message.
 
 	          **[in]** **context** - Library context
 
-	          **[inout]** **auth_context** - Authentication context
+	          **[in]** **auth_context** - Authentication context
 
 	          **[in]** **inbuf** - AP-REP message
 

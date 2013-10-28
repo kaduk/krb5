@@ -29,7 +29,7 @@ krb5_get_fallback_host_realm
 
 
 
-Fill in *realmsp* with a pointer to a null-terminated list of realm names obtained through heuristics or insecure resolution methods which have lower priority than KDC referrals.
+Fill in *realmsp* with a pointer to a null-terminated list of realm names obtained through heuristics or insecure resolution methods which have lowerpriority than KDC referrals.
 
 
 

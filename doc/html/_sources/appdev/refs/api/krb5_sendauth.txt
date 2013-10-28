@@ -12,7 +12,7 @@ krb5_sendauth -  Client function for sendauth protocol.
 
 	          **[in]** **context** - Library context
 
-	          **[inout]** **auth_context** - Authentication context
+	          **[inout]** **auth_context** - Pre-existing or newly created auth context
 
 	          **[in]** **fd** - File descriptor that describes network socket
 

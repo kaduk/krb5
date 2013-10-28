@@ -57,7 +57,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <syslog.h>
-#include "adm.h"
+#include <kadm5/admin.h>
 #include "adm_proto.h"
 #include "net-server.h"
 #include <limits.h>
@@ -389,9 +389,9 @@ kdc_rd_ap_req(kdc_realm_t *kdc_active_realm,
         match_enctype = 0;
     }
 
-    retval = kdc_get_server_key(kdc_context,
-                                apreq->ticket, 0, match_enctype, server, NULL,
-                                NULL);
+    retval = kdc_get_server_key(kdc_context, apreq->ticket,
+                                KRB5_KDB_FLAG_ALIAS_OK, match_enctype, server,
+                                NULL, NULL);
     if (retval)
         return retval;
 
@@ -568,7 +568,7 @@ check_anon(kdc_realm_t *kdc_active_realm,
 {
     /* If restrict_anon is set, reject requests from anonymous to principals
      * other than the local TGT. */
-    if (restrict_anon &&
+    if (kdc_active_realm->realm_restrict_anon &&
         krb5_principal_compare_any_realm(kdc_context, client,
                                          krb5_anonymous_principal()) &&
         !krb5_principal_compare(kdc_context, server, tgs_server))
@@ -661,14 +661,6 @@ validate_as_request(kdc_realm_t *kdc_active_realm,
      * data, and is now performed by validate_forwardable() (the
      * contents of which were previously below).
      */
-
-    /* Client and server must allow renewable tickets */
-    if (isflagset(request->kdc_options, KDC_OPT_RENEWABLE) &&
-        (isflagset(client.attributes, KRB5_KDB_DISALLOW_RENEWABLE) ||
-         isflagset(server.attributes, KRB5_KDB_DISALLOW_RENEWABLE))) {
-        *status = "RENEWABLE NOT ALLOWED";
-        return(KDC_ERR_POLICY);
-    }
 
     /* Client and server must allow proxiable tickets */
     if (isflagset(request->kdc_options, KDC_OPT_PROXIABLE) &&
@@ -909,7 +901,8 @@ dbentry_supports_enctype(kdc_realm_t *kdc_active_realm, krb5_db_entry *server,
 
     /* If configured to, assume every server without a session_enctypes
      * attribute supports DES_CBC_CRC. */
-    if (assume_des_crc_sess && enctype == ENCTYPE_DES_CBC_CRC)
+    if (kdc_active_realm->realm_assume_des_crc_sess &&
+        enctype == ENCTYPE_DES_CBC_CRC)
         return TRUE;
 
     /* Due to an ancient interop problem, assume nothing supports des-cbc-md5
@@ -1090,16 +1083,21 @@ verify_for_user_checksum(krb5_context context,
     p += 4;
 
     for (i = 0; i < krb5_princ_size(context, req->user); i++) {
-        memcpy(p, krb5_princ_component(context, req->user, i)->data,
-               krb5_princ_component(context, req->user, i)->length);
+        if (krb5_princ_component(context, req->user, i)->length > 0) {
+            memcpy(p, krb5_princ_component(context, req->user, i)->data,
+                   krb5_princ_component(context, req->user, i)->length);
+        }
         p += krb5_princ_component(context, req->user, i)->length;
     }
 
-    memcpy(p, krb5_princ_realm(context, req->user)->data,
-           krb5_princ_realm(context, req->user)->length);
+    if (krb5_princ_realm(context, req->user)->length > 0) {
+        memcpy(p, krb5_princ_realm(context, req->user)->data,
+               krb5_princ_realm(context, req->user)->length);
+    }
     p += krb5_princ_realm(context, req->user)->length;
 
-    memcpy(p, req->auth_package.data, req->auth_package.length);
+    if (req->auth_package.length > 0)
+        memcpy(p, req->auth_package.data, req->auth_package.length);
     p += req->auth_package.length;
 
     code = krb5_c_verify_checksum(context,
@@ -1348,8 +1346,10 @@ kdc_make_s4u2self_rep(krb5_context context,
 
         code = add_pa_data_element(context,&padata,
                                    &reply_encpart->enc_padata, FALSE);
-        if (code != 0)
+        if (code != 0) {
+            free(padata.contents);
             goto cleanup;
+        }
     }
 
 cleanup:
@@ -1573,16 +1573,14 @@ kdc_check_transited_list(kdc_realm_t *kdc_active_realm,
 {
     krb5_error_code             code;
 
-    /* Check using krb5.conf */
-    code = krb5_check_transited_list(kdc_context, trans, realm1, realm2);
-    if (code)
+    /* Check against the KDB module.  Treat this answer as authoritative if the
+     * method is supported and doesn't explicitly pass control. */
+    code = krb5_db_check_transited_realms(kdc_context, trans, realm1, realm2);
+    if (code != KRB5_PLUGIN_OP_NOTSUPP && code != KRB5_PLUGIN_NO_HANDLE)
         return code;
 
-    /* Check against the KDB module. */
-    code = krb5_db_check_transited_realms(kdc_context, trans, realm1, realm2);
-    if (code == KRB5_PLUGIN_OP_NOTSUPP)
-        code = 0;
-    return code;
+    /* Check using krb5.conf [capaths] or hierarchical relationships. */
+    return krb5_check_transited_list(kdc_context, trans, realm1, realm2);
 }
 
 krb5_error_code
@@ -1884,10 +1882,58 @@ kdc_get_ticket_endtime(kdc_realm_t *kdc_active_realm,
         life = min(life, client->max_life);
     if (server->max_life != 0)
         life = min(life, server->max_life);
-    if (max_life_for_realm != 0)
-        life = min(life, max_life_for_realm);
+    if (kdc_active_realm->realm_maxlife != 0)
+        life = min(life, kdc_active_realm->realm_maxlife);
 
     *out_endtime = starttime + life;
+}
+
+/*
+ * Set tkt->renew_till to the requested renewable lifetime as modified by
+ * policy.  Set the TKT_FLG_RENEWABLE flag if we set a nonzero renew_till.
+ * client and tgt may be NULL.
+ */
+void
+kdc_get_ticket_renewtime(kdc_realm_t *realm, krb5_kdc_req *request,
+                         krb5_enc_tkt_part *tgt, krb5_db_entry *client,
+                         krb5_db_entry *server, krb5_enc_tkt_part *tkt)
+{
+    krb5_timestamp rtime, max_rlife;
+
+    tkt->times.renew_till = 0;
+
+    /* Don't issue renewable tickets if the client or server don't allow it,
+     * or if this is a TGS request and the TGT isn't renewable. */
+    if (server->attributes & KRB5_KDB_DISALLOW_RENEWABLE)
+        return;
+    if (client != NULL && (client->attributes & KRB5_KDB_DISALLOW_RENEWABLE))
+        return;
+    if (tgt != NULL && !(tgt->flags & TKT_FLG_RENEWABLE))
+        return;
+
+    /* Determine the requested renewable time. */
+    if (isflagset(request->kdc_options, KDC_OPT_RENEWABLE))
+        rtime = request->rtime ? request->rtime : kdc_infinity;
+    else if (isflagset(request->kdc_options, KDC_OPT_RENEWABLE_OK) &&
+             tkt->times.endtime < request->till)
+        rtime = request->till;
+    else
+        return;
+
+    /* Truncate it to the allowable renewable time. */
+    if (tgt != NULL)
+        rtime = min(rtime, tgt->times.renew_till);
+    max_rlife = min(server->max_renewable_life, realm->realm_maxrlife);
+    if (client != NULL)
+        max_rlife = min(max_rlife, client->max_renewable_life);
+    rtime = min(rtime, tkt->times.starttime + max_rlife);
+
+    /* Make the ticket renewable if the truncated requested time is larger than
+     * the ticket end time. */
+    if (rtime > tkt->times.endtime) {
+        setflag(tkt->flags, TKT_FLG_RENEWABLE);
+        tkt->times.renew_till = rtime;
+    }
 }
 
 /**

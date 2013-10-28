@@ -44,12 +44,8 @@ typedef struct __kdc_realm_data {
  * cannot span multiple realms -- proven */
     krb5_context        realm_context;  /* Context to be used for realm     */
     krb5_keytab         realm_keytab;   /* keytab to be used for this realm */
-    char *              realm_profile;  /* Profile file for this realm      */
-    char *              realm_host_based_services; /* do referral processing for these services
-                                                    * If '*' - allow all referrals */
-    char *              realm_no_host_referral; /* no referral for these services.
-                                                 * If '*' - disallow all referrals and
-                                                 * ignore realm_host_based_services */
+    char *              realm_hostbased; /* referral services for NT-UNKNOWN */
+    char *              realm_no_referral; /* non-referral services         */
     /*
      * Database per-realm data.
      */
@@ -95,13 +91,6 @@ kdc_realm_t *setup_server_realm(struct server_handle *, krb5_principal);
  * properly declared in each function that uses these macros.
  */
 #define kdc_context                     kdc_active_realm->realm_context
-#define max_life_for_realm              kdc_active_realm->realm_maxlife
-#define max_renewable_life_for_realm    kdc_active_realm->realm_maxrlife
-#define master_keyblock                 kdc_active_realm->realm_mkey
-#define master_princ                    kdc_active_realm->realm_mprinc
 #define tgs_server                      kdc_active_realm->realm_tgsprinc
-#define reject_bad_transit              kdc_active_realm->realm_reject_bad_transit
-#define restrict_anon                   kdc_active_realm->realm_restrict_anon
-#define assume_des_crc_sess             kdc_active_realm->realm_assume_des_crc_sess
 
 #endif  /* REALM_DATA_H */

@@ -62,6 +62,6 @@ Use :c:func:`krb5_tkt_creds_free()` to free *ctx* when it is no longer needed.
 
 .. note::
 
-	 First introduced in 1.9
+	 New in 1.9
  
 

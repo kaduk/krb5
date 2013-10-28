@@ -64,6 +64,6 @@ If this function returns **KRB5KRB_ERR_RESPONSE_TOO_BIG** , the caller should tr
 
 .. note::
 
-	 First introduced in 1.9
+	 New in 1.9
  
 

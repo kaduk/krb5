@@ -188,7 +188,7 @@ kdb_get_hist_key(kadm5_server_handle_t handle, krb5_keyblock **keyblocks_out,
     if (ret)
         goto done;
 
-    kblist = k5alloc((kdb->n_key_data + 1) * sizeof(*kblist), &ret);
+    kblist = k5calloc(kdb->n_key_data + 1, sizeof(*kblist), &ret);
     if (kblist == NULL)
         goto done;
     for (i = 0; i < kdb->n_key_data; i++) {
@@ -282,7 +282,7 @@ kdb_get_entry(kadm5_server_handle_t handle,
             return(ret);
         }
 
-        xdrmem_create(&xdrs, tl_data.tl_data_contents,
+        xdrmem_create(&xdrs, (caddr_t)tl_data.tl_data_contents,
                       tl_data.tl_data_length, XDR_DECODE);
         if (! xdr_osa_princ_ent_rec(&xdrs, adb)) {
             xdr_destroy(&xdrs);
@@ -373,7 +373,7 @@ kdb_put_entry(kadm5_server_handle_t handle,
     }
     tl_data.tl_data_type = KRB5_TL_KADM_DATA;
     tl_data.tl_data_length = xdr_getpos(&xdrs);
-    tl_data.tl_data_contents = xdralloc_getdata(&xdrs);
+    tl_data.tl_data_contents = (krb5_octet *)xdralloc_getdata(&xdrs);
 
     ret = krb5_dbe_update_tl_data(handle->context, kdb, &tl_data);
 

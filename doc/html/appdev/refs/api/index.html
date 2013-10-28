@@ -17,7 +17,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../',
-        VERSION:     '1.11.3',
+        VERSION:     '1.12-alpha1',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -35,104 +35,31 @@
   </head>
   <body>
     <div class="header-wrapper">
-        <div class="header" style="padding-bottom: 0px;">
+        <div class="header">
             
             
-                <h1><a href="../../../index.html"
-                style="color: #5d1509; font-size: 120%;
-                padding-top: 10px;">MIT Kerberos Documentation</a></h1>
+            <h1><a href="../../../index.html">MIT Kerberos Documentation</a></h1>
             
             <div class="rel">
-                    <a href="../../../index.html"
-                    title="Full Table of Contents"
-                    accesskey="C">Contents</a>
-                     |
-                    <a href="../index.html"
-                    title="Complete reference - API and datatypes"
-                    accesskey="P">previous</a>
-                     |
-                    <a href="krb5_build_principal.html"
-                    title="krb5_build_principal - Build a principal name using null-terminated strings."
-                    accesskey="N">next</a>
-                     |
-                    <a href="../../../genindex.html"
-                    title="General Index"
-                    accesskey="I">index</a>
-                     |
-                    <a href="../../../search.html"
-                    title="Enter search criteria"
-                    accesskey="S">Search</a>
-                     |
-                <a href="mailto:krb5-bugs@mit.edu?subject=Documentation__krb5 API">feedback</a>
+                
+        <a href="../../../index.html" title="Full Table of Contents"
+            accesskey="C">Contents</a> |
+        <a href="../index.html" title="Complete reference - API and datatypes"
+            accesskey="P">previous</a> |
+        <a href="krb5_build_principal.html" title="krb5_build_principal - Build a principal name using null-terminated strings."
+            accesskey="N">next</a> |
+        <a href="../../../genindex.html" title="General Index"
+            accesskey="I">index</a> |
+        <a href="../../../search.html" title="Enter search criteria"
+            accesskey="S">Search</a> |
+    <a href="mailto:krb5-bugs@mit.edu?subject=Documentation__krb5 API">feedback</a>
             </div>
         </div>
     </div>
 
     <div class="content-wrapper">
-        <div class="content">
-                <div class="sidebar"
-                    style="float: right; background: #F9F9F9">
-                    <h2>On this page </h2>
-                    <ul>
-<li><a class="reference internal" href="#">krb5 API</a><ul>
-<li><a class="reference internal" href="#frequently-used-public-interfaces">Frequently used public interfaces</a><ul>
-</ul>
-</li>
-<li><a class="reference internal" href="#rarely-used-public-interfaces">Rarely used public interfaces</a><ul>
-</ul>
-</li>
-<li><a class="reference internal" href="#public-interfaces-that-should-not-be-called-directly">Public interfaces that should not be called directly</a><ul>
-</ul>
-</li>
-<li><a class="reference internal" href="#legacy-convenience-interfaces">Legacy convenience interfaces</a><ul>
-</ul>
-</li>
-<li><a class="reference internal" href="#deprecated-public-interfaces">Deprecated public interfaces</a><ul>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-
-                    <br/>
-                    <h2>Table of contents</h2>
-                    <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="../../../user/index.html">For users</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../admin/index.html">For administrators</a></li>
-<li class="toctree-l1 current"><a class="reference internal" href="../../index.html">For application developers</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="../../gssapi.html">Developing with GSSAPI</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../h5l_mit_apidiff.html">Differences between Heimdal and MIT Kerberos API</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../init_creds.html">Initial credentials</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../../princ_handle.html">Principal manipulation and parsing</a></li>
-<li class="toctree-l2 current"><a class="reference internal" href="../index.html">Complete reference - API and datatypes</a><ul class="current">
-<li class="toctree-l3 current"><a class="current reference internal" href="">krb5 API</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../types/index.html">krb5 types and structures</a></li>
-<li class="toctree-l3"><a class="reference internal" href="../macros/index.html">krb5 simple macros</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../../../plugindev/index.html">For plugin module developers</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../build/index.html">Building Kerberos V5</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../basic/index.html">Kerberos V5 concepts</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../mitK5features.html">MIT Kerberos features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../build_this.html">How to build this documentation from the source</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../about.html">The Kerberos Documentation Set</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../resources.html">Resources</a></li>
-</ul>
-
-                    <br/>
-                    <h4><a href="../../../index.html">Full Table of Contents
-                    </a></h4>
-                    <h4>Search</h4>
-                    <form class="search" action="../../../search.html" method="get">
-                        <input type="text" name="q" size="18" />
-                        <input type="submit" value="Go" />
-                        <input type="hidden" name="check_keywords" value="yes" />
-                        <input type="hidden" name="area" value="default" />
-                    </form>
-                </div>
-            <div class="document">
+      <div class="content">
+        <div class="document">
             
       <div class="documentwrapper">
         <div class="bodywrapper">
@@ -205,6 +132,7 @@
 <li class="toctree-l1"><a class="reference internal" href="krb5_kt_client_default.html">krb5_kt_client_default -  Resolve the default client key table.</a></li>
 <li class="toctree-l1"><a class="reference internal" href="krb5_kt_default.html">krb5_kt_default -  Resolve the default key table.</a></li>
 <li class="toctree-l1"><a class="reference internal" href="krb5_kt_default_name.html">krb5_kt_default_name -  Get the default key table name.</a></li>
+<li class="toctree-l1"><a class="reference internal" href="krb5_kt_dup.html">krb5_kt_dup -  Duplicate keytab handle.</a></li>
 <li class="toctree-l1"><a class="reference internal" href="krb5_kt_get_name.html">krb5_kt_get_name -  Get a key table name.</a></li>
 <li class="toctree-l1"><a class="reference internal" href="krb5_kt_get_type.html">krb5_kt_get_type -  Return the type of a key table.</a></li>
 <li class="toctree-l1"><a class="reference internal" href="krb5_kt_resolve.html">krb5_kt_resolve -  Get a handle for a key table.</a></li>
@@ -222,6 +150,9 @@
 <li class="toctree-l1"><a class="reference internal" href="krb5_responder_otp_get_challenge.html">krb5_responder_otp_get_challenge -  Decode the KRB5_RESPONDER_QUESTION_OTP to a C struct.</a></li>
 <li class="toctree-l1"><a class="reference internal" href="krb5_responder_otp_set_answer.html">krb5_responder_otp_set_answer -  Answer the KRB5_RESPONDER_QUESTION_OTP question.</a></li>
 <li class="toctree-l1"><a class="reference internal" href="krb5_responder_otp_challenge_free.html">krb5_responder_otp_challenge_free -  Free the value returned by krb5_responder_otp_get_challenge() .</a></li>
+<li class="toctree-l1"><a class="reference internal" href="krb5_responder_pkinit_get_challenge.html">krb5_responder_pkinit_get_challenge -  Decode the KRB5_RESPONDER_QUESTION_PKINIT to a C struct.</a></li>
+<li class="toctree-l1"><a class="reference internal" href="krb5_responder_pkinit_set_answer.html">krb5_responder_pkinit_set_answer -  Answer the KRB5_RESPONDER_QUESTION_PKINIT question for one identity.</a></li>
+<li class="toctree-l1"><a class="reference internal" href="krb5_responder_pkinit_challenge_free.html">krb5_responder_pkinit_challenge_free -  Free the value returned by krb5_responder_pkinit_get_challenge() .</a></li>
 <li class="toctree-l1"><a class="reference internal" href="krb5_set_default_realm.html">krb5_set_default_realm -  Override the default realm for the specified context.</a></li>
 <li class="toctree-l1"><a class="reference internal" href="krb5_set_password.html">krb5_set_password -  Set a password for a principal using specified credentials.</a></li>
 <li class="toctree-l1"><a class="reference internal" href="krb5_set_password_using_ccache.html">krb5_set_password_using_ccache -  Set a password for a principal using cached credentials.</a></li>
@@ -333,6 +264,7 @@
 <li class="toctree-l1"><a class="reference internal" href="krb5_free_data.html">krb5_free_data -  Free a krb5_data structure.</a></li>
 <li class="toctree-l1"><a class="reference internal" href="krb5_free_data_contents.html">krb5_free_data_contents -  Free the contents of a krb5_data structure and zero the data field.</a></li>
 <li class="toctree-l1"><a class="reference internal" href="krb5_free_default_realm.html">krb5_free_default_realm -  Free a default realm string returned by krb5_get_default_realm() .</a></li>
+<li class="toctree-l1"><a class="reference internal" href="krb5_free_enctypes.html">krb5_free_enctypes -  Free an array of encryption types.</a></li>
 <li class="toctree-l1"><a class="reference internal" href="krb5_free_error.html">krb5_free_error -  Free an error allocated by krb5_read_error() or krb5_sendauth() .</a></li>
 <li class="toctree-l1"><a class="reference internal" href="krb5_free_host_realm.html">krb5_free_host_realm -  Free the memory allocated by krb5_get_host_realm() .</a></li>
 <li class="toctree-l1"><a class="reference internal" href="krb5_free_keyblock.html">krb5_free_keyblock -  Free a krb5_keyblock structure.</a></li>
@@ -536,40 +468,92 @@
           </div>
         </div>
       </div>
-            </div>
-            <div class="clearer" ></div>
         </div>
+        <div class="sidebar">
+    <h2>On this page</h2>
+    <ul>
+<li><a class="reference internal" href="#">krb5 API</a><ul>
+<li><a class="reference internal" href="#frequently-used-public-interfaces">Frequently used public interfaces</a><ul>
+</ul>
+</li>
+<li><a class="reference internal" href="#rarely-used-public-interfaces">Rarely used public interfaces</a><ul>
+</ul>
+</li>
+<li><a class="reference internal" href="#public-interfaces-that-should-not-be-called-directly">Public interfaces that should not be called directly</a><ul>
+</ul>
+</li>
+<li><a class="reference internal" href="#legacy-convenience-interfaces">Legacy convenience interfaces</a><ul>
+</ul>
+</li>
+<li><a class="reference internal" href="#deprecated-public-interfaces">Deprecated public interfaces</a><ul>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+    <br/>
+    <h2>Table of contents</h2>
+    <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../../user/index.html">For users</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../admin/index.html">For administrators</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../index.html">For application developers</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../../gssapi.html">Developing with GSSAPI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../h5l_mit_apidiff.html">Differences between Heimdal and MIT Kerberos API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../init_creds.html">Initial credentials</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../princ_handle.html">Principal manipulation and parsing</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../index.html">Complete reference - API and datatypes</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="">krb5 API</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../types/index.html">krb5 types and structures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../macros/index.html">krb5 simple macros</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../../plugindev/index.html">For plugin module developers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../build/index.html">Building Kerberos V5</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../basic/index.html">Kerberos V5 concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../mitK5features.html">MIT Kerberos features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../build_this.html">How to build this documentation from the source</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../about.html">Contributing to the MIT Kerberos Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../resources.html">Resources</a></li>
+</ul>
+
+    <br/>
+    <h4><a href="../../../index.html">Full Table of Contents</a></h4>
+    <h4>Search</h4>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+        </div>
+        <div class="clearer"></div>
+      </div>
     </div>
- 
-    <div class="footer-wrapper" >
+
+    <div class="footer-wrapper">
         <div class="footer" >
-            <div class="right" ><i>Release: 1.11.3</i><br />
+            <div class="right" ><i>Release: 1.12-alpha1</i><br />
                 &copy; <a href="../../../copyright.html">Copyright</a> 1985-2013, MIT.
             </div>
-            <div class="left" >
-                    <a href="../../../index.html"
-                    title="Full Table of Contents"
-                    >Contents</a>
-                     |
-                    <a href="../index.html"
-                    title="Complete reference - API and datatypes"
-                    >previous</a>
-                     |
-                    <a href="krb5_build_principal.html"
-                    title="krb5_build_principal - Build a principal name using null-terminated strings."
-                    >next</a>
-                     |
-                    <a href="../../../genindex.html"
-                    title="General Index"
-                    >index</a>
-                     |
-                    <a href="../../../search.html"
-                    title="Enter search criteria"
-                    >Search</a>
-                     |
-                    <a href="mailto:krb5-bugs@mit.edu?subject=Documentation__krb5 API">feedback</a>
+            <div class="left">
+                
+        <a href="../../../index.html" title="Full Table of Contents"
+            >Contents</a> |
+        <a href="../index.html" title="Complete reference - API and datatypes"
+            >previous</a> |
+        <a href="krb5_build_principal.html" title="krb5_build_principal - Build a principal name using null-terminated strings."
+            >next</a> |
+        <a href="../../../genindex.html" title="General Index"
+            >index</a> |
+        <a href="../../../search.html" title="Enter search criteria"
+            >Search</a> |
+    <a href="mailto:krb5-bugs@mit.edu?subject=Documentation__krb5 API">feedback</a>
             </div>
         </div>
     </div>
+
   </body>
 </html>

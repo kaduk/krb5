@@ -11,7 +11,7 @@ KRB5_PADATA_OSF_DCE
 
 OSF DCE.
 
-
+RFC 4120
 
 ========================== ======================
 ``KRB5_PADATA_OSF_DCE``       ``8``

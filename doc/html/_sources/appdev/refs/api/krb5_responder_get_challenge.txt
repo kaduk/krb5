@@ -29,6 +29,10 @@ krb5_responder_get_challenge -  Retrieve the challenge data for a given question
 
 
 
+Return a pointer to a C string containing the challenge for *question* within *rctx* , or NULL if the question is not present in *rctx* . The structure of the question depends on the question name, but will always be printable UTF-8 text. The returned pointer is an alias, valid only as long as the lifetime of *rctx* , and should not be modified or freed by the caller.
+
+
+
 
 
 
@@ -43,6 +47,6 @@ krb5_responder_get_challenge -  Retrieve the challenge data for a given question
 
 .. note::
 
-	 First introduced in 1.11
+	 New in 1.11
  
 

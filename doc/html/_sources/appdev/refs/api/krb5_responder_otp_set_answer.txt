@@ -47,6 +47,6 @@ krb5_responder_otp_set_answer -  Answer the KRB5_RESPONDER_QUESTION_OTP question
 
 .. note::
 
-	 First introduced in 1.11
+	 New in 1.11
  
 

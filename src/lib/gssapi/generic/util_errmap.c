@@ -79,14 +79,14 @@ static inline int
 mecherror_copy(struct mecherror *dest, struct mecherror src)
 {
     *dest = src;
-    dest->mech.elements = malloc(src.mech.length);
-    if (dest->mech.elements == NULL) {
-        if (src.mech.length)
+    if (src.mech.length > 0) {
+        dest->mech.elements = malloc(src.mech.length);
+        if (dest->mech.elements == NULL)
             return ENOMEM;
-        else
-            return 0;
+        memcpy(dest->mech.elements, src.mech.elements, src.mech.length);
+    } else {
+        dest->mech.elements = NULL;
     }
-    memcpy(dest->mech.elements, src.mech.elements, src.mech.length);
     return 0;
 }
 
@@ -155,8 +155,7 @@ int gssint_mecherrmap_init(void)
    element storage when destroying the collection.  */
 static int free_one(OM_uint32 i, struct mecherror value, void *p)
 {
-    if (value.mech.length && value.mech.elements)
-        free(value.mech.elements);
+    free(value.mech.elements);
     return 0;
 }
 
@@ -184,13 +183,7 @@ OM_uint32 gssint_mecherrmap_map(OM_uint32 minor, const gss_OID_desc * oid)
 
     me.code = minor;
     me.mech = *oid;
-    err = k5_mutex_lock(&mutex);
-    if (err) {
-#ifdef DEBUG
-        if (f != stderr) fclose(f);
-#endif
-        return 0;
-    }
+    k5_mutex_lock(&mutex);
 
     /* Is this status+oid already mapped?  */
     p = mecherrmap_findright(&m, me);
@@ -229,10 +222,8 @@ OM_uint32 gssint_mecherrmap_map(OM_uint32 minor, const gss_OID_desc * oid)
     }
     err = mecherrmap_add(&m, new_status, me_copy);
     k5_mutex_unlock(&mutex);
-    if (err) {
-        if (me_copy.mech.length)
-            free(me_copy.mech.elements);
-    }
+    if (err)
+        free(me_copy.mech.elements);
 #ifdef DEBUG
     fprintf(f, "%s: mapping ", __FUNCTION__);
     mecherror_print(me, f);
@@ -257,14 +248,11 @@ int gssint_mecherrmap_get(OM_uint32 minor, gss_OID mech_oid,
                           OM_uint32 *mech_minor)
 {
     const struct mecherror *p;
-    int err;
 
     if (minor == 0) {
         return EINVAL;
     }
-    err = k5_mutex_lock(&mutex);
-    if (err)
-        return err;
+    k5_mutex_lock(&mutex);
     p = mecherrmap_findleft(&m, minor);
     k5_mutex_unlock(&mutex);
     if (!p) {

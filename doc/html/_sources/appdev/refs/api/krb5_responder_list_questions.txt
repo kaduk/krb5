@@ -27,6 +27,10 @@ krb5_responder_list_questions -  List the question names contained in the respon
 
 
 
+Return a pointer to a null-terminated list of question names which are present in *rctx* . The pointer is an alias, valid only as long as the lifetime of *rctx* , and should not be modified or freed by the caller. A question's challenge can be retrieved using :c:func:`krb5_responder_get_challenge()` and answered using :c:func:`krb5_responder_set_answer()` .
+
+
+
 
 
 
@@ -41,6 +45,6 @@ krb5_responder_list_questions -  List the question names contained in the respon
 
 .. note::
 
-	 First introduced in 1.11
+	 New in 1.11
  
 

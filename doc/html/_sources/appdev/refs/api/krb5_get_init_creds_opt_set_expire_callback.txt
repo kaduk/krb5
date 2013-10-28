@@ -73,6 +73,6 @@ Note that *cb* may be invoked even if credentials are being acquired for the kad
 
 .. note::
 
-	 First introduced in 1.9
+	 New in 1.9
  
 

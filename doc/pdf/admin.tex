@@ -14,7 +14,7 @@
 
 \title{Kerberos Administration Guide}
 \date{ }
-\release{1.11.3}
+\release{1.12-alpha1}
 \author{MIT}
 \newcommand{\sphinxlogo}{}
 \renewcommand{\releasename}{Release}
@@ -1045,12 +1045,13 @@ invalid.  The default value is 300 seconds, or five minutes.
 \item[{\textbf{default\_ccache\_name}}] \leavevmode
 This relation specifies the name of the default credential cache.
 The default is {\hyperref[mitK5defaults:paths]{\emph{DEFCCNAME}}}.  This relation is subject to parameter
-expansion (see below).
+expansion (see below).  New in release 1.11.
 
 \item[{\textbf{default\_client\_keytab\_name}}] \leavevmode
 This relation specifies the name of the default keytab for
 obtaining client credentials.  The default is {\hyperref[mitK5defaults:paths]{\emph{DEFCKTNAME}}}.  This
 relation is subject to parameter expansion (see below).
+New in release 1.11.
 
 \item[{\textbf{default\_keytab\_name}}] \leavevmode
 This relation specifies the default keytab name to be used by
@@ -1092,6 +1093,13 @@ compatibility purposes; stale values of this setting can prevent
 clients from taking advantage of new stronger enctypes when the
 libraries are upgraded.
 
+\item[{\textbf{dns\_canonicalize\_hostname}}] \leavevmode
+Indicate whether name lookups will be used to canonicalize
+hostnames for use in service principal names.  Setting this flag
+to false can improve security by reducing reliance on DNS, but
+means that short hostnames will not be canonicalized to
+fully-qualified hostnames.  The default value is true.
+
 \item[{\textbf{dns\_lookup\_kdc}}] \leavevmode
 Indicate whether DNS SRV records should be used to locate the KDCs
 and other servers for a realm, if they are not listed in the
@@ -1127,7 +1135,7 @@ principal in the keytab matching the service name and realm name
 (if given).  This option can improve the administrative
 flexibility of server applications on multihomed hosts, but could
 compromise the security of virtual hosting environments.  The
-default value is false.
+default value is false.  New in release 1.10.
 
 \item[{\textbf{k5login\_authoritative}}] \leavevmode
 If this flag is true, principals must be listed in a local user's
@@ -1247,7 +1255,8 @@ default, if allowed by the KDC.  The default value is false.
 \item[{\textbf{rdns}}] \leavevmode
 If this flag is true, reverse name lookup will be used in addition
 to forward name lookup to canonicalizing hostnames for use in
-service principal names.  The default value is true.
+service principal names.  If \textbf{dns\_canonicalize\_hostname} is set
+to false, this flag has no effect.  The default value is true.
 
 \item[{\textbf{realm\_try\_domains}}] \leavevmode
 Indicate whether a host's domain components should be used to
@@ -1411,7 +1420,9 @@ The {[}domain\_realm{]} section provides a translation from a domain name
 or hostname to a Kerberos realm name.  The tag name can be a host name
 or domain name, where domain names are indicated by a prefix of a
 period (\code{.}).  The value of the relation is the Kerberos realm name
-for that particular host or domain.  The Kerberos realm may be
+for that particular host or domain.  A host name relation implicitly
+provides the corresponding domain name relation, unless an explicit domain
+name relation is provided.  The Kerberos realm may be
 identified either in the {\hyperref[admin/conf_files/krb5_conf:realms]{realms}} section or using DNS SRV records.
 Host names and domain names should be in lower case.  For example:
 \begin{quote}
@@ -1419,16 +1430,18 @@ Host names and domain names should be in lower case.  For example:
 \begin{Verbatim}[commandchars=\\\{\}]
 [domain\_realm]
     crash.mit.edu = TEST.ATHENA.MIT.EDU
-    .mit.edu = ATHENA.MIT.EDU
+    .dev.mit.edu = TEST.ATHENA.MIT.EDU
     mit.edu = ATHENA.MIT.EDU
 \end{Verbatim}
 \end{quote}
 
-maps the host with the exact name \code{crash.mit.edu} into the
-TEST.ATHENA.MIT.EDU realm.  The period prefix in \code{.mit.edu} denotes
-that all systems in the \code{mit.edu} domain belong to
-\code{ATHENA.MIT.EDU} realm.  The third entry maps the host \code{mit.edu}
-itself to the \code{ATHENA.MIT.EDU} realm.
+maps the host with the name \code{crash.mit.edu} into the
+\code{TEST.ATHENA.MIT.EDU} realm.  The second entry maps all hosts under the
+domain \code{dev.mit.edu} into the \code{TEST.ATHENA.MIT.EDU} realm, but not
+the host with the name \code{dev.mit.edu}.  That host is matched
+by the third entry, which maps the host \code{mit.edu} and all hosts
+under the domain \code{mit.edu} that do not match a preceding rule
+into the realm \code{ATHENA.MIT.EDU}.
 
 If no translation entry applies to a hostname used for a service
 principal for a service ticket request, the library will try to get a
@@ -1586,6 +1599,8 @@ modules and to turn modules on and off.  Not every krb5 pluggable
 interface uses the {[}plugins{]} section; the ones that do are documented
 here.
 
+New in release 1.9.
+
 Each pluggable interface corresponds to a subsection of {[}plugins{]}.
 All subsections support the same tags:
 \begin{description}
@@ -1608,6 +1623,12 @@ absolute path, it will be treated as relative to the
 \textbf{plugin\_base\_dir} value from {\hyperref[admin/conf_files/krb5_conf:libdefaults]{\emph{{[}libdefaults{]}}}}.
 
 \end{description}
+
+For pluggable interfaces where module order matters, modules
+registered with a \textbf{module} tag normally come first, in the order
+they are registered, followed by built-in modules in the order they
+are documented below.  If \textbf{enable\_only} tags are used, then the
+order of those tags overrides the normal module order.
 
 The following subsections are currently supported within the {[}plugins{]}
 section:
@@ -1676,6 +1697,67 @@ This module implements the encrypted challenge FAST factor.
 
 \item[{\textbf{encrypted\_timestamp}}] \leavevmode
 This module implements the encrypted timestamp mechanism.
+
+\end{description}
+
+
+\subparagraph{hostrealm interface}
+\label{admin/conf_files/krb5_conf:hostrealm-interface}\label{admin/conf_files/krb5_conf:hostrealm}
+The hostrealm section (introduced in release 1.12) controls modules
+for the host-to-realm interface, which affects the local mapping of
+hostnames to realm names and the choice of default realm.  The following
+built-in modules exist for this interface:
+\begin{description}
+\item[{\textbf{profile}}] \leavevmode
+This module consults the {[}domain\_realm{]} section of the profile for
+authoritative host-to-realm mappings, and the \textbf{default\_realm}
+variable for the default realm.
+
+\item[{\textbf{dns}}] \leavevmode
+This module looks for DNS records for fallback host-to-realm
+mappings and the default realm.  It only operates if the
+\textbf{dns\_lookup\_realm} variable is set to true.
+
+\item[{\textbf{domain}}] \leavevmode
+This module applies heuristics for fallback host-to-realm
+mappings.  It implements the \textbf{realm\_try\_domains} variable, and
+uses the uppercased parent domain of the hostname if that does not
+produce a result.
+
+\end{description}
+
+
+\subparagraph{localauth interface}
+\label{admin/conf_files/krb5_conf:localauth-interface}\label{admin/conf_files/krb5_conf:localauth}
+The localauth section (introduced in release 1.12) controls modules
+for the local authorization interface, which affects the relationship
+between Kerberos principals and local system accounts.  The following
+built-in modules exist for this interface:
+\begin{description}
+\item[{\textbf{default}}] \leavevmode
+This module implements the \textbf{DEFAULT} type for \textbf{auth\_to\_local}
+values.
+
+\item[{\textbf{rule}}] \leavevmode
+This module implements the \textbf{RULE} type for \textbf{auth\_to\_local}
+values.
+
+\item[{\textbf{names}}] \leavevmode
+This module looks for an \textbf{auth\_to\_local\_names} mapping for the
+principal name.
+
+\item[{\textbf{auth\_to\_local}}] \leavevmode
+This module processes \textbf{auth\_to\_local} values in the default
+realm's section, and applies the default method if no
+\textbf{auth\_to\_local} values exist.
+
+\item[{\textbf{k5login}}] \leavevmode
+This module authorizes a principal to a local account according to
+the account's \emph{.k5login(5)} file.
+
+\item[{\textbf{an2ln}}] \leavevmode
+This module authorizes a principal to a local account if the
+principal name maps to the local account name.
 
 \end{description}
 
@@ -2273,8 +2355,8 @@ preauthenticate using a hardware device before receiving any
 tickets.
 
 \item[{\textbf{no-auth-data-required}}] \leavevmode
-Enabling this flag prevents PAC data from being added to
-service tickets for the principal.
+Enabling this flag prevents PAC or AD-SIGNEDPATH data from
+being added to service tickets for the principal.
 
 \item[{\textbf{ok-as-delegate}}] \leavevmode
 If this flag is enabled, it hints the client that credentials
@@ -2329,9 +2411,10 @@ authentication process that was used to obtain the TGT.
 
 \item[{\textbf{dict\_file}}] \leavevmode
 (String.)  Location of the dictionary file containing strings that
-are not allowed as passwords.  If none is specified or if there is
-no policy assigned to the principal, no dictionary checks of
-passwords will be performed.
+are not allowed as passwords.  The file should contain one string
+per line, with no additional whitespace.  If none is specified or
+if there is no policy assigned to the principal, no dictionary
+checks of passwords will be performed.
 
 \item[{\textbf{host\_based\_services}}] \leavevmode
 (Whitespace- or comma-separated list.)  Lists services which will
@@ -2361,7 +2444,7 @@ slave configuration files.
 (Delta time string.)  Specifies the amount of time to wait for a
 full propagation to complete.  This is optional in configuration
 files, and is used by slave KDCs only.  The default value is 5
-minutes (\code{5m}).
+minutes (\code{5m}).  New in release 1.11.
 
 \item[{\textbf{iprop\_logfile}}] \leavevmode
 (File name.)  Specifies where the update log file for the realm
@@ -2432,7 +2515,7 @@ disable referral processing altogether.
 principals support des-cbc-crc for session key enctype negotiation
 purposes.  If \textbf{allow\_weak\_crypto} in {\hyperref[admin/conf_files/krb5_conf:libdefaults]{\emph{{[}libdefaults{]}}}} is
 false, or if des-cbc-crc is not a permitted enctype, then this
-variable has no effect.  Defaults to true.
+variable has no effect.  Defaults to true.  New in release 1.11.
 
 \item[{\textbf{reject\_bad\_transit}}] \leavevmode
 (Boolean value.)  If set to true, the KDC will check the list of
@@ -2461,7 +2544,7 @@ requests from anonymous principals to service principals other
 than the realm's ticket-granting service.  This option allows
 anonymous PKINIT to be enabled for use as FAST armor tickets
 without allowing anonymous authentication to services.  The
-default value is false.
+default value is false.  New in release 1.9.
 
 \item[{\textbf{supported\_enctypes}}] \leavevmode
 (List of \emph{key}:\emph{salt} strings.)  Specifies the default key/salt
@@ -2534,14 +2617,14 @@ authentication'' field of principal entries requiring
 preauthentication.  Setting this flag may improve performance.
 (Principal entries which do not require preauthentication never
 update the ``Last successful authentication'' field.).  First
-introduced in version 1.9.
+introduced in release 1.9.
 
 \item[{\textbf{disable\_lockout}}] \leavevmode
 If set to \code{true}, suppresses KDC updates to the ``Last failed
 authentication'' and ``Failed password attempts'' fields of principal
 entries requiring preauthentication.  Setting this flag may
 improve performance, but also disables account lockout.  First
-introduced in version 1.9.
+introduced in release 1.9.
 
 \item[{\textbf{ldap\_conns\_per\_server}}] \leavevmode
 This LDAP-specific tag indicates the number of connections to be
@@ -2650,6 +2733,76 @@ administrative server will be appended to the file
     kdc = SYSLOG:INFO:DAEMON
     admin\_server = FILE:/var/adm/kadmin.log
     admin\_server = DEVICE=/dev/tty04
+\end{Verbatim}
+\end{quote}
+
+
+\paragraph{{[}otp{]}}
+\label{admin/conf_files/kdc_conf:otp}\label{admin/conf_files/kdc_conf:id5}
+Each subsection of {[}otp{]} is the name of an OTP token type.  The tags
+within the subsection define the configuration required to forward a
+One Time Password request to a RADIUS server.
+
+For each token type, the following tags may be specified:
+\begin{description}
+\item[{\textbf{server}}] \leavevmode
+This is the server to send the RADIUS request to.  It can be a
+hostname with optional port, an ip address with optional port, or
+a Unix domain socket address.  The default is
+{\hyperref[mitK5defaults:paths]{\emph{LOCALSTATEDIR}}}\code{/krb5kdc}\code{/\textless{}name\textgreater{}.socket}.
+
+\item[{\textbf{secret}}] \leavevmode
+This tag indicates a filename (which may be relative to {\hyperref[mitK5defaults:paths]{\emph{LOCALSTATEDIR}}}\code{/krb5kdc})
+containing the secret used to encrypt the RADIUS packets.  The
+secret should appear in the first line of the file by itself;
+leading and trailing whitespace on the line will be removed.  If
+the value of \textbf{server} is a Unix domain socket address, this tag
+is optional, and an empty secret will be used if it is not
+specified.  Otherwise, this tag is required.
+
+\item[{\textbf{timeout}}] \leavevmode
+An integer which specifies the time in seconds during which the
+KDC should attempt to contact the RADIUS server.  This tag is the
+total time across all retries and should be less than the time
+which an OTP value remains valid for.  The default is 5 seconds.
+
+\item[{\textbf{retries}}] \leavevmode
+This tag specifies the number of retries to make to the RADIUS
+server.  The default is 3 retries (4 tries).
+
+\item[{\textbf{strip\_realm}}] \leavevmode
+If this tag is \code{true}, the principal without the realm will be
+passed to the RADIUS server.  Otherwise, the realm will be
+included.  The default value is \code{true}.
+
+\end{description}
+
+In the following example, requests are sent to a remote server via UDP.
+\begin{quote}
+
+\begin{Verbatim}[commandchars=\\\{\}]
+[otp]
+    MyRemoteTokenType = \PYGZob{}
+        server = radius.mydomain.com:1812
+        secret = SEmfiajf42\$
+        timeout = 15
+        retries = 5
+        strip\_realm = true
+    \PYGZcb{}
+\end{Verbatim}
+\end{quote}
+
+An implicit default token type named \code{DEFAULT} is defined for when
+the per-principal configuration does not specify a token type.  Its
+configuration is shown below.  You may override this token type to
+something applicable for your situation.
+\begin{quote}
+
+\begin{Verbatim}[commandchars=\\\{\}]
+[otp]
+    DEFAULT = \PYGZob{}
+        strip\_realm = false
+    \PYGZcb{}
 \end{Verbatim}
 \end{quote}
 
@@ -2777,7 +2930,7 @@ policy is such that up-to-date CRLs must be present for every CA.
 
 
 \subsubsection{Encryption and salt types}
-\label{admin/conf_files/kdc_conf:id5}\label{admin/conf_files/kdc_conf:encryption-and-salt-types}
+\label{admin/conf_files/kdc_conf:id6}\label{admin/conf_files/kdc_conf:encryption-and-salt-types}
 Any tag in the configuration files which requires a list of encryption
 types can be set to some combination of the following strings.
 Encryption types marked as ``weak'' are available for compatibility but
@@ -3578,6 +3731,11 @@ system via the process list; to avoid this, instead stash the
 password using the \textbf{stashsrvpw} command of
 {\hyperref[admin/admin_commands/kdb5_ldap_util:kdb5-ldap-util-8]{\emph{kdb5\_ldap\_util}}}.
 
+\item[{\textbf{-x debug=}\emph{level}}] \leavevmode
+sets the OpenLDAP client library debug level.  \emph{level} is an
+integer to be interpreted by the library.  Debugging messages
+are printed to standard error.  New in release 1.12.
+
 \end{description}
 
 \end{description}
@@ -3716,8 +3874,21 @@ flag.
 \textbf{+password\_changing\_service} marks this principal as a password
 change service principal.
 
+\item[{\{-\textbar{}+\}\textbf{ok\_to\_auth\_as\_delegate}}] \leavevmode
+\textbf{+ok\_to\_auth\_as\_delegate} allows this principal to acquire
+forwardable tickets to itself from arbitrary users, for use with
+constrained delegation.
+
+\item[{\{-\textbar{}+\}\textbf{no\_auth\_data\_required}}] \leavevmode
+\textbf{+no\_auth\_data\_required} prevents PAC or AD-SIGNEDPATH data from
+being added to service tickets for the principal.
+
 \item[{\textbf{-randkey}}] \leavevmode
 Sets the key of the principal to a random value.
+
+\item[{\textbf{-nokey}}] \leavevmode
+Causes the principal to be created with no key.  New in release
+1.12.
 
 \item[{\textbf{-pw} \emph{password}}] \leavevmode
 Sets the password of the principal to the specified string and
@@ -4257,6 +4428,14 @@ kadmin:
 \end{quote}
 
 
+\subsection{Policies and principals}
+\label{admin/database:policies-and-principals}
+Policies can be applied to principals as they are created by using
+the \textbf{-policy} flag to {\hyperref[admin/admin_commands/kadmin_local:add-principal]{\emph{add\_principal}}}. Existing principals can
+be modified by using the \textbf{-policy} or \textbf{-clearpolicy} flag to
+{\hyperref[admin/admin_commands/kadmin_local:modify-principal]{\emph{modify\_principal}}}.
+
+
 \subsection{Updating the history key}
 \label{admin/database:updating-the-history-key}
 If a policy specifies a number of old keys kept of two or more, the
@@ -4360,9 +4539,9 @@ To dump a Kerberos database into a file, use the {\hyperref[admin/admin_commands
 \textbf{dump} command on one of the KDCs.
 \begin{quote}
 
-\textbf{dump} {[}\textbf{-old}\textbar{}\textbf{-b6}\textbar{}\textbf{-b7}\textbar{}\textbf{-ov}\textbar{}\textbf{-r13}{]}
-{[}\textbf{-verbose}{]} {[}\textbf{-mkey\_convert}{]} {[}\textbf{-new\_mkey\_file} \emph{mkey\_file}{]}
-{[}\textbf{-rev}{]} {[}\textbf{-recurse}{]} {[}\emph{filename} {[}\emph{principals}...{]}{]}
+\textbf{dump} {[}\textbf{-b7}\textbar{}\textbf{-ov}\textbar{}\textbf{-r13}{]} {[}\textbf{-verbose}{]}
+{[}\textbf{-mkey\_convert}{]} {[}\textbf{-new\_mkey\_file} \emph{mkey\_file}{]} {[}\textbf{-rev}{]}
+{[}\textbf{-recurse}{]} {[}\emph{filename} {[}\emph{principals}...{]}{]}
 \end{quote}
 
 Dumps the current Kerberos and KADM5 database into an ASCII file.  By
@@ -4370,14 +4549,6 @@ default, the database is dumped in current format, ``kdb5\_util
 load\_dump version 6''.  If filename is not specified, or is the string
 ``-'', the dump is sent to standard output.  Options:
 \begin{description}
-\item[{\textbf{-old}}] \leavevmode
-causes the dump to be in the Kerberos 5 Beta 5 and earlier dump
-format (``kdb5\_edit load\_dump version 2.0'').
-
-\item[{\textbf{-b6}}] \leavevmode
-causes the dump to be in the Kerberos 5 Beta 6 format (``kdb5\_edit
-load\_dump version 3.0'').
-
 \item[{\textbf{-b7}}] \leavevmode
 causes the dump to be in the Kerberos 5 Beta 7 format (``kdb5\_util
 load\_dump version 4'').  This was the dump format produced on
@@ -4467,8 +4638,8 @@ To restore a Kerberos database dump from a file, use the
 {\hyperref[admin/admin_commands/kdb5_util:kdb5-util-8]{\emph{kdb5\_util}}} \textbf{load} command on one of the KDCs.
 \begin{quote}
 
-\textbf{load} {[}\textbf{-old}\textbar{}\textbf{-b6}\textbar{}\textbf{-b7}\textbar{}\textbf{-ov}\textbar{}\textbf{-r13}{]}
-{[}\textbf{-hash}{]} {[}\textbf{-verbose}{]} {[}\textbf{-update}{]} \emph{filename} {[}\emph{dbname}{]}
+\textbf{load} {[}\textbf{-b7}\textbar{}\textbf{-ov}\textbar{}\textbf{-r13}{]} {[}\textbf{-hash}{]}
+{[}\textbf{-verbose}{]} {[}\textbf{-update}{]} \emph{filename} {[}\emph{dbname}{]}
 \end{quote}
 
 Loads a database dump from the named file into the named database.  If
@@ -4481,14 +4652,6 @@ database module, the \textbf{-update} flag is required.
 
 Options:
 \begin{description}
-\item[{\textbf{-old}}] \leavevmode
-requires the database to be in the Kerberos 5 Beta 5 and earlier
-format (``kdb5\_edit load\_dump version 2.0'').
-
-\item[{\textbf{-b6}}] \leavevmode
-requires the database to be in the Kerberos 5 Beta 6 format
-(``kdb5\_edit load\_dump version 3.0'').
-
 \item[{\textbf{-b7}}] \leavevmode
 requires the database to be in the Kerberos 5 Beta 7 format
 (``kdb5\_util load\_dump version 4'').
@@ -6111,7 +6274,7 @@ corrupted, you can load the most recent dump onto the master KDC.
 
 
 \chapter{PKINIT configuration}
-\label{admin/pkinit:pkinit-configuration}\label{admin/pkinit::doc}
+\label{admin/pkinit:pkinit-configuration}\label{admin/pkinit:pkinit}\label{admin/pkinit::doc}
 PKINIT is a preauthentication mechanism for Kerberos 5 which uses
 X.509 certificates to authenticate the KDC to clients and vice versa.
 PKINIT can also be used to enable anonymity support, allowing clients
@@ -6342,6 +6505,97 @@ appropriate {\hyperref[admin/conf_files/kdc_conf:kdc-realms]{\emph{{[}realms{]}}
 To obtain anonymous credentials on a client, run \code{kinit -n}, or
 \code{kinit -n @REALMNAME} to specify a realm.  The resulting tickets
 will have the client name \code{WELLKNOWN/ANONYMOUS@WELLKNOWN:ANONYMOUS}.
+
+
+\chapter{OTP Preauthentication}
+\label{admin/otp::doc}\label{admin/otp:otp-preauthentication}
+OTP is a preauthentication mechanism for Kerberos 5 which uses One
+Time Passwords (OTP) to authenticate the client to the KDC.  The OTP
+is passed to the KDC over an encrypted FAST channel in clear-text.
+The KDC uses the password along with per-user configuration to proxy
+the request to a third-party RADIUS system.  This enables
+out-of-the-box compatibility with a large number of already widely
+deployed proprietary systems.
+
+Additionally, our implementation of the OTP system allows for the
+passing of RADIUS requests over a UNIX domain stream socket.  This
+permits the use of a local companion daemon which can handle the
+details of authentication.
+
+
+\section{Defining token types}
+\label{admin/otp:defining-token-types}
+Token types are defined in either krb5.conf or kdc.conf according to
+the following format:
+
+\begin{Verbatim}[commandchars=\\\{\}]
+[otp]
+    \textless{}name\textgreater{} = \PYGZob{}
+        server = \textless{}host:port or filename\textgreater{} (default: \$KDCDIR/\textless{}name\textgreater{}.socket)
+        secret = \textless{}filename\textgreater{}
+        timeout = \textless{}integer\textgreater{} (default: 5 [seconds])
+        retries = \textless{}integer\textgreater{} (default: 3)
+        strip\_realm = \textless{}boolean\textgreater{} (default: true)
+    \PYGZcb{}
+\end{Verbatim}
+
+If the server field begins with `/', it will be interpreted as a UNIX
+socket.  Otherwise, it is assumed to be in the format host:port.  When
+a UNIX domain socket is specified, the secret field is optional and an
+empty secret is used by default.
+
+When forwarding the request over RADIUS, by default the principal is
+used in the User-Name attribute of the RADIUS packet.  The strip\_realm
+parameter controls whether the principal is forwarded with or without
+the realm portion.
+
+
+\section{The default token type}
+\label{admin/otp:the-default-token-type}
+A default token type is used internally when no token type is specified for a
+given user.  It is defined as follows:
+
+\begin{Verbatim}[commandchars=\\\{\}]
+[otp]
+    DEFAULT = \PYGZob{}
+        strip\_realm = false
+    \PYGZcb{}
+\end{Verbatim}
+
+The administrator may override the internal \code{DEFAULT} token type
+simply by defining a configuration with the same name.
+
+
+\section{Token instance configuration}
+\label{admin/otp:token-instance-configuration}
+To enable OTP for a client principal, the administrator must define
+the \textbf{otp} string attribute for that principal.  The \textbf{otp} user
+string is a JSON string of the format:
+
+\begin{Verbatim}[commandchars=\\\{\}]
+[\PYGZob{}
+    "type": \textless{}string\textgreater{},
+    "username": \textless{}string\textgreater{}
+ \PYGZcb{}, ...]
+\end{Verbatim}
+
+This is an array of token objects.  Both fields of token objects are
+optional.  The \textbf{type} field names the token type of this token; if
+not specified, it defaults to \code{DEFAULT}.  The \textbf{username} field
+specifies the value to be sent in the User-Name RADIUS attribute.  If
+not specified, the principal name is sent, with or without realm as
+defined in the token type.
+
+For ease of configuration, an empty array (\code{{[}{]}}) is treated as
+equivalent to one DEFAULT token (\code{{[}\{\}{]}}).
+
+
+\section{Other considerations}
+\label{admin/otp:other-considerations}\begin{enumerate}
+\item {} 
+FAST is required for OTP to work.
+
+\end{enumerate}
 
 
 \chapter{Principal names and DNS}
@@ -6831,6 +7085,11 @@ system via the process list; to avoid this, instead stash the
 password using the \textbf{stashsrvpw} command of
 {\hyperref[admin/admin_commands/kdb5_ldap_util:kdb5-ldap-util-8]{\emph{kdb5\_ldap\_util}}}.
 
+\item[{\textbf{-x debug=}\emph{level}}] \leavevmode
+sets the OpenLDAP client library debug level.  \emph{level} is an
+integer to be interpreted by the library.  Debugging messages
+are printed to standard error.  New in release 1.12.
+
 \end{description}
 
 \end{description}
@@ -6953,8 +7212,21 @@ flag.
 \textbf{+password\_changing\_service} marks this principal as a password
 change service principal.
 
+\item[{\{-\textbar{}+\}\textbf{ok\_to\_auth\_as\_delegate}}] \leavevmode
+\textbf{+ok\_to\_auth\_as\_delegate} allows this principal to acquire
+forwardable tickets to itself from arbitrary users, for use with
+constrained delegation.
+
+\item[{\{-\textbar{}+\}\textbf{no\_auth\_data\_required}}] \leavevmode
+\textbf{+no\_auth\_data\_required} prevents PAC or AD-SIGNEDPATH data from
+being added to service tickets for the principal.
+
 \item[{\textbf{-randkey}}] \leavevmode
 Sets the key of the principal to a random value.
+
+\item[{\textbf{-nokey}}] \leavevmode
+Causes the principal to be created with no key.  New in release
+1.12.
 
 \item[{\textbf{-pw} \emph{password}}] \leavevmode
 Sets the password of the principal to the specified string and
@@ -7127,12 +7399,14 @@ kadmin:
 \subsubsection{purgekeys}
 \label{admin/admin_commands/kadmin_local:id6}\label{admin/admin_commands/kadmin_local:change-password-end}\label{admin/admin_commands/kadmin_local:purgekeys}\begin{quote}
 
-\textbf{purgekeys} {[}\textbf{-keepkvno} \emph{oldest\_kvno\_to\_keep}{]} \emph{principal}
+\textbf{purgekeys} {[}\textbf{-all}\textbar{}\textbf{-keepkvno} \emph{oldest\_kvno\_to\_keep}{]} \emph{principal}
 \end{quote}
 
 Purges previously retained old keys (e.g., from \textbf{change\_password
 -keepold}) from \emph{principal}.  If \textbf{-keepkvno} is specified, then
-only purges keys with kvnos lower than \emph{oldest\_kvno\_to\_keep}.
+only purges keys with kvnos lower than \emph{oldest\_kvno\_to\_keep}.  If
+\textbf{-all} is specified, then all keys are purged.  The \textbf{-all} option
+is new in release 1.12.
 
 This command requires the \textbf{modify} privilege.
 \phantomsection\label{admin/admin_commands/kadmin_local:purgekeys-end}
@@ -7706,6 +7980,13 @@ on the system via the process list; to avoid this, instead
 stash the password using the \textbf{stashsrvpw} command of
 {\hyperref[admin/admin_commands/kdb5_ldap_util:kdb5-ldap-util-8]{\emph{kdb5\_ldap\_util}}}.
 
+\item[{\textbf{-x debug=}\emph{level}}] \leavevmode
+sets the OpenLDAP client library debug level.  \emph{level} is
+an integer to be interpreted by the library.  Debugging
+messages are printed to standard error, so this option
+must be used with the \textbf{-nofork} option to be useful.
+New in release 1.12.
+
 \end{description}
 \end{quote}
 
@@ -7832,9 +8113,9 @@ argument can be used to override the \emph{keyfile} specified in
 \subsubsection{dump}
 \label{admin/admin_commands/kdb5_util:kdb5-util-stash-end}\label{admin/admin_commands/kdb5_util:dump}\phantomsection\label{admin/admin_commands/kdb5_util:kdb5-util-dump}\begin{quote}
 
-\textbf{dump} {[}\textbf{-old}\textbar{}\textbf{-b6}\textbar{}\textbf{-b7}\textbar{}\textbf{-ov}\textbar{}\textbf{-r13}{]}
-{[}\textbf{-verbose}{]} {[}\textbf{-mkey\_convert}{]} {[}\textbf{-new\_mkey\_file} \emph{mkey\_file}{]}
-{[}\textbf{-rev}{]} {[}\textbf{-recurse}{]} {[}\emph{filename} {[}\emph{principals}...{]}{]}
+\textbf{dump} {[}\textbf{-b7}\textbar{}\textbf{-ov}\textbar{}\textbf{-r13}{]} {[}\textbf{-verbose}{]}
+{[}\textbf{-mkey\_convert}{]} {[}\textbf{-new\_mkey\_file} \emph{mkey\_file}{]} {[}\textbf{-rev}{]}
+{[}\textbf{-recurse}{]} {[}\emph{filename} {[}\emph{principals}...{]}{]}
 \end{quote}
 
 Dumps the current Kerberos and KADM5 database into an ASCII file.  By
@@ -7842,14 +8123,6 @@ default, the database is dumped in current format, ``kdb5\_util
 load\_dump version 6''.  If filename is not specified, or is the string
 ``-'', the dump is sent to standard output.  Options:
 \begin{description}
-\item[{\textbf{-old}}] \leavevmode
-causes the dump to be in the Kerberos 5 Beta 5 and earlier dump
-format (``kdb5\_edit load\_dump version 2.0'').
-
-\item[{\textbf{-b6}}] \leavevmode
-causes the dump to be in the Kerberos 5 Beta 6 format (``kdb5\_edit
-load\_dump version 3.0'').
-
 \item[{\textbf{-b7}}] \leavevmode
 causes the dump to be in the Kerberos 5 Beta 7 format (``kdb5\_util
 load\_dump version 4'').  This was the dump format produced on
@@ -7899,8 +8172,8 @@ than the \textbf{-rev} option will.
 \subsubsection{load}
 \label{admin/admin_commands/kdb5_util:kdb5-util-dump-end}\label{admin/admin_commands/kdb5_util:load}\phantomsection\label{admin/admin_commands/kdb5_util:kdb5-util-load}\begin{quote}
 
-\textbf{load} {[}\textbf{-old}\textbar{}\textbf{-b6}\textbar{}\textbf{-b7}\textbar{}\textbf{-ov}\textbar{}\textbf{-r13}{]}
-{[}\textbf{-hash}{]} {[}\textbf{-verbose}{]} {[}\textbf{-update}{]} \emph{filename} {[}\emph{dbname}{]}
+\textbf{load} {[}\textbf{-b7}\textbar{}\textbf{-ov}\textbar{}\textbf{-r13}{]} {[}\textbf{-hash}{]}
+{[}\textbf{-verbose}{]} {[}\textbf{-update}{]} \emph{filename} {[}\emph{dbname}{]}
 \end{quote}
 
 Loads a database dump from the named file into the named database.  If
@@ -7913,14 +8186,6 @@ database module, the \textbf{-update} flag is required.
 
 Options:
 \begin{description}
-\item[{\textbf{-old}}] \leavevmode
-requires the database to be in the Kerberos 5 Beta 5 and earlier
-format (``kdb5\_edit load\_dump version 2.0'').
-
-\item[{\textbf{-b6}}] \leavevmode
-requires the database to be in the Kerberos 5 Beta 6 format
-(``kdb5\_edit load\_dump version 3.0'').
-
 \item[{\textbf{-b7}}] \leavevmode
 requires the database to be in the Kerberos 5 Beta 7 format
 (``kdb5\_util load\_dump version 4'').
@@ -8656,6 +8921,12 @@ system via the process list; to avoid this, instead stash the
 password using the \textbf{stashsrvpw} command of
 {\hyperref[admin/admin_commands/kdb5_ldap_util:kdb5-ldap-util-8]{\emph{kdb5\_ldap\_util}}}.
 
+\item[{\textbf{-x debug=}\emph{level}}] \leavevmode
+sets the OpenLDAP client library debug level.  \emph{level} is an
+integer to be interpreted by the library.  Debugging messages
+are printed to standard error, so this option must be used
+with the \textbf{-n} option to be useful.  New in release 1.12.
+
 \end{description}
 \end{quote}
 
@@ -9140,6 +9411,7 @@ ktutil:
 \textbf{k5srvutil} \emph{operation}
 {[}\textbf{-i}{]}
 {[}\textbf{-f} \emph{filename}{]}
+{[}\textbf{-e} \emph{keysalts}{]}
 
 
 \subsection{DESCRIPTION}
@@ -9162,7 +9434,9 @@ operation will fail.  Old keys are retained in the keytab so that
 existing tickets continue to work.  If the \textbf{-i} flag is given,
 k5srvutil will prompt for confirmation before changing each key.
 If the \textbf{-k} option is given, the old and new keys will be
-displayed.
+displayed.  Ordinarily, keys will be generated with the default
+encryption types and key salts.  This can be overridden with the
+\textbf{-e} option.
 
 \item[{\textbf{delold}}] \leavevmode
 Deletes keys that are not the most recent version from the keytab.
@@ -9629,7 +9903,7 @@ programs).
 \label{admin/troubleshoot::doc}\label{admin/troubleshoot:troubleshooting}
 
 \section{Trace logging}
-\label{admin/troubleshoot:trace-logging}
+\label{admin/troubleshoot:trace-logging}\label{admin/troubleshoot:id1}
 Most programs using MIT krb5 1.9 or later can be made to provide
 information about internal krb5 library operations using trace
 logging.  To enable this, set the \textbf{KRB5\_TRACE} environment variable

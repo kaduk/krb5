@@ -96,11 +96,11 @@ done:
  *      [modifies]
  *
  */
-int process_ov_principal(fname, kcontext, filep, verbose, linenop)
-    char                *fname;
+int process_ov_principal(kcontext, fname, filep, verbose, linenop)
     krb5_context        kcontext;
+    const char          *fname;
     FILE                *filep;
-    int                 verbose;
+    krb5_boolean        verbose;
     int                 *linenop;
 {
     XDR                     xdrs;
@@ -111,7 +111,7 @@ int process_ov_principal(fname, kcontext, filep, verbose, linenop)
     krb5_db_entry           *kdb = NULL;
     char                    *current = 0;
     char                    *cp;
-    int                     x;
+    unsigned int            x;
     char                    line[LINESIZE];
 
     if (fgets(line, LINESIZE, filep) == (char *) NULL) {

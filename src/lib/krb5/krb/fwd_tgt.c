@@ -29,6 +29,7 @@
 #include <memory.h>
 #endif
 #include "int-proto.h"
+#include "os-proto.h"
 
 /* helper function: convert flags to necessary KDC options */
 #define flags2options(flags) (flags & KDC_TKT_COMMON_MASK)
@@ -120,27 +121,24 @@ krb5_fwd_tgt_creds(krb5_context context, krb5_auth_context auth_context,
 
     if (tgt.addresses && *tgt.addresses) {
         if (rhost == NULL) {
-            if (krb5_princ_type(context, server) != KRB5_NT_SRV_HST) {
+            if (server->type != KRB5_NT_SRV_HST) {
                 retval = KRB5_FWD_BAD_PRINCIPAL;
                 goto errout;
             }
 
-            if (krb5_princ_size(context, server) < 2){
+            if (server->length < 2){
                 retval = KRB5_CC_BADNAME;
                 goto errout;
             }
 
-            rhost = malloc(server->data[1].length+1);
-            if (!rhost) {
-                retval = ENOMEM;
+            rhost = k5memdup0(server->data[1].data, server->data[1].length,
+                              &retval);
+            if (rhost == NULL)
                 goto errout;
-            }
             free_rhost = 1;
-            memcpy(rhost, server->data[1].data, server->data[1].length);
-            rhost[server->data[1].length] = '\0';
         }
 
-        retval = krb5_os_hostaddr(context, rhost, &addrs);
+        retval = k5_os_hostaddr(context, rhost, &addrs);
         if (retval)
             goto errout;
     }

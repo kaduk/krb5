@@ -41,6 +41,6 @@ krb5_free_string -  Free a string allocated by a krb5 function.
 
 .. note::
 
-	 First introduced in 1.10
+	 New in 1.10
  
 

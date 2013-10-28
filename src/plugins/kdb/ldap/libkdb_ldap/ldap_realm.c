@@ -43,7 +43,6 @@
 char  *realm_attributes[] = {"krbSearchScope","krbSubTrees", "krbPrincContainerRef",
                              "krbMaxTicketLife", "krbMaxRenewableAge",
                              "krbTicketFlags", "krbUpEnabled",
-                             "krbTicketPolicyReference",
                              "krbLdapServers",
                              "krbKdcServers",  "krbAdmServers",
                              "krbPwdServers", NULL};
@@ -70,72 +69,25 @@ char  *krbContainerRefclass[] = { "krbContainerRefAux", NULL};
  * list realms from eDirectory
  */
 
-/*
- * Function to remove all special characters from a string (rfc2254).
- * Use whenever exact matching is to be done ...
- */
+/* Return a copy of in, quoting all characters which are special in an LDAP
+ * filter (RFC 4515) or DN string (RFC 4514).  Return NULL on failure. */
 char *
 ldap_filter_correct (char *in)
 {
-    size_t i, count;
-    char *out, *ptr;
-    size_t len = strlen(in);
+    size_t count;
+    const char special[] = "*()\\ #\"+,;<>";
+    struct k5buf buf;
 
-    for (i = 0, count = 0; i < len; i++)
-        switch (in[i]) {
-        case '*':
-        case '(':
-        case ')':
-        case '\\':
-        case '\0':
-            count ++;
-        }
-
-    out = (char *)malloc((len + (count * 2) + 1) * sizeof (char));
-    assert (out != NULL);
-    memset(out, 0, len + (count * 2) + 1);
-
-    for (i = 0, ptr = out; i < len; i++)
-        switch (in[i]) {
-        case '*':
-            ptr[0] = '\\';
-            ptr[1] = '2';
-            ptr[2] = 'a';
-            ptr += 3;
+    k5_buf_init_dynamic(&buf);
+    while (TRUE) {
+        count = strcspn(in, special);
+        k5_buf_add_len(&buf, in, count);
+        in += count;
+        if (*in == '\0')
             break;
-        case '(':
-            ptr[0] = '\\';
-            ptr[1] = '2';
-            ptr[2] = '8';
-            ptr += 3;
-            break;
-        case ')':
-            ptr[0] = '\\';
-            ptr[1] = '2';
-            ptr[2] = '9';
-            ptr += 3;
-            break;
-        case '\\':
-            ptr[0] = '\\';
-            ptr[1] = '5';
-            ptr[2] = 'c';
-            ptr += 3;
-            break;
-        case '\0':
-            ptr[0] = '\\';
-            ptr[1] = '0';
-            ptr[2] = '0';
-            ptr += 3;
-            break;
-        default:
-            ptr[0] = in[i];
-            ptr += 1;
-            break;
-        }
-
-    /* ptr[count - 1] = '\0'; */
-
-    return out;
+        k5_buf_add_fmt(&buf, "\\%2x", (unsigned char)*in++);
+    }
+    return k5_buf_data(&buf);
 }
 
 static int
@@ -177,9 +129,9 @@ krb5_ldap_list_realm(krb5_context context, char ***realms)
     SETUP_CONTEXT ();
 
     /* get the kerberos container DN information */
-    if (ldap_context->krbcontainer == NULL) {
-        if ((st = krb5_ldap_read_krbcontainer_params(context,
-                                                     &(ldap_context->krbcontainer))) != 0)
+    if (ldap_context->container_dn == NULL) {
+        if ((st = krb5_ldap_read_krbcontainer_dn(context,
+                                                 &(ldap_context->container_dn))) != 0)
             goto cleanup;
     }
 
@@ -188,7 +140,7 @@ krb5_ldap_list_realm(krb5_context context, char ***realms)
 
     {
         char *cn[] = {"cn", NULL};
-        LDAP_SEARCH(ldap_context->krbcontainer->DN,
+        LDAP_SEARCH(ldap_context->container_dn,
                     LDAP_SCOPE_ONELEVEL,
                     "(objectclass=krbRealmContainer)",
                     cn);
@@ -257,7 +209,8 @@ krb5_ldap_delete_realm (krb5_context context, char *lrealm)
     char                        **values=NULL, **subtrees=NULL, **policy=NULL;
     LDAPMessage                 **result_arr=NULL, *result = NULL, *ent = NULL;
     krb5_principal              principal;
-    int                         l=0, ntree=0, i=0, j=0, mask=0;
+    unsigned int                l=0, ntree=0;
+    int                         i=0, j=0, mask=0;
     kdb5_dal_handle             *dal_handle = NULL;
     krb5_ldap_context           *ldap_context = NULL;
     krb5_ldap_server_handle     *ldap_server_handle = NULL;
@@ -390,7 +343,7 @@ krb5_ldap_modify_realm(krb5_context context, krb5_ldap_realm_params *rparams,
     krb5_error_code       st=0;
     char                  **strval=NULL, *strvalprc[5]={NULL};
     LDAPMod               **mods = NULL;
-    int                   oldmask=0, objectmask=0,k=0;
+    int                   objectmask=0,k=0;
     kdb5_dal_handle       *dal_handle=NULL;
     krb5_ldap_context     *ldap_context=NULL;
     krb5_ldap_server_handle *ldap_server_handle=NULL;
@@ -406,7 +359,7 @@ krb5_ldap_modify_realm(krb5_context context, krb5_ldap_realm_params *rparams,
     SETUP_CONTEXT ();
 
     /* Check validity of arguments */
-    if (ldap_context->krbcontainer == NULL ||
+    if (ldap_context->container_dn == NULL ||
         rparams->tl_data == NULL ||
         rparams->tl_data->tl_data_contents == NULL ||
         ((mask & LDAP_REALM_SUBTREE) && rparams->subtree == NULL) ||
@@ -418,21 +371,6 @@ krb5_ldap_modify_realm(krb5_context context, krb5_ldap_realm_params *rparams,
 
     /* get ldap handle */
     GET_HANDLE ();
-
-    /* get the oldmask obtained from the krb5_ldap_read_realm_params */
-    {
-        void *voidptr=NULL;
-
-        if ((st=decode_tl_data(rparams->tl_data, KDB_TL_MASK, &voidptr)) == 0) {
-            oldmask = *((int *) voidptr);
-            free (voidptr);
-        } else {
-            st = EINVAL;
-            krb5_set_error_message(context, st, _("tl_data not available"));
-            return st;
-        }
-    }
-
 
     /* SUBTREE ATTRIBUTE */
     if (mask & LDAP_REALM_SUBTREE) {
@@ -521,17 +459,14 @@ cleanup:
 
 
 /*
- * Create the Kerberos container in the Directory
+ * Create the Kerberos container in the Directory if it does not exist
  */
 
 krb5_error_code
-krb5_ldap_create_krbcontainer(krb5_context context,
-                              const
-                              krb5_ldap_krbcontainer_params *krbcontparams)
+krb5_ldap_create_krbcontainer(krb5_context context, const char *dn)
 {
     LDAP                        *ld=NULL;
-    char                        *strval[2]={NULL}, *kerberoscontdn=NULL, **rdns=NULL;
-    int                         pmask=0;
+    char                        *strval[2]={NULL}, **rdns=NULL;
     LDAPMod                     **mods = NULL;
     krb5_error_code             st=0;
     kdb5_dal_handle             *dal_handle=NULL;
@@ -543,9 +478,7 @@ krb5_ldap_create_krbcontainer(krb5_context context,
     /* get ldap handle */
     GET_HANDLE ();
 
-    if (krbcontparams != NULL && krbcontparams->DN != NULL) {
-        kerberoscontdn = krbcontparams->DN;
-    } else {
+    if (dn == NULL) {
         st = EINVAL;
         krb5_set_error_message(context, st,
                                _("Kerberos Container information is missing"));
@@ -557,7 +490,7 @@ krb5_ldap_create_krbcontainer(krb5_context context,
     if ((st=krb5_add_str_mem_ldap_mod(&mods, "objectclass", LDAP_MOD_ADD, strval)) != 0)
         goto cleanup;
 
-    rdns = ldap_explode_dn(kerberoscontdn, 1);
+    rdns = ldap_explode_dn(dn, 1);
     if (rdns == NULL) {
         st = EINVAL;
         krb5_set_error_message(context, st,
@@ -570,21 +503,11 @@ krb5_ldap_create_krbcontainer(krb5_context context,
     if ((st=krb5_add_str_mem_ldap_mod(&mods, "cn", LDAP_MOD_ADD, strval)) != 0)
         goto cleanup;
 
-    /* check if the policy reference value exists and is of krbticketpolicyreference object class */
-    if (krbcontparams && krbcontparams->policyreference) {
-        st = checkattributevalue(ld, krbcontparams->policyreference, "objectclass", policyclass,
-                                 &pmask);
-        CHECK_CLASS_VALIDITY(st, pmask, _("ticket policy object value: "));
-
-        strval[0] = krbcontparams->policyreference;
-        strval[1] = NULL;
-        if ((st=krb5_add_str_mem_ldap_mod(&mods, "krbticketpolicyreference", LDAP_MOD_ADD,
-                                          strval)) != 0)
-            goto cleanup;
-    }
-
     /* create the kerberos container */
-    if ((st = ldap_add_ext_s(ld, kerberoscontdn, mods, NULL, NULL)) != LDAP_SUCCESS) {
+    st = ldap_add_ext_s(ld, dn, mods, NULL, NULL);
+    if (st == LDAP_ALREADY_EXISTS)
+        st = LDAP_SUCCESS;
+    if (st != LDAP_SUCCESS) {
         int ost = st;
         st = translate_ldap_error (st, OP_ADD);
         krb5_set_error_message(context, st,
@@ -608,12 +531,9 @@ cleanup:
  */
 
 krb5_error_code
-krb5_ldap_delete_krbcontainer(krb5_context context,
-                              const
-                              krb5_ldap_krbcontainer_params *krbcontparams)
+krb5_ldap_delete_krbcontainer(krb5_context context, const char *dn)
 {
     LDAP                        *ld=NULL;
-    char                        *kerberoscontdn=NULL;
     krb5_error_code             st=0;
     kdb5_dal_handle             *dal_handle=NULL;
     krb5_ldap_context           *ldap_context=NULL;
@@ -624,9 +544,7 @@ krb5_ldap_delete_krbcontainer(krb5_context context,
     /* get ldap handle */
     GET_HANDLE ();
 
-    if (krbcontparams != NULL && krbcontparams->DN != NULL) {
-        kerberoscontdn = krbcontparams->DN;
-    } else {
+    if (dn == NULL) {
         st = EINVAL;
         krb5_set_error_message(context, st,
                                _("Kerberos Container information is missing"));
@@ -634,7 +552,7 @@ krb5_ldap_delete_krbcontainer(krb5_context context,
     }
 
     /* delete the kerberos container */
-    if ((st = ldap_delete_ext_s(ld, kerberoscontdn, NULL, NULL)) != LDAP_SUCCESS) {
+    if ((st = ldap_delete_ext_s(ld, dn, NULL, NULL)) != LDAP_SUCCESS) {
         int ost = st;
         st = translate_ldap_error (st, OP_ADD);
         krb5_set_error_message(context, st,
@@ -673,22 +591,14 @@ krb5_ldap_create_realm(krb5_context context, krb5_ldap_realm_params *rparams,
     SETUP_CONTEXT ();
 
     /* Check input validity ... */
-    if (ldap_context->krbcontainer == NULL ||
-        ldap_context->krbcontainer->DN == NULL ||
+    if (ldap_context->container_dn == NULL ||
         rparams == NULL ||
         rparams->realm_name == NULL ||
         ((mask & LDAP_REALM_SUBTREE) && rparams->subtree  == NULL) ||
         ((mask & LDAP_REALM_CONTREF) && rparams->containerref == NULL) ||
-        ((mask & LDAP_REALM_POLICYREFERENCE) && rparams->policyreference == NULL) ||
         0) {
         st = EINVAL;
         return st;
-    }
-
-    if (ldap_context->krbcontainer == NULL) {
-        if ((st = krb5_ldap_read_krbcontainer_params(context,
-                                                     &(ldap_context->krbcontainer))) != 0)
-            goto cleanup;
     }
 
     /* get ldap handle */
@@ -696,8 +606,7 @@ krb5_ldap_create_realm(krb5_context context, krb5_ldap_realm_params *rparams,
 
     realm_name = rparams->realm_name;
 
-    if (asprintf(&dn, "cn=%s,%s", realm_name,
-                 ldap_context->krbcontainer->DN) < 0)
+    if (asprintf(&dn, "cn=%s,%s", realm_name, ldap_context->container_dn) < 0)
         dn = NULL;
     CHECK_NULL(dn);
 
@@ -805,7 +714,7 @@ krb5_error_code
 krb5_ldap_read_realm_params(krb5_context context, char *lrealm,
                             krb5_ldap_realm_params **rlparamp, int *mask)
 {
-    char                   **values=NULL, *krbcontDN=NULL /*, *curr=NULL */;
+    char                   **values=NULL;
     krb5_error_code        st=0, tempst=0;
     LDAP                   *ld=NULL;
     LDAPMessage            *result=NULL,*ent=NULL;
@@ -818,19 +727,11 @@ krb5_ldap_read_realm_params(krb5_context context, char *lrealm,
     SETUP_CONTEXT ();
 
     /* validate the input parameter */
-    if (lrealm == NULL ||
-        ldap_context->krbcontainer == NULL ||
-        ldap_context->krbcontainer->DN == NULL) {
+    if (lrealm == NULL || ldap_context->container_dn == NULL) {
         st = EINVAL;
         goto cleanup;
     }
 
-    /* read kerberos container, if not read already */
-    if (ldap_context->krbcontainer == NULL) {
-        if ((st = krb5_ldap_read_krbcontainer_params(context,
-                                                     &(ldap_context->krbcontainer))) != 0)
-            goto cleanup;
-    }
     /* get ldap handle */
     GET_HANDLE ();
 
@@ -854,9 +755,8 @@ krb5_ldap_read_realm_params(krb5_context context, char *lrealm,
     /* set default values */
     rlparams->search_scope = LDAP_SCOPE_SUBTREE;
 
-    krbcontDN = ldap_context->krbcontainer->DN;
-
-    if (asprintf(&rlparams->realmdn, "cn=%s,%s", lrealm, krbcontDN) < 0) {
+    if (asprintf(&rlparams->realmdn, "cn=%s,%s", lrealm,
+                 ldap_context->container_dn) < 0) {
         rlparams->realmdn = NULL;
         st = ENOMEM;
         goto cleanup;
@@ -946,53 +846,6 @@ krb5_ldap_read_realm_params(krb5_context context, char *lrealm,
     }
     ldap_msgfree(result);
 
-    /*
-     * If all of maxtktlife, maxrenewlife and ticketflags are not directly
-     * available, use the policy dn from the policy reference attribute, if
-     * available, to fetch the missing.
-     */
-
-    if ((!(*mask & LDAP_REALM_MAXTICKETLIFE && *mask & LDAP_REALM_MAXRENEWLIFE &&
-           *mask & LDAP_REALM_KRBTICKETFLAGS)) && rlparams->policyreference) {
-
-        LDAP_SEARCH_1(rlparams->policyreference, LDAP_SCOPE_BASE, NULL, policy_attributes, IGNORE_STATUS);
-        if (st != LDAP_SUCCESS && st != LDAP_NO_SUCH_OBJECT) {
-            int ost = st;
-            st = translate_ldap_error (st, OP_SEARCH);
-            krb5_set_error_message(context, st,
-                                   _("Policy object read failed: %s"),
-                                   ldap_err2string(ost));
-            goto cleanup;
-        }
-        ent = ldap_first_entry (ld, result);
-        if (ent != NULL) {
-            if ((*mask & LDAP_REALM_MAXTICKETLIFE) == 0) {
-                if ((values=ldap_get_values(ld, ent, "krbmaxticketlife")) != NULL) {
-                    rlparams->max_life = atoi(values[0]);
-                    *mask |= LDAP_REALM_MAXTICKETLIFE;
-                    ldap_value_free(values);
-                }
-            }
-
-            if ((*mask & LDAP_REALM_MAXRENEWLIFE) == 0) {
-                if ((values=ldap_get_values(ld, ent, "krbmaxrenewableage")) != NULL) {
-                    rlparams->max_renewable_life = atoi(values[0]);
-                    *mask |= LDAP_REALM_MAXRENEWLIFE;
-                    ldap_value_free(values);
-                }
-            }
-
-            if ((*mask & LDAP_REALM_KRBTICKETFLAGS) == 0) {
-                if ((values=ldap_get_values(ld, ent, "krbticketflags")) != NULL) {
-                    rlparams->tktflags = atoi(values[0]);
-                    *mask |= LDAP_REALM_KRBTICKETFLAGS;
-                    ldap_value_free(values);
-                }
-            }
-        }
-        ldap_msgfree(result);
-    }
-
     rlparams->mask = *mask;
     *rlparamp = rlparams;
     st = store_tl_data(rlparams->tl_data, KDB_TL_MASK, mask);
@@ -1022,39 +875,39 @@ krb5_ldap_free_realm_params(krb5_ldap_realm_params *rparams)
             free(rparams->realmdn);
 
         if (rparams->realm_name)
-            krb5_xfree(rparams->realm_name);
+            free(rparams->realm_name);
 
         if (rparams->subtree) {
             for (i=0; i<rparams->subtreecount && rparams->subtree[i] ; i++)
-                krb5_xfree(rparams->subtree[i]);
-            krb5_xfree(rparams->subtree);
+                free(rparams->subtree[i]);
+            free(rparams->subtree);
         }
 
         if (rparams->kdcservers) {
             for (i=0; rparams->kdcservers[i]; ++i)
-                krb5_xfree(rparams->kdcservers[i]);
-            krb5_xfree(rparams->kdcservers);
+                free(rparams->kdcservers[i]);
+            free(rparams->kdcservers);
         }
 
         if (rparams->adminservers) {
             for (i=0; rparams->adminservers[i]; ++i)
-                krb5_xfree(rparams->adminservers[i]);
-            krb5_xfree(rparams->adminservers);
+                free(rparams->adminservers[i]);
+            free(rparams->adminservers);
         }
 
         if (rparams->passwdservers) {
             for (i=0; rparams->passwdservers[i]; ++i)
-                krb5_xfree(rparams->passwdservers[i]);
-            krb5_xfree(rparams->passwdservers);
+                free(rparams->passwdservers[i]);
+            free(rparams->passwdservers);
         }
 
         if (rparams->tl_data) {
             if (rparams->tl_data->tl_data_contents)
-                krb5_xfree(rparams->tl_data->tl_data_contents);
-            krb5_xfree(rparams->tl_data);
+                free(rparams->tl_data->tl_data_contents);
+            free(rparams->tl_data);
         }
 
-        krb5_xfree(rparams);
+        free(rparams);
     }
     return;
 }

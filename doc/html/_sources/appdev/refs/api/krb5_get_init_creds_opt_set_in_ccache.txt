@@ -47,6 +47,6 @@ If an input credential cache is set, then the krb5_get_init_creds family of APIs
 
 .. note::
 
-	 First introduced in 1.11
+	 New in 1.11
  
 

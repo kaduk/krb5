@@ -33,6 +33,50 @@
 #include "kdb_ldap.h"
 #include "ldap_service_stash.h"
 
+/* Decode a password of the form {HEX}<hexstring>. */
+static krb5_error_code
+dec_password(krb5_context context, const char *str,
+             unsigned char **password_out)
+{
+    size_t len;
+    const unsigned char *p;
+    unsigned char *password, *q;
+    unsigned int k;
+
+    *password_out = NULL;
+
+    if (strncmp(str, "{HEX}", 5) != 0) {
+        krb5_set_error_message(context, EINVAL,
+                               _("Not a hexadecimal password"));
+        return EINVAL;
+    }
+    str += 5;
+
+    len = strlen(str);
+    if (len % 2 != 0) {
+        krb5_set_error_message(context, EINVAL, _("Password corrupt"));
+        return EINVAL;
+    }
+
+    q = password = malloc(len / 2 + 1);
+    if (password == NULL)
+        return ENOMEM;
+
+    for (p = (unsigned char *)str; *p != '\0'; p += 2) {
+        if (!isxdigit(*p) || !isxdigit(p[1])) {
+            free(password);
+            krb5_set_error_message(context, EINVAL, _("Password corrupt"));
+            return EINVAL;
+        }
+        sscanf((char *)p, "%2x", &k);
+        *q++ = k;
+    }
+    *q = '\0';
+
+    *password_out = password;
+    return 0;
+}
+
 krb5_error_code
 krb5_ldap_readpassword(krb5_context context, krb5_ldap_context *ldap_context,
                        unsigned char **password)
@@ -40,7 +84,6 @@ krb5_ldap_readpassword(krb5_context context, krb5_ldap_context *ldap_context,
     int                         entryfound=0;
     krb5_error_code             st=0;
     char                        line[RECORDLEN]="0", *start=NULL, *file=NULL;
-    char                        errbuf[1024];
     FILE                        *fptr=NULL;
 
     *password = NULL;
@@ -53,26 +96,12 @@ krb5_ldap_readpassword(krb5_context context, krb5_ldap_context *ldap_context,
 # define strerror_r(ERRNUM, BUF, SIZE) (strncpy(BUF, strerror(ERRNUM), SIZE), BUF[(SIZE)-1] = 0)
 #endif
 
-    /* check whether file exists */
-    if (access(file, F_OK) < 0) {
+    fptr = fopen(file, "r");
+    if (fptr == NULL) {
         st = errno;
-        strerror_r(errno, errbuf, sizeof(errbuf));
-        krb5_set_error_message (context, st, "%s", errbuf);
-        goto rp_exit;
-    }
-
-    /* check read access */
-    if (access(file, R_OK) < 0) {
-        st = errno;
-        strerror_r(errno, errbuf, sizeof(errbuf));
-        krb5_set_error_message (context, st, "%s", errbuf);
-        goto rp_exit;
-    }
-
-    if ((fptr=fopen(file, "r")) == NULL) {
-        st = errno;
-        strerror_r(errno, errbuf, sizeof(errbuf));
-        krb5_set_error_message (context, st, "%s", errbuf);
+        krb5_set_error_message(context, st,
+                               _("Cannot open LDAP password file '%s': %s"),
+                               file, error_message(st));
         goto rp_exit;
     }
     set_cloexec_file(fptr);
@@ -100,8 +129,9 @@ krb5_ldap_readpassword(krb5_context context, krb5_ldap_context *ldap_context,
 
     if (entryfound == 0)  {
         st = KRB5_KDB_SERVER_INTERNAL_ERR;
-        krb5_set_error_message(context, st,
-                               _("Bind DN entry missing in stash file"));
+        krb5_set_error_message(context, st, _("Bind DN entry '%s' missing in "
+                                              "LDAP password file '%s'"),
+                               ldap_context->bind_dn, file);
         goto rp_exit;
     }
     /* replace the \n with \0 */
@@ -117,58 +147,9 @@ krb5_ldap_readpassword(krb5_context context, krb5_ldap_context *ldap_context,
         goto rp_exit;
     }
     ++ start;
-    /* Extract the plain password / certificate file information */
-    {
-        struct data PT, CT;
 
-        /* Check if the entry has the path of a certificate */
-        if (!strncmp(start, "{FILE}", strlen("{FILE}"))) {
-            /* Set *password = {FILE}<path to cert>\0<cert password> */
-            size_t len = strlen(start);
-
-            *password = (unsigned char *)malloc(len + 2);
-            if (*password == NULL) {
-                st = ENOMEM;
-                goto rp_exit;
-            }
-            memcpy(*password, start, len);
-            (*password)[len] = '\0';
-            (*password)[len + 1] = '\0';
-            goto got_password;
-        } else {
-            CT.value = (unsigned char *)start;
-            CT.len = strlen((char *)CT.value);
-            st = dec_password(CT, &PT);
-            if (st != 0) {
-                switch (st) {
-                case ERR_NO_MEM:
-                    st = ENOMEM;
-                    break;
-                case ERR_PWD_ZERO:
-                    st = EINVAL;
-                    krb5_set_error_message(context, st,
-                                           _("Password has zero length"));
-                    break;
-                case ERR_PWD_BAD:
-                    st = EINVAL;
-                    krb5_set_error_message(context, st,
-                                           _("Password corrupted"));
-                    break;
-                case ERR_PWD_NOT_HEX:
-                    st = EINVAL;
-                    krb5_set_error_message(context, st,
-                                           _("Not a hexadecimal password"));
-                    break;
-                default:
-                    st = KRB5_KDB_SERVER_INTERNAL_ERR;
-                    break;
-                }
-                goto rp_exit;
-            }
-            *password = PT.value;
-        }
-    }
-got_password:
+    /* Extract the plain password information. */
+    st = dec_password(context, start, password);
 
 rp_exit:
     if (st) {
@@ -184,7 +165,8 @@ rp_exit:
 int
 tohex(krb5_data in, krb5_data *ret)
 {
-    int                i=0, err = 0;
+    unsigned int       i=0;
+    int                err = 0;
 
     ret->length = 0;
     ret->data = NULL;
@@ -208,76 +190,4 @@ cleanup:
     }
 
     return err;
-}
-
-/* The entry in the password file will have the following format
- * <FQDN of service> = <secret>
- *   <secret> := {HEX}<password in hexadecimal>
- *
- * <password> is the actual eDirectory password of the service
- * Return values:
- * ERR_NO_MEM      - No Memory
- * ERR_PWD_ZERO    - Password has zero length
- * ERR_PWD_BAD     - Passowrd corrupted
- * ERR_PWD_NOT_HEX - Not a hexadecimal password
- */
-
-int
-dec_password(struct data pwd, struct data *ret)
-{
-    int err=0;
-    int i=0, j=0;
-
-    ret->len = 0;
-    ret->value = NULL;
-
-    if (pwd.len == 0) {
-        err = ERR_PWD_ZERO;
-        ret->len = 0;
-        goto cleanup;
-    }
-
-    /* Check if it is a hexadecimal encoded password */
-    if (pwd.len >= strlen("{HEX}") &&
-        strncmp((char *)pwd.value, "{HEX}", strlen("{HEX}")) == 0) {
-
-        if ((pwd.len - strlen("{HEX}")) % 2 != 0) {
-            /* A hexadecimal encoded password should have even length */
-            err = ERR_PWD_BAD;
-            ret->len = 0;
-            goto cleanup;
-        }
-        ret->value = (unsigned char *)malloc((pwd.len - strlen("{HEX}")) / 2 + 1);
-        if (ret->value == NULL) {
-            err = ERR_NO_MEM;
-            ret->len = 0;
-            goto cleanup;
-        }
-        ret->len = (pwd.len - strlen("{HEX}")) / 2;
-        ret->value[ret->len] = '\0';
-        for (i = strlen("{HEX}"), j = 0; i < pwd.len; i += 2, j++) {
-            unsigned int k;
-            /* Check if it is a hexadecimal number */
-            if (isxdigit(pwd.value[i]) == 0 || isxdigit(pwd.value[i + 1]) == 0) {
-                err = ERR_PWD_NOT_HEX;
-                ret->len = 0;
-                goto cleanup;
-            }
-            sscanf((char *)pwd.value + i, "%2x", &k);
-            ret->value[j] = k;
-        }
-        goto cleanup;
-    } else {
-        err = ERR_PWD_NOT_HEX;
-        ret->len = 0;
-        goto cleanup;
-    }
-
-cleanup:
-
-    if (ret->len == 0) {
-        free(ret->value);
-        ret->value = NULL;
-    }
-    return(err);
 }

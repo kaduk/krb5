@@ -126,8 +126,8 @@ For each realm, the following tags may be specified:
         tickets.
 
     **no-auth-data-required**
-        Enabling this flag prevents PAC data from being added to
-        service tickets for the principal.
+        Enabling this flag prevents PAC or AD-SIGNEDPATH data from
+        being added to service tickets for the principal.
 
     **ok-as-delegate**
         If this flag is enabled, it hints the client that credentials
@@ -180,9 +180,10 @@ For each realm, the following tags may be specified:
 
 **dict_file**
     (String.)  Location of the dictionary file containing strings that
-    are not allowed as passwords.  If none is specified or if there is
-    no policy assigned to the principal, no dictionary checks of
-    passwords will be performed.
+    are not allowed as passwords.  The file should contain one string
+    per line, with no additional whitespace.  If none is specified or
+    if there is no policy assigned to the principal, no dictionary
+    checks of passwords will be performed.
 
 **host_based_services**
     (Whitespace- or comma-separated list.)  Lists services which will
@@ -212,7 +213,7 @@ For each realm, the following tags may be specified:
     (Delta time string.)  Specifies the amount of time to wait for a
     full propagation to complete.  This is optional in configuration
     files, and is used by slave KDCs only.  The default value is 5
-    minutes (``5m``).
+    minutes (``5m``).  New in release 1.11.
 
 **iprop_logfile**
     (File name.)  Specifies where the update log file for the realm
@@ -284,7 +285,7 @@ For each realm, the following tags may be specified:
     principals support des-cbc-crc for session key enctype negotiation
     purposes.  If **allow_weak_crypto** in :ref:`libdefaults` is
     false, or if des-cbc-crc is not a permitted enctype, then this
-    variable has no effect.  Defaults to true.
+    variable has no effect.  Defaults to true.  New in release 1.11.
 
 **reject_bad_transit**
     (Boolean value.)  If set to true, the KDC will check the list of
@@ -313,7 +314,7 @@ For each realm, the following tags may be specified:
     than the realm's ticket-granting service.  This option allows
     anonymous PKINIT to be enabled for use as FAST armor tickets
     without allowing anonymous authentication to services.  The
-    default value is false.
+    default value is false.  New in release 1.9.
 
 **supported_enctypes**
     (List of *key*:*salt* strings.)  Specifies the default key/salt
@@ -375,14 +376,14 @@ the subsection:
     preauthentication.  Setting this flag may improve performance.
     (Principal entries which do not require preauthentication never
     update the "Last successful authentication" field.).  First
-    introduced in version 1.9.
+    introduced in release 1.9.
 
 **disable_lockout**
     If set to ``true``, suppresses KDC updates to the "Last failed
     authentication" and "Failed password attempts" fields of principal
     entries requiring preauthentication.  Setting this flag may
     improve performance, but also disables account lockout.  First
-    introduced in version 1.9.
+    introduced in release 1.9.
 
 **ldap_conns_per_server**
     This LDAP-specific tag indicates the number of connections to be
@@ -489,6 +490,72 @@ administrative server will be appended to the file
         admin_server = FILE:/var/adm/kadmin.log
         admin_server = DEVICE=/dev/tty04
 
+
+.. _otp:
+
+[otp]
+~~~~~
+
+Each subsection of [otp] is the name of an OTP token type.  The tags
+within the subsection define the configuration required to forward a
+One Time Password request to a RADIUS server.
+
+For each token type, the following tags may be specified:
+
+**server**
+    This is the server to send the RADIUS request to.  It can be a
+    hostname with optional port, an ip address with optional port, or
+    a Unix domain socket address.  The default is
+    |kdcdir|\ ``/<name>.socket``.
+
+**secret**
+    This tag indicates a filename (which may be relative to |kdcdir|)
+    containing the secret used to encrypt the RADIUS packets.  The
+    secret should appear in the first line of the file by itself;
+    leading and trailing whitespace on the line will be removed.  If
+    the value of **server** is a Unix domain socket address, this tag
+    is optional, and an empty secret will be used if it is not
+    specified.  Otherwise, this tag is required.
+
+**timeout**
+    An integer which specifies the time in seconds during which the
+    KDC should attempt to contact the RADIUS server.  This tag is the
+    total time across all retries and should be less than the time
+    which an OTP value remains valid for.  The default is 5 seconds.
+
+**retries**
+    This tag specifies the number of retries to make to the RADIUS
+    server.  The default is 3 retries (4 tries).
+
+**strip_realm**
+    If this tag is ``true``, the principal without the realm will be
+    passed to the RADIUS server.  Otherwise, the realm will be
+    included.  The default value is ``true``.
+
+In the following example, requests are sent to a remote server via UDP.
+
+ ::
+
+    [otp]
+        MyRemoteTokenType = {
+            server = radius.mydomain.com:1812
+            secret = SEmfiajf42$
+            timeout = 15
+            retries = 5
+            strip_realm = true
+        }
+
+An implicit default token type named ``DEFAULT`` is defined for when
+the per-principal configuration does not specify a token type.  Its
+configuration is shown below.  You may override this token type to
+something applicable for your situation.
+
+ ::
+
+    [otp]
+        DEFAULT = {
+            strip_realm = false
+        }
 
 PKINIT options
 --------------

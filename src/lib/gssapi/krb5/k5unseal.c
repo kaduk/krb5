@@ -67,7 +67,7 @@ kg_unseal_v1(context, minor_status, ctx, ptr, bodysize, message_buffer,
     int bodysize;
     gss_buffer_t message_buffer;
     int *conf_state;
-    int *qop_state;
+    gss_qop_t *qop_state;
     int toktype;
 {
     krb5_error_code code;
@@ -309,7 +309,7 @@ kg_unseal_v1(context, minor_status, ctx, ptr, bodysize, message_buffer,
             cksum.length = 16;
         cksum.contents = md5cksum.contents + 16 - cksum.length;
 
-        code = memcmp(cksum.contents, ptr+14, cksum.length);
+        code = k5_bcmp(cksum.contents, ptr + 14, cksum.length);
         break;
 
     case SGN_ALG_MD2_5:
@@ -353,7 +353,7 @@ kg_unseal_v1(context, minor_status, ctx, ptr, bodysize, message_buffer,
             return(GSS_S_FAILURE);
         }
 
-        code = memcmp(md5cksum.contents, ptr+14, 8);
+        code = k5_bcmp(md5cksum.contents, ptr + 14, 8);
         /* Falls through to defective-token??  */
 
     default:
@@ -393,7 +393,7 @@ kg_unseal_v1(context, minor_status, ctx, ptr, bodysize, message_buffer,
             return(GSS_S_FAILURE);
         }
 
-        code = memcmp(md5cksum.contents, ptr+14, cksum_len);
+        code = k5_bcmp(md5cksum.contents, ptr + 14, cksum_len);
         break;
     }
 

@@ -5,6 +5,9 @@
 #define KRB5_AUTOCONF_H
 
 
+/* Define if AES-NI support is enabled */
+#undef AESNI
+
 /* Define if ANSI stdio is present (in particular "b" option to fopen) */
 #undef ANSI_STDIO
 
@@ -136,6 +139,9 @@
 /* Define if com_err has compatible gettext support */
 #undef HAVE_COM_ERR_INTL
 
+/* Define to 1 if you have the <cpuid.h> header file. */
+#undef HAVE_CPUID_H
+
 /* Define to 1 if you have the `daemon' function. */
 #undef HAVE_DAEMON
 
@@ -230,9 +236,6 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
-/* Define to 1 if you have the `isblank' function. */
-#undef HAVE_ISBLANK
-
 /* Define to 1 if you have the <keyutils.h> header file. */
 #undef HAVE_KEYUTILS_H
 
@@ -319,6 +322,9 @@
 
 /* Define to 1 if you have the <paths.h> header file. */
 #undef HAVE_PATHS_H
+
+/* Define if persistent keyrings are supported */
+#undef HAVE_PERSISTENT_KEYRING
 
 /* Define to 1 if you have the <poll.h> header file. */
 #undef HAVE_POLL_H
@@ -634,9 +640,6 @@
 /* Define for DNS support of locating realms and KDCs */
 #undef KRB5_DNS_LOOKUP
 
-/* Define to enable DNS lookups of Kerberos KDCs */
-#undef KRB5_DNS_LOOKUP_KDC
-
 /* Define to enable DNS lookups of Kerberos realm names */
 #undef KRB5_DNS_LOOKUP_REALM
 
@@ -651,9 +654,6 @@
 
 /* Define if in6addr_any is not defined in libc */
 #undef NEED_INSIXADDR_ANY
-
-/* define if the system header files are missing prototype for isblank() */
-#undef NEED_ISBLANK_PROTO
 
 /* define if the system header files are missing prototype for strptime() */
 #undef NEED_STRPTIME_PROTO

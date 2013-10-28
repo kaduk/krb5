@@ -14,7 +14,7 @@
 
 \title{Building MIT Kerberos}
 \date{ }
-\release{1.11.3}
+\release{1.12-alpha1}
 \author{MIT}
 \newcommand{\sphinxlogo}{}
 \renewcommand{\releasename}{Release}
@@ -510,11 +510,6 @@ search path, though. Alternatively, you can configure with
 installation, but allows testing without interference from
 previously installed libraries.
 
-\item {} 
-In order to test the RPC layer, the local system has to be running
-the portmap daemon and it has to be listening to the regular network
-interface (not just localhost).
-
 \end{itemize}
 
 There are additional regression tests available, which are not run
@@ -821,6 +816,9 @@ Disable the cache which detects client retransmits.
 
 \item[{\textbf{-}\textbf{-disable-pkinit}}] \leavevmode
 Disable PKINIT plugin support.
+
+\item[{\textbf{-}\textbf{-disable-aesni}}] \leavevmode
+Disable support for using AES instructions on x86 platforms.
 
 \end{description}
 

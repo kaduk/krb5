@@ -215,7 +215,7 @@ typedef struct _osa_policy_ent_t {
     krb5_ui_4       pw_min_length;
     krb5_ui_4       pw_min_classes;
     krb5_ui_4       pw_history_num;
-    krb5_ui_4       policy_refcnt;
+    krb5_ui_4       policy_refcnt;              /* no longer used */
     /* Only valid if version > 1 */
     krb5_ui_4       pw_max_fail;                /* pwdMaxFailure */
     krb5_ui_4       pw_failcnt_interval;        /* pwdFailureCountInterval */
@@ -335,9 +335,7 @@ extern char *krb5_mkey_pwd_prompt2;
 #define KRB5_KDB_SRV_TYPE_ADMIN         0x0200
 #endif
 
-#ifndef KRB5_KDB_SRV_TYPE_PASSWD
-#define KRB5_KDB_SRV_TYPE_PASSWD        0x0300
-#endif
+/* 0x0300 was KRB5_KDB_SRV_TYPE_PASSWD but it is no longer used. */
 
 #ifndef KRB5_KDB_SRV_TYPE_OTHER
 #define KRB5_KDB_SRV_TYPE_OTHER         0x0400
@@ -373,6 +371,12 @@ krb5_error_code krb5_db_put_principal ( krb5_context kcontext,
                                         krb5_db_entry *entry );
 krb5_error_code krb5_db_delete_principal ( krb5_context kcontext,
                                            krb5_principal search_for );
+
+/*
+ * Iterate over principals in the KDB.  If the callback may write to the DB,
+ * the caller must get an exclusive lock with krb5_db_lock before iterating,
+ * and release it with krb5_db_unlock after iterating.
+ */
 krb5_error_code krb5_db_iterate ( krb5_context kcontext,
                                   char *match_entry,
                                   int (*func) (krb5_pointer, krb5_db_entry *),
@@ -1257,8 +1261,9 @@ typedef struct _kdb_vftabl {
 
     /*
      * Optional: Perform a policy check on a cross-realm ticket's transited
-     * field and return an error (other than KRB5_PLUGIN_OP_NOTSUPP) if the
-     * check fails.
+     * field.  Return 0 if the check authoritatively succeeds,
+     * KRB5_PLUGIN_NO_HANDLE to use the core transited-checking mechanisms, or
+     * another error (other than KRB5_PLUGIN_OP_NOTSUPP) if the check fails.
      */
     krb5_error_code (*check_transited_realms)(krb5_context kcontext,
                                               const krb5_data *tr_contents,
@@ -1272,7 +1277,7 @@ typedef struct _kdb_vftabl {
      *   - Place a short string literal into *status.
      *   - If desired, place data into e_data.  Any data placed here will be
      *     freed by the caller using the standard free function.
-     *   - Return an appropriate error (such as KDC_ERR_POLICY).
+     *   - Return an appropriate error (such as KRB5KDC_ERR_POLICY).
      */
     krb5_error_code (*check_policy_as)(krb5_context kcontext,
                                        krb5_kdc_req *request,
@@ -1289,7 +1294,7 @@ typedef struct _kdb_vftabl {
      *   - Place a short string literal into *status.
      *   - If desired, place data into e_data.  Any data placed here will be
      *     freed by the caller using the standard free function.
-     *   - Return an appropriate error (such as KDC_ERR_POLICY).
+     *   - Return an appropriate error (such as KRB5KDC_ERR_POLICY).
      * The input parameter ticket contains the TGT used in the TGS request.
      */
     krb5_error_code (*check_policy_tgs)(krb5_context kcontext,

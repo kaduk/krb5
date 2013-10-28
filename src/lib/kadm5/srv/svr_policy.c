@@ -17,41 +17,6 @@
 #define MAX_PW_CLASSES  5
 #define MIN_PW_LENGTH   1
 
-/*
- * Function: kadm5_create_policy
- *
- * Purpose: Create Policies in the policy DB.
- *
- * Arguments:
- *      entry   (input) The policy entry to be written out to the DB.
- *      mask    (input) Specifies which fields in entry are to ge written out
- *                      and which get default values.
- *      <return value> 0 if successful otherwise an error code is returned.
- *
- * Requires:
- *      Entry must be a valid principal entry, and mask have a valid value.
- *
- * Effects:
- *      Verifies that mask does not specify that the refcount should
- *      be set as part of the creation, and calls
- *      kadm5_create_policy_internal.  If the refcount *is*
- *      specified, returns KADM5_BAD_MASK.
- */
-
-kadm5_ret_t
-kadm5_create_policy(void *server_handle,
-                    kadm5_policy_ent_t entry, long mask)
-{
-    CHECK_HANDLE(server_handle);
-
-    krb5_clear_error_message(((kadm5_server_handle_t)server_handle)->context);
-
-    if (mask & KADM5_REF_COUNT)
-        return KADM5_BAD_MASK;
-    else
-        return kadm5_create_policy_internal(server_handle, entry, mask);
-}
-
 /* Validate allowed_keysalts. */
 static kadm5_ret_t
 validate_allowed_keysalts(const char *allowed_keysalts)
@@ -71,7 +36,7 @@ validate_allowed_keysalts(const char *allowed_keysalts)
 }
 
 /*
- * Function: kadm5_create_policy_internal
+ * Function: kadm5_create_policy
  *
  * Purpose: Create Policies in the policy DB.
  *
@@ -91,8 +56,7 @@ validate_allowed_keysalts(const char *allowed_keysalts)
  */
 
 kadm5_ret_t
-kadm5_create_policy_internal(void *server_handle,
-                             kadm5_policy_ent_t entry, long mask)
+kadm5_create_policy(void *server_handle, kadm5_policy_ent_t entry, long mask)
 {
     kadm5_server_handle_t handle = server_handle;
     osa_policy_ent_rec  pent;
@@ -100,6 +64,8 @@ kadm5_create_policy_internal(void *server_handle,
     char                *p;
 
     CHECK_HANDLE(server_handle);
+
+    krb5_clear_error_message(handle->context);
 
     if ((entry == (kadm5_policy_ent_t) NULL) || (entry->policy == NULL))
         return EINVAL;
@@ -158,10 +124,6 @@ kadm5_create_policy_internal(void *server_handle,
         else
             pent.pw_history_num = entry->pw_history_num;
     }
-    if (!(mask & KADM5_REF_COUNT))
-        pent.policy_refcnt = 0;
-    else
-        pent.policy_refcnt = entry->policy_refcnt;
 
     if (handle->api_version >= KADM5_API_VERSION_4) {
         if (!(mask & KADM5_POLICY_ATTRIBUTES))
@@ -230,29 +192,11 @@ kadm5_delete_policy(void *server_handle, kadm5_policy_t name)
     else if (ret)
         return ret;
 
-    if(entry->policy_refcnt != 0) {
-        krb5_db_free_policy(handle->context, entry);
-        return KADM5_POLICY_REF;
-    }
     krb5_db_free_policy(handle->context, entry);
     ret = krb5_db_delete_policy(handle->context, name);
     if (ret == KRB5_KDB_POLICY_REF)
         ret = KADM5_POLICY_REF;
     return (ret == 0) ? KADM5_OK : ret;
-}
-
-kadm5_ret_t
-kadm5_modify_policy(void *server_handle,
-                    kadm5_policy_ent_t entry, long mask)
-{
-    CHECK_HANDLE(server_handle);
-
-    krb5_clear_error_message(((kadm5_server_handle_t)server_handle)->context);
-
-    if (mask & KADM5_REF_COUNT)
-        return KADM5_BAD_MASK;
-    else
-        return kadm5_modify_policy_internal(server_handle, entry, mask);
 }
 
 /* Allocate and form a TL data list of a desired size. */
@@ -299,8 +243,7 @@ copy_tl_data(krb5_int16 n_tl_data, krb5_tl_data *tl_data,
 }
 
 kadm5_ret_t
-kadm5_modify_policy_internal(void *server_handle,
-                             kadm5_policy_ent_t entry, long mask)
+kadm5_modify_policy(void *server_handle, kadm5_policy_ent_t entry, long mask)
 {
     kadm5_server_handle_t    handle = server_handle;
     krb5_tl_data            *tl;
@@ -309,6 +252,8 @@ kadm5_modify_policy_internal(void *server_handle,
     size_t                   len;
 
     CHECK_HANDLE(server_handle);
+
+    krb5_clear_error_message(handle->context);
 
     if((entry == (kadm5_policy_ent_t) NULL) || (entry->policy == NULL))
         return EINVAL;
@@ -368,8 +313,6 @@ kadm5_modify_policy_internal(void *server_handle,
         }
         p->pw_history_num = entry->pw_history_num;
     }
-    if ((mask & KADM5_REF_COUNT))
-        p->policy_refcnt = entry->policy_refcnt;
     if (handle->api_version >= KADM5_API_VERSION_3) {
         if ((mask & KADM5_PW_MAX_FAILURE))
             p->pw_max_fail = entry->pw_max_fail;
@@ -448,7 +391,6 @@ kadm5_get_policy(void *server_handle, kadm5_policy_t name,
     entry->pw_min_length = t->pw_min_length;
     entry->pw_min_classes = t->pw_min_classes;
     entry->pw_history_num = t->pw_history_num;
-    entry->policy_refcnt = t->policy_refcnt;
     if (handle->api_version >= KADM5_API_VERSION_3) {
         entry->pw_max_fail = t->pw_max_fail;
         entry->pw_failcnt_interval = t->pw_failcnt_interval;

@@ -12,7 +12,7 @@ krb5_rd_cred -  Read and validate a KRB-CRED message.
 
 	          **[in]** **context** - Library context
 
-	          **[inout]** **auth_context** - Authentication context
+	          **[in]** **auth_context** - Authentication context
 
 	          **[in]** **pcreddata** - **KRB-CRED** message
 

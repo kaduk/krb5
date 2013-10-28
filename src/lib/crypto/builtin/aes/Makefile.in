@@ -1,19 +1,19 @@
 mydir=lib$(S)crypto$(S)builtin$(S)aes
 BUILDTOP=$(REL)..$(S)..$(S)..$(S)..
-LOCALINCLUDES = -I$(srcdir)/.. -I$(srcdir)/../../krb/dk  -I$(srcdir)/../../../../include
-DEFS=
 
 ##DOS##BUILDTOP = ..\..\..\..
 ##DOS##PREFIXDIR = builtin\aes
 ##DOS##OBJFILE = ..\..\$(OUTPRE)aes.lst
 
-PROG_LIBPATH=-L$(TOPLIBD)
-PROG_RPATH=$(KRB5_LIBDIR)
+YASM=@YASM@
+AESNI_OBJ=@AESNI_OBJ@
+AESNI_FLAGS=@AESNI_FLAGS@
 
 STLIBOBJS=\
 	aescrypt.o	\
 	aestab.o	\
-	aeskey.o
+	aeskey.o	\
+	@AESNI_OBJ@
 
 OBJS=\
 	$(OUTPRE)aescrypt.$(OBJEXT)	\
@@ -34,12 +34,18 @@ GEN_OBJS=\
 
 all-unix:: all-libobjs # aes-gen
 
+iaesx64@SHOBJEXT@: $(srcdir)/iaesx64.s
+	$(YASM) $(AESNI_FLAGS) -o $@ $(srcdir)/iaesx64.s
+
+iaesx86@SHOBJEXT@: $(srcdir)/iaesx86.s
+	$(YASM) $(AESNI_FLAGS) -o $@ $(srcdir)/iaesx86.s
+
 includes:: depend
 
 depend:: $(SRCS)
 
 aes-gen: aes-gen.o $(GEN_OBJS)
-	$(CC_LINK) -I../../../../include $(LOCALINCLUDES) -o aes-gen aes-gen.o $(GEN_OBJS)
+	$(CC_LINK) -o aes-gen aes-gen.o $(GEN_OBJS)
 
 run-aes-gen: aes-gen
 	./aes-gen > kresults.out

@@ -40,6 +40,7 @@
 #include <sys/stat.h>
 
 #include "pkinit.h"
+#include "k5-json.h"
 
 /*
  * It is anticipated that all the special checks currently
@@ -198,7 +199,7 @@ pa_pkinit_gen_req(krb5_context context,
      */
     if ((return_pa_data[0]->pa_type == KRB5_PADATA_PK_AS_REP_OLD
          && reqctx->opts->win2k_require_cksum) || (longhorn == 1)) {
-        return_pa_data[1]->pa_type = 132;
+        return_pa_data[1]->pa_type = KRB5_PADATA_AS_CHECKSUM;
         return_pa_data[1]->length = 0;
         return_pa_data[1]->contents = NULL;
     } else {
@@ -902,8 +903,8 @@ pkinit_as_rep_parse(krb5_context context,
         }
 
         if ((cksum.length != key_pack->asChecksum.length) ||
-            memcmp(cksum.contents, key_pack->asChecksum.contents,
-                   cksum.length)) {
+            k5_bcmp(cksum.contents, key_pack->asChecksum.contents,
+                    cksum.length) != 0) {
             TRACE_PKINIT_CLIENT_REP_CHECKSUM_FAIL(context, &cksum,
                                                   &key_pack->asChecksum);
             pkiDebug("failed to match the checksums\n");
@@ -1050,6 +1051,195 @@ pkinit_client_profile(krb5_context context,
     }
 }
 
+/*
+ * Convert a PKCS11 token flags value to the subset that we're interested in
+ * passing along to our API callers.
+ */
+static long long
+pkinit_client_get_token_flags(unsigned long pkcs11_token_flags)
+{
+    long long flags = 0;
+
+    if (pkcs11_token_flags & CKF_USER_PIN_COUNT_LOW)
+        flags |= KRB5_RESPONDER_PKINIT_FLAGS_TOKEN_USER_PIN_COUNT_LOW;
+    if (pkcs11_token_flags & CKF_USER_PIN_FINAL_TRY)
+        flags |= KRB5_RESPONDER_PKINIT_FLAGS_TOKEN_USER_PIN_FINAL_TRY;
+    if (pkcs11_token_flags & CKF_USER_PIN_LOCKED)
+        flags |= KRB5_RESPONDER_PKINIT_FLAGS_TOKEN_USER_PIN_LOCKED;
+    return flags;
+}
+
+/*
+ * Phase one of loading client identity information - call
+ * identity_initialize() to load any identities which we can without requiring
+ * help from the calling user, and use their names of those which we can't load
+ * to construct the challenge for the responder callback.
+ */
+static krb5_error_code
+pkinit_client_prep_questions(krb5_context context,
+                             krb5_clpreauth_moddata moddata,
+                             krb5_clpreauth_modreq modreq,
+                             krb5_get_init_creds_opt *opt,
+                             krb5_clpreauth_callbacks cb,
+                             krb5_clpreauth_rock rock,
+                             krb5_kdc_req *request,
+                             krb5_data *encoded_request_body,
+                             krb5_data *encoded_previous_request,
+                             krb5_pa_data *pa_data)
+{
+    krb5_error_code retval;
+    pkinit_context plgctx = (pkinit_context)moddata;
+    pkinit_req_context reqctx = (pkinit_req_context)modreq;
+    int i, n;
+    const pkinit_deferred_id *deferred_ids;
+    const char *identity;
+    unsigned long ck_flags;
+    char *encoded;
+    k5_json_object jval = NULL;
+    k5_json_number jflag = NULL;
+
+    if (!reqctx->identity_initialized) {
+        pkinit_client_profile(context, plgctx, reqctx, cb, rock,
+                              &request->server->realm);
+        retval = pkinit_identity_initialize(context, plgctx->cryptoctx,
+                                            reqctx->cryptoctx, reqctx->idopts,
+                                            reqctx->idctx, cb, rock,
+                                            request->client);
+        if (retval != 0) {
+            TRACE_PKINIT_CLIENT_NO_IDENTITY(context);
+            pkiDebug("pkinit_identity_initialize returned %d (%s)\n",
+                     retval, error_message(retval));
+        }
+
+        reqctx->identity_initialized = TRUE;
+        crypto_free_cert_info(context, plgctx->cryptoctx,
+                              reqctx->cryptoctx, reqctx->idctx);
+        if (retval != 0) {
+            pkiDebug("%s: not asking responder question\n", __FUNCTION__);
+            retval = 0;
+            goto cleanup;
+        }
+    }
+
+    deferred_ids = crypto_get_deferred_ids(context, reqctx->idctx);
+    for (i = 0; deferred_ids != NULL && deferred_ids[i] != NULL; i++)
+        continue;
+    n = i;
+
+    /* Make sure we don't just return an empty challenge. */
+    if (n == 0) {
+        pkiDebug("%s: no questions to ask\n", __FUNCTION__);
+        retval = 0;
+        goto cleanup;
+    }
+
+    /* Create the top-level object. */
+    retval = k5_json_object_create(&jval);
+    if (retval != 0)
+        goto cleanup;
+
+    for (i = 0; i < n; i++) {
+        /* Add an entry to the top-level object for the identity. */
+        identity = deferred_ids[i]->identity;
+        ck_flags = deferred_ids[i]->ck_flags;
+        /* Calculate the flags value for the bits that that we care about. */
+        retval = k5_json_number_create(pkinit_client_get_token_flags(ck_flags),
+                                       &jflag);
+        if (retval != 0)
+            goto cleanup;
+        retval = k5_json_object_set(jval, identity, jflag);
+        if (retval != 0)
+            goto cleanup;
+        k5_json_release(jflag);
+        jflag = NULL;
+    }
+
+    /* Encode and done. */
+    retval = k5_json_encode(jval, &encoded);
+    if (retval == 0) {
+        cb->ask_responder_question(context, rock,
+                                   KRB5_RESPONDER_QUESTION_PKINIT,
+                                   encoded);
+        pkiDebug("%s: asking question '%s'\n", __FUNCTION__, encoded);
+        free(encoded);
+    }
+
+cleanup:
+    k5_json_release(jval);
+    k5_json_release(jflag);
+
+    pkiDebug("%s returning %d\n", __FUNCTION__, retval);
+
+    return retval;
+}
+
+/*
+ * Parse data supplied by the application's responder callback, saving off any
+ * PINs and passwords for identities which we noted needed them.
+ */
+struct save_one_password_data {
+    krb5_context context;
+    krb5_clpreauth_modreq modreq;
+    const char *caller;
+};
+
+static void
+save_one_password(void *arg, const char *key, k5_json_value val)
+{
+    struct save_one_password_data *data = arg;
+    pkinit_req_context reqctx = (pkinit_req_context)data->modreq;
+    const char *password;
+
+    if (k5_json_get_tid(val) == K5_JSON_TID_STRING) {
+        password = k5_json_string_utf8(val);
+        pkiDebug("%s: \"%s\": %p\n", data->caller, key, password);
+        crypto_set_deferred_id(data->context, reqctx->idctx, key, password);
+    }
+}
+
+static krb5_error_code
+pkinit_client_parse_answers(krb5_context context,
+                            krb5_clpreauth_moddata moddata,
+                            krb5_clpreauth_modreq modreq,
+                            krb5_clpreauth_callbacks cb,
+                            krb5_clpreauth_rock rock)
+{
+    krb5_error_code retval;
+    const char *encoded;
+    k5_json_value jval;
+    struct save_one_password_data data;
+
+    data.context = context;
+    data.modreq = modreq;
+    data.caller = __FUNCTION__;
+
+    encoded = cb->get_responder_answer(context, rock,
+                                       KRB5_RESPONDER_QUESTION_PKINIT);
+    if (encoded == NULL)
+        return 0;
+
+    pkiDebug("pkinit_client_parse_answers: %s\n", encoded);
+
+    retval = k5_json_decode(encoded, &jval);
+    if (retval != 0)
+        goto cleanup;
+
+    /* Expect that the top-level answer is an object. */
+    if (k5_json_get_tid(jval) != K5_JSON_TID_OBJECT) {
+        retval = EINVAL;
+        goto cleanup;
+    }
+
+    /* Store the passed-in per-identity passwords. */
+    k5_json_object_iterate(jval, &save_one_password, &data);
+    retval = 0;
+
+cleanup:
+    if (jval != NULL)
+        k5_json_release(jval);
+    return retval;
+}
+
 static krb5_error_code
 pkinit_client_process(krb5_context context, krb5_clpreauth_moddata moddata,
                       krb5_clpreauth_modreq modreq,
@@ -1107,15 +1297,41 @@ pkinit_client_process(krb5_context context, krb5_clpreauth_moddata moddata,
     if (processing_request) {
         pkinit_client_profile(context, plgctx, reqctx, cb, rock,
                               &request->server->realm);
-        pkinit_identity_set_prompter(reqctx->idctx, prompter, prompter_data);
-        retval = pkinit_identity_initialize(context, plgctx->cryptoctx,
+        /* Pull in PINs and passwords for identities which we deferred
+         * loading earlier. */
+        retval = pkinit_client_parse_answers(context, moddata, modreq,
+                                             cb, rock);
+        if (retval) {
+            if (retval == KRB5KRB_ERR_GENERIC)
+                pkiDebug("pkinit responder answers were invalid\n");
+            return retval;
+        }
+        if (!reqctx->identity_prompted) {
+            reqctx->identity_prompted = TRUE;
+            /*
+             * Load identities (again, potentially), prompting, if we can, for
+             * anything for which we didn't get an answer from the responder
+             * callback.
+             */
+            pkinit_identity_set_prompter(reqctx->idctx, prompter,
+                                         prompter_data);
+            retval = pkinit_identity_prompt(context, plgctx->cryptoctx,
                                             reqctx->cryptoctx, reqctx->idopts,
                                             reqctx->idctx, cb, rock,
                                             reqctx->do_identity_matching,
                                             request->client);
-        if (retval) {
+            pkinit_identity_set_prompter(reqctx->idctx, NULL, NULL);
+            reqctx->identity_prompt_retval = retval;
+            if (retval) {
+                TRACE_PKINIT_CLIENT_NO_IDENTITY(context);
+                pkiDebug("pkinit_identity_prompt returned %d (%s)\n",
+                         retval, error_message(retval));
+                return retval;
+            }
+        } else if (reqctx->identity_prompt_retval) {
+            retval = reqctx->identity_prompt_retval;
             TRACE_PKINIT_CLIENT_NO_IDENTITY(context);
-            pkiDebug("pkinit_identity_initialize returned %d (%s)\n",
+            pkiDebug("pkinit_identity_prompt previously returned %d (%s)\n",
                      retval, error_message(retval));
             return retval;
         }
@@ -1130,8 +1346,10 @@ pkinit_client_process(krb5_context context, krb5_clpreauth_moddata moddata,
         retval = pa_pkinit_parse_rep(context, plgctx, reqctx, request,
                                      in_padata, enctype, &as_key,
                                      encoded_previous_request);
-        if (retval == 0)
+        if (retval == 0) {
             retval = cb->set_as_key(context, rock, &as_key);
+            krb5_free_keyblock_contents(context, &as_key);
+        }
     }
 
     pkiDebug("pkinit_client_process: returning %d (%s)\n",
@@ -1230,7 +1448,7 @@ static int
 pkinit_client_get_flags(krb5_context kcontext, krb5_preauthtype patype)
 {
     if (patype == KRB5_PADATA_PKINIT_KX)
-        return PA_INFO|PA_PSEUDO;
+        return PA_INFO;
     return PA_REAL;
 }
 
@@ -1406,40 +1624,21 @@ pkinit_client_plugin_fini(krb5_context context, krb5_clpreauth_moddata moddata)
 static krb5_error_code
 add_string_to_array(krb5_context context, char ***array, const char *addition)
 {
-    char **out = NULL;
+    char **a = *array;
+    size_t len;
 
-    if (*array == NULL) {
-        out = malloc(2 * sizeof(char *));
-        if (out == NULL)
-            return ENOMEM;
-        out[1] = NULL;
-        out[0] = strdup(addition);
-        if (out[0] == NULL) {
-            free(out);
-            return ENOMEM;
-        }
-    } else {
-        int i;
-        char **a = *array;
-        for (i = 0; a[i] != NULL; i++);
-        out = malloc( (i + 2) * sizeof(char *));
-        if (out == NULL)
-            return ENOMEM;
-        for (i = 0; a[i] != NULL; i++) {
-            out[i] = a[i];
-        }
-        out[i++] = strdup(addition);
-        if (out == NULL) {
-            free(out);
-            return ENOMEM;
-        }
-        out[i] = NULL;
-        free(*array);
-    }
-    *array = out;
-
+    for (len = 0; a != NULL && a[len] != NULL; len++);
+    a = realloc(a, (len + 2) * sizeof(char *));
+    if (a == NULL)
+        return ENOMEM;
+    *array = a;
+    a[len] = strdup(addition);
+    if (a[len] == NULL)
+        return ENOMEM;
+    a[len + 1] = NULL;
     return 0;
 }
+
 static krb5_error_code
 handle_gic_opt(krb5_context context,
                pkinit_context plgctx,
@@ -1509,6 +1708,7 @@ clpreauth_pkinit_initvt(krb5_context context, int maj_ver, int min_ver,
     vt->fini = pkinit_client_plugin_fini;
     vt->flags = pkinit_client_get_flags;
     vt->request_init = pkinit_client_req_init;
+    vt->prep_questions = pkinit_client_prep_questions;
     vt->request_fini = pkinit_client_req_fini;
     vt->process = pkinit_client_process;
     vt->tryagain = pkinit_client_tryagain;

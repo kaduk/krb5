@@ -314,12 +314,12 @@ rd_req_decoded_opt(krb5_context context, krb5_auth_context *auth_context,
     }
 
     /* Get an rcache if necessary. */
-    if (((*auth_context)->rcache == NULL)
-        && ((*auth_context)->auth_context_flags & KRB5_AUTH_CONTEXT_DO_TIME)
-        && server) {
-        if ((retval = krb5_get_server_rcache(context,
-                                             krb5_princ_component(context,server,0),
-                                             &(*auth_context)->rcache)))
+    if (((*auth_context)->rcache == NULL) &&
+        ((*auth_context)->auth_context_flags & KRB5_AUTH_CONTEXT_DO_TIME) &&
+        server != NULL && server->length > 0) {
+        retval = krb5_get_server_rcache(context, &server->data[0],
+                                        &(*auth_context)->rcache);
+        if (retval)
             goto cleanup;
     }
     /* okay, now check cross-realm policy */
@@ -345,7 +345,7 @@ rd_req_decoded_opt(krb5_context context, krb5_auth_context *auth_context,
         krb5_data       * realm;
         krb5_transited  * trans;
 
-        realm = krb5_princ_realm(context, req->ticket->enc_part2->client);
+        realm = &req->ticket->enc_part2->client->realm;
         trans = &(req->ticket->enc_part2->transited);
 
         /*
@@ -368,7 +368,7 @@ rd_req_decoded_opt(krb5_context context, krb5_auth_context *auth_context,
         krb5_data      * realm;
         krb5_transited * trans;
 
-        realm = krb5_princ_realm(context, req->ticket->enc_part2->client);
+        realm = &req->ticket->enc_part2->client->realm;
         trans = &(req->ticket->enc_part2->transited);
 
         /*
@@ -378,8 +378,7 @@ rd_req_decoded_opt(krb5_context context, krb5_auth_context *auth_context,
          */
         if (trans->tr_contents.length > 0 && trans->tr_contents.data[0]) {
             retval = krb5_check_transited_list(context, &(trans->tr_contents),
-                                               realm,
-                                               krb5_princ_realm (context,server));
+                                               realm, &server->realm);
         }
     }
 

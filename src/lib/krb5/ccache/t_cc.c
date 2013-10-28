@@ -25,6 +25,7 @@
  */
 
 #include "k5-int.h"
+#include "cc-int.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include "autoconf.h"
@@ -331,14 +332,14 @@ check_registered(krb5_context context, const char *prefix)
     if(kret != KRB5_OK) {
         if(kret == KRB5_CC_UNKNOWN_TYPE)
             return 0;
-        com_err("Checking on credential type", kret,prefix);
+        com_err("Checking on credential type", kret, "%s", prefix);
         fflush(stderr);
         return 0;
     }
 
     kret = krb5_cc_close(context, id);
     if(kret != KRB5_OK) {
-        com_err("Checking on credential type - closing", kret,prefix);
+        com_err("Checking on credential type - closing", kret, "%s", prefix);
         fflush(stderr);
     }
 
@@ -425,8 +426,8 @@ main(void)
     test_misc(context);
     do_test(context, "");
 
-    if(check_registered(context, "KEYRING:"))
-        do_test(context, "KEYRING:");
+    if (check_registered(context, "KEYRING:process:"))
+        do_test(context, "KEYRING:process:");
     else
         printf("Skiping KEYRING: test - unregistered type\n");
 

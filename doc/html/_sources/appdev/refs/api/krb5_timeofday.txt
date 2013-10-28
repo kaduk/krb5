@@ -12,7 +12,7 @@ krb5_timeofday -  Retrieve the current time with context specific time offset ad
 
 	          **[in]** **context** - Library context
 
-	          **[inout]** **timeret** - Timestamp to fill in
+	          **[out]** **timeret** - Timestamp to fill in
 
 
 ..

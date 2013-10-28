@@ -43,6 +43,6 @@ krb5_responder_otp_challenge_free -  Free the value returned by krb5_responder_o
 
 .. note::
 
-	 First introduced in 1.11
+	 New in 1.11
  
 

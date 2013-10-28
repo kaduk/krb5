@@ -257,15 +257,12 @@ kdc_find_fast(krb5_kdc_req **requestptr,
         } else {
             new_padata->pa_type = KRB5_PADATA_FX_COOKIE;
             new_padata->length = cookie_padata->length;
-            new_padata->contents = malloc(new_padata->length);
-            if (new_padata->contents == NULL) {
-                retval = ENOMEM;
+            new_padata->contents =
+                k5memdup(cookie_padata->contents, new_padata->length, &retval);
+            if (new_padata->contents == NULL)
                 free(new_padata);
-            } else {
-                memcpy(new_padata->contents, cookie_padata->contents,
-                       new_padata->length);
+            else
                 state->cookie = new_padata;
-            }
         }
     }
     if (retval == 0 && inner_body_out != NULL) {
@@ -298,8 +295,6 @@ kdc_free_rstate (struct kdc_request_state *s)
 {
     kdc_realm_t *kdc_active_realm = s->realm_data;
 
-    if (s == NULL)
-        return;
     if (s->armor_key)
         krb5_free_keyblock(kdc_context, s->armor_key);
     if (s->strengthen_key)
@@ -419,7 +414,7 @@ kdc_fast_handle_error(krb5_context context,
 
     *fast_edata_out = NULL;
     memset(outer_pa, 0, sizeof(outer_pa));
-    if (!state || !state->armor_key)
+    if (state->armor_key == NULL)
         return 0;
     fx_error = *err;
     fx_error.e_data.data = NULL;
@@ -520,4 +515,10 @@ kdc_preauth_get_cookie(struct kdc_request_state *state,
     pa->contents = (unsigned char *) contents;
     *cookie = pa;
     return 0;
+}
+
+krb5_boolean
+kdc_fast_hide_client(struct kdc_request_state *state)
+{
+    return (state->fast_options & KRB5_FAST_OPTION_HIDE_CLIENT_NAMES) != 0;
 }

@@ -49,6 +49,6 @@ This function checks if *date* is close enough to the current time according to 
 
 .. note::
 
-	 First introduced in 1.10
+	 New in 1.10
  
 

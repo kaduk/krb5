@@ -389,9 +389,9 @@ krb5_free_principal(krb5_context context, krb5_principal val)
         return;
 
     if (val->data) {
-        i = krb5_princ_size(context, val);
+        i = val->length;
         while(--i >= 0)
-            free(krb5_princ_component(context, val, i)->data);
+            free(val->data[i].data);
         free(val->data);
     }
     free(val->realm.data);
@@ -640,15 +640,6 @@ krb5_free_pa_pac_req(krb5_context context,
     free(req);
 }
 
-void KRB5_CALLCONV
-krb5_free_etype_list(krb5_context context,
-                     krb5_etype_list *etypes)
-{
-    if (etypes != NULL) {
-        free(etypes->etypes);
-        free(etypes);
-    }
-}
 void KRB5_CALLCONV
 krb5_free_fast_req(krb5_context context, krb5_fast_req *val)
 {

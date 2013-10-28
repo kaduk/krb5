@@ -12,7 +12,7 @@ krb5_cccol_cursor_new -  Prepare to iterate over the collection of known credent
 
 	          **[in]** **context** - Library context
 
-	          **[inout]** **cursor** - Cursor
+	          **[out]** **cursor** - Cursor
 
 
 ..

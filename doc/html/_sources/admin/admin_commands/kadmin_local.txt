@@ -158,6 +158,11 @@ OPTIONS
         password using the **stashsrvpw** command of
         :ref:`kdb5_ldap_util(8)`.
 
+    **-x debug=**\ *level*
+        sets the OpenLDAP client library debug level.  *level* is an
+        integer to be interpreted by the library.  Debugging messages
+        are printed to standard error.  New in release 1.12.
+
 .. _kadmin_options_end:
 
 
@@ -279,8 +284,21 @@ Options:
     **+password_changing_service** marks this principal as a password
     change service principal.
 
+{-\|+}\ **ok_to_auth_as_delegate**
+    **+ok_to_auth_as_delegate** allows this principal to acquire
+    forwardable tickets to itself from arbitrary users, for use with
+    constrained delegation.
+
+{-\|+}\ **no_auth_data_required**
+    **+no_auth_data_required** prevents PAC or AD-SIGNEDPATH data from
+    being added to service tickets for the principal.
+
 **-randkey**
     Sets the key of the principal to a random value.
+
+**-nokey**
+    Causes the principal to be created with no key.  New in release
+    1.12.
 
 **-pw** *password*
     Sets the password of the principal to the specified string and
@@ -445,11 +463,13 @@ Example:
 purgekeys
 ~~~~~~~~~
 
-    **purgekeys** [**-keepkvno** *oldest_kvno_to_keep*] *principal*
+    **purgekeys** [**-all**\|\ **-keepkvno** *oldest_kvno_to_keep*] *principal*
 
 Purges previously retained old keys (e.g., from **change_password
 -keepold**) from *principal*.  If **-keepkvno** is specified, then
-only purges keys with kvnos lower than *oldest_kvno_to_keep*.
+only purges keys with kvnos lower than *oldest_kvno_to_keep*.  If
+**-all** is specified, then all keys are purged.  The **-all** option
+is new in release 1.12.
 
 This command requires the **modify** privilege.
 

@@ -123,11 +123,8 @@ krb5_kt_register(krb5_context context, const krb5_kt_ops *ops)
 {
     const struct krb5_kt_typelist *t;
     struct krb5_kt_typelist *newt;
-    krb5_error_code err;
 
-    err = k5_mutex_lock(&kt_typehead_lock);
-    if (err)
-        return err;
+    k5_mutex_lock(&kt_typehead_lock);
     for (t = kt_typehead; t && strcmp(t->ops->prefix,ops->prefix);t = t->next)
         ;
     if (t) {
@@ -188,20 +185,14 @@ krb5_kt_resolve (krb5_context context, const char *name, krb5_keytab *ktid)
         resid = name;
     } else {
         resid = name + pfxlen + 1;
-
-        pfx = malloc (pfxlen+1);
-        if (!pfx)
-            return ENOMEM;
-
-        memcpy (pfx, name, pfxlen);
-        pfx[pfxlen] = '\0';
+        pfx = k5memdup0(name, pfxlen, &err);
+        if (pfx == NULL)
+            return err;
     }
 
     *ktid = (krb5_keytab) 0;
 
-    err = k5_mutex_lock(&kt_typehead_lock);
-    if (err)
-        goto cleanup;
+    k5_mutex_lock(&kt_typehead_lock);
     tlist = kt_typehead;
     /* Don't need to hold the lock, since entries are never modified
        or removed once they're in the list.  Just need to protect
@@ -220,6 +211,16 @@ krb5_kt_resolve (krb5_context context, const char *name, krb5_keytab *ktid)
 cleanup:
     free(pfx);
     return err;
+}
+
+krb5_error_code KRB5_CALLCONV
+krb5_kt_dup(krb5_context context, krb5_keytab in, krb5_keytab *out)
+{
+    krb5_error_code err;
+    char name[BUFSIZ];
+
+    err = in->ops->get_name(context, in, name, sizeof(name));
+    return err ? err : krb5_kt_resolve(context, name, out);
 }
 
 /*

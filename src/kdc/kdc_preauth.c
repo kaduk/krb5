@@ -85,7 +85,7 @@
 #include <syslog.h>
 
 #include <assert.h>
-#include "../include/krb5/preauth_plugin.h"
+#include <krb5/kdcpreauth_plugin.h>
 
 typedef struct preauth_system_st {
     const char *name;
@@ -237,6 +237,8 @@ get_plugin_vtables(krb5_context context,
 
     /* Auto-register encrypted challenge and (if possible) pkinit. */
     k5_plugin_register_dyn(context, PLUGIN_INTERFACE_KDCPREAUTH, "pkinit",
+                           "preauth");
+    k5_plugin_register_dyn(context, PLUGIN_INTERFACE_KDCPREAUTH, "otp",
                            "preauth");
     k5_plugin_register(context, PLUGIN_INTERFACE_KDCPREAUTH,
                        "encrypted_challenge",
@@ -542,8 +544,23 @@ event_context(krb5_context context, krb5_kdcpreauth_rock rock)
     return rock->vctx;
 }
 
+static krb5_boolean
+have_client_keys(krb5_context context, krb5_kdcpreauth_rock rock)
+{
+    krb5_kdc_req *request = rock->request;
+    krb5_key_data *kd;
+    int i;
+
+    for (i = 0; i < request->nktypes; i++) {
+        if (krb5_dbe_find_enctype(context, rock->client, request->ktype[i],
+                                  -1, 0, &kd) == 0)
+            return TRUE;
+    }
+    return FALSE;
+}
+
 static struct krb5_kdcpreauth_callbacks_st callbacks = {
-    1,
+    2,
     max_time_skew,
     client_keys,
     free_keys,
@@ -552,7 +569,8 @@ static struct krb5_kdcpreauth_callbacks_st callbacks = {
     get_string,
     free_string,
     client_entry,
-    event_context
+    event_context,
+    have_client_keys
 };
 
 static krb5_error_code
@@ -1349,7 +1367,7 @@ etype_info_helper(krb5_context context, krb5_kdc_req *request,
     int i = 0, start = 0, seen_des = 0;
     int etype_info2 = (pa_type == KRB5_PADATA_ETYPE_INFO2);
 
-    entry = k5alloc((client->n_key_data * 2 + 1) * sizeof(*entry), &retval);
+    entry = k5calloc(client->n_key_data * 2 + 1, sizeof(*entry), &retval);
     if (entry == NULL)
         goto cleanup;
     entry[0] = NULL;
@@ -1404,6 +1422,11 @@ etype_info_helper(krb5_context context, krb5_kdc_req *request,
             seen_des++;
         }
     }
+
+    /* If the list is empty, don't send it at all. */
+    if (i == 0)
+        goto cleanup;
+
     if (etype_info2)
         retval = encode_krb5_etype_info2(entry, &scratch);
     else
@@ -1467,6 +1490,9 @@ etype_info_as_rep_helper(krb5_context context, krb5_pa_data * padata,
     krb5_pa_data *tmp_padata;
     krb5_etype_info_entry **entry = NULL;
     krb5_data *scratch = NULL;
+
+    if (client_key == NULL)
+        return 0;
 
     /*
      * Skip PA-ETYPE-INFO completely if AS-REQ lists any "newer"
@@ -1571,6 +1597,9 @@ return_pw_salt(krb5_context context, krb5_pa_data *in_padata,
     krb5_key_data *     client_key = rock->client_key;
     int i;
 
+    if (client_key == NULL)
+        return 0;
+
     for (i = 0; i < request->nktypes; i++) {
         if (enctype_requires_etype_info_2(request->ktype[i]))
             return 0;
@@ -1586,12 +1615,10 @@ return_pw_salt(krb5_context context, krb5_pa_data *in_padata,
     padata->magic = KV5M_PA_DATA;
 
     if (salttype == KRB5_KDB_SALTTYPE_AFS3) {
-        padata->contents = k5alloc(salt->length + 1, &retval);
+        padata->contents = k5memdup0(salt->data, salt->length, &retval);
         if (padata->contents == NULL)
             goto cleanup;
-        memcpy(padata->contents, salt->data, salt->length);
         padata->pa_type = KRB5_PADATA_AFS3_SALT;
-        padata->contents[salt->length] = '\0';
         padata->length = salt->length + 1;
     } else {
         padata->pa_type = KRB5_PADATA_PW_SALT;

@@ -17,7 +17,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '1.11.3',
+        VERSION:     '1.12-alpha1',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -35,92 +35,31 @@
   </head>
   <body>
     <div class="header-wrapper">
-        <div class="header" style="padding-bottom: 0px;">
+        <div class="header">
             
             
-                <h1><a href="../index.html"
-                style="color: #5d1509; font-size: 120%;
-                padding-top: 10px;">MIT Kerberos Documentation</a></h1>
+            <h1><a href="../index.html">MIT Kerberos Documentation</a></h1>
             
             <div class="rel">
-                    <a href="../index.html"
-                    title="Full Table of Contents"
-                    accesskey="C">Contents</a>
-                     |
-                    <a href="directory_org.html"
-                    title="Organization of the source directory"
-                    accesskey="P">previous</a>
-                     |
-                    <a href="options2configure.html"
-                    title="Options to configure"
-                    accesskey="N">next</a>
-                     |
-                    <a href="../genindex.html"
-                    title="General Index"
-                    accesskey="I">index</a>
-                     |
-                    <a href="../search.html"
-                    title="Enter search criteria"
-                    accesskey="S">Search</a>
-                     |
-                <a href="mailto:krb5-bugs@mit.edu?subject=Documentation__Doing the build">feedback</a>
+                
+        <a href="../index.html" title="Full Table of Contents"
+            accesskey="C">Contents</a> |
+        <a href="directory_org.html" title="Organization of the source directory"
+            accesskey="P">previous</a> |
+        <a href="options2configure.html" title="Options to configure"
+            accesskey="N">next</a> |
+        <a href="../genindex.html" title="General Index"
+            accesskey="I">index</a> |
+        <a href="../search.html" title="Enter search criteria"
+            accesskey="S">Search</a> |
+    <a href="mailto:krb5-bugs@mit.edu?subject=Documentation__Doing the build">feedback</a>
             </div>
         </div>
     </div>
 
     <div class="content-wrapper">
-        <div class="content">
-                <div class="sidebar"
-                    style="float: right; background: #F9F9F9">
-                    <h2>On this page </h2>
-                    <ul>
-<li><a class="reference internal" href="#">Doing the build</a><ul>
-<li><a class="reference internal" href="#using-autoconf">Using autoconf</a></li>
-<li><a class="reference internal" href="#building-within-a-single-tree">Building within a single tree</a></li>
-<li><a class="reference internal" href="#building-with-separate-build-directories">Building with separate build directories</a></li>
-<li><a class="reference internal" href="#building-using-lndir">Building using lndir</a></li>
-<li><a class="reference internal" href="#installing-the-binaries">Installing the binaries</a></li>
-<li><a class="reference internal" href="#testing-the-build">Testing the build</a></li>
-<li><a class="reference internal" href="#cleaning-up-the-build">Cleaning up the build</a></li>
-</ul>
-</li>
-</ul>
-
-                    <br/>
-                    <h2>Table of contents</h2>
-                    <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="../user/index.html">For users</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../admin/index.html">For administrators</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../appdev/index.html">For application developers</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../plugindev/index.html">For plugin module developers</a></li>
-<li class="toctree-l1 current"><a class="reference internal" href="index.html">Building Kerberos V5</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="directory_org.html">Organization of the source directory</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="">Doing the build</a><ul class="simple">
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="options2configure.html">Options to <em>configure</em></a></li>
-<li class="toctree-l2"><a class="reference internal" href="osconf.html">osconf.hin</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../basic/index.html">Kerberos V5 concepts</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../mitK5features.html">MIT Kerberos features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../build_this.html">How to build this documentation from the source</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../about.html">The Kerberos Documentation Set</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../resources.html">Resources</a></li>
-</ul>
-
-                    <br/>
-                    <h4><a href="../index.html">Full Table of Contents
-                    </a></h4>
-                    <h4>Search</h4>
-                    <form class="search" action="../search.html" method="get">
-                        <input type="text" name="q" size="18" />
-                        <input type="submit" value="Go" />
-                        <input type="hidden" name="check_keywords" value="yes" />
-                        <input type="hidden" name="area" value="default" />
-                    </form>
-                </div>
-            <div class="document">
+      <div class="content">
+        <div class="document">
             
       <div class="documentwrapper">
         <div class="bodywrapper">
@@ -251,9 +190,6 @@ search path, though. Alternatively, you can configure with
 <strong>-</strong><strong>-disable-rpath</strong>, which renders the build tree less suitable for
 installation, but allows testing without interference from
 previously installed libraries.</li>
-<li>In order to test the RPC layer, the local system has to be running
-the portmap daemon and it has to be listening to the regular network
-interface (not just localhost).</li>
 </ul>
 <p>There are additional regression tests available, which are not run
 by <tt class="docutils literal"><span class="pre">make</span> <span class="pre">check</span></tt>.  These tests require manual setup and teardown of
@@ -279,40 +215,80 @@ with executed <tt class="docutils literal"><span class="pre">util/reconf</span><
           </div>
         </div>
       </div>
-            </div>
-            <div class="clearer" ></div>
         </div>
+        <div class="sidebar">
+    <h2>On this page</h2>
+    <ul>
+<li><a class="reference internal" href="#">Doing the build</a><ul>
+<li><a class="reference internal" href="#using-autoconf">Using autoconf</a></li>
+<li><a class="reference internal" href="#building-within-a-single-tree">Building within a single tree</a></li>
+<li><a class="reference internal" href="#building-with-separate-build-directories">Building with separate build directories</a></li>
+<li><a class="reference internal" href="#building-using-lndir">Building using lndir</a></li>
+<li><a class="reference internal" href="#installing-the-binaries">Installing the binaries</a></li>
+<li><a class="reference internal" href="#testing-the-build">Testing the build</a></li>
+<li><a class="reference internal" href="#cleaning-up-the-build">Cleaning up the build</a></li>
+</ul>
+</li>
+</ul>
+
+    <br/>
+    <h2>Table of contents</h2>
+    <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../user/index.html">For users</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin/index.html">For administrators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../appdev/index.html">For application developers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../plugindev/index.html">For plugin module developers</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Building Kerberos V5</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="directory_org.html">Organization of the source directory</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="">Doing the build</a><ul class="simple">
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="options2configure.html">Options to <em>configure</em></a></li>
+<li class="toctree-l2"><a class="reference internal" href="osconf.html">osconf.hin</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../basic/index.html">Kerberos V5 concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../mitK5features.html">MIT Kerberos features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../build_this.html">How to build this documentation from the source</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../about.html">Contributing to the MIT Kerberos Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../resources.html">Resources</a></li>
+</ul>
+
+    <br/>
+    <h4><a href="../index.html">Full Table of Contents</a></h4>
+    <h4>Search</h4>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+        </div>
+        <div class="clearer"></div>
+      </div>
     </div>
- 
-    <div class="footer-wrapper" >
+
+    <div class="footer-wrapper">
         <div class="footer" >
-            <div class="right" ><i>Release: 1.11.3</i><br />
+            <div class="right" ><i>Release: 1.12-alpha1</i><br />
                 &copy; <a href="../copyright.html">Copyright</a> 1985-2013, MIT.
             </div>
-            <div class="left" >
-                    <a href="../index.html"
-                    title="Full Table of Contents"
-                    >Contents</a>
-                     |
-                    <a href="directory_org.html"
-                    title="Organization of the source directory"
-                    >previous</a>
-                     |
-                    <a href="options2configure.html"
-                    title="Options to configure"
-                    >next</a>
-                     |
-                    <a href="../genindex.html"
-                    title="General Index"
-                    >index</a>
-                     |
-                    <a href="../search.html"
-                    title="Enter search criteria"
-                    >Search</a>
-                     |
-                    <a href="mailto:krb5-bugs@mit.edu?subject=Documentation__Doing the build">feedback</a>
+            <div class="left">
+                
+        <a href="../index.html" title="Full Table of Contents"
+            >Contents</a> |
+        <a href="directory_org.html" title="Organization of the source directory"
+            >previous</a> |
+        <a href="options2configure.html" title="Options to configure"
+            >next</a> |
+        <a href="../genindex.html" title="General Index"
+            >index</a> |
+        <a href="../search.html" title="Enter search criteria"
+            >Search</a> |
+    <a href="mailto:krb5-bugs@mit.edu?subject=Documentation__Doing the build">feedback</a>
             </div>
         </div>
     </div>
+
   </body>
 </html>

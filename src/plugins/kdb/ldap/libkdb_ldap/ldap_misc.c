@@ -33,6 +33,7 @@
  */
 #include <string.h>
 #include <time.h>
+#include <ctype.h>
 #include "kdb_ldap.h"
 #include "ldap_misc.h"
 #include "ldap_handle.h"
@@ -53,7 +54,7 @@ remove_overlapping_subtrees(char **listin, char **listop, int *subtcount,
    But all the world's not Linux.  */
 #undef strndup
 #define strndup my_strndup
-#ifdef HAVE_LDAP_STR2DN
+
 static char *
 my_strndup(const char *input, size_t limit)
 {
@@ -69,7 +70,6 @@ my_strndup(const char *input, size_t limit)
     } else
         return strdup(input);
 }
-#endif
 
 /* Get integer or string values from the config section, falling back
    to the default section, then to hard-coded values.  */
@@ -164,7 +164,143 @@ prof_get_string_def(krb5_context ctx, const char *conf_section,
     return 0;
 }
 
+static krb5_error_code
+get_db_opt(const char *input, char **opt_out, char **val_out)
+{
+    const char *pos;
+    char *opt, *val = NULL;
+    size_t len;
 
+    *opt_out = *val_out = NULL;
+    pos = strchr(input, '=');
+    if (pos == NULL) {
+        opt = strdup(input);
+        if (opt == NULL)
+            return ENOMEM;
+    } else {
+        len = pos - input;
+        /* Ignore trailing spaces. */
+        while (len > 0 && isspace((unsigned char)input[len - 1]))
+            len--;
+        opt = strndup(input, len);
+
+        pos++;                  /* Move past '='. */
+        while (isspace(*pos))   /* Ignore leading spaces. */
+            pos++;
+        if (*pos != '\0') {
+            val = strdup(pos);
+            if (val == NULL) {
+                free(opt);
+                return ENOMEM;
+            }
+        }
+    }
+    *opt_out = opt;
+    *val_out = val;
+    return 0;
+}
+
+static krb5_error_code
+add_server_entry(krb5_context context, const char *name)
+{
+    krb5_ldap_context *lctx = context->dal_handle->db_context;
+    krb5_ldap_server_info **sp, **list, *server;
+    size_t count = 0;
+
+    /* Allocate list space for the new entry and null terminator. */
+    for (sp = lctx->server_info_list; sp != NULL && *sp != NULL; sp++)
+        count++;
+    list = realloc(lctx->server_info_list, (count + 2) * sizeof(*list));
+    if (list == NULL)
+        return ENOMEM;
+    lctx->server_info_list = list;
+
+    server = calloc(1, sizeof(krb5_ldap_server_info));
+    if (server == NULL)
+        return ENOMEM;
+    server->server_status = NOTSET;
+    server->server_name = strdup(name);
+    if (server->server_name == NULL) {
+        free(server);
+        return ENOMEM;
+    }
+    list[count] = server;
+    list[count + 1] = NULL;
+    return 0;
+}
+
+krb5_error_code
+krb5_ldap_parse_db_params(krb5_context context, char **db_args)
+{
+    char *opt = NULL, *val = NULL;
+    krb5_error_code status = 0;
+    krb5_ldap_context *lctx = context->dal_handle->db_context;
+
+    if (db_args == NULL)
+        return 0;
+    for (; *db_args != NULL; db_args++) {
+        status = get_db_opt(*db_args, &opt, &val);
+        if (status)
+            goto cleanup;
+
+        /* Check for options which don't require values. */
+        if (!strcmp(opt, "temporary")) {
+            /* "temporary" is passed by kdb5_util load without -update,
+             * which we don't support. */
+            status = EINVAL;
+            krb5_set_error_message(context, status,
+                                   _("KDB module requires -update argument"));
+            goto cleanup;
+        }
+
+        if (val == NULL) {
+            status = EINVAL;
+            krb5_set_error_message(context, status, _("'%s' value missing"),
+                                   opt);
+            goto cleanup;
+        }
+
+        /* Check for options which do require arguments. */
+        if (!strcmp(opt, "binddn")) {
+            free(lctx->bind_dn);
+            lctx->bind_dn = strdup(val);
+            if (lctx->bind_dn == NULL) {
+                status = ENOMEM;
+                goto cleanup;
+            }
+        } else if (!strcmp(opt, "nconns")) {
+            lctx->max_server_conns = atoi(val) ? atoi(val) :
+                DEFAULT_CONNS_PER_SERVER;
+        } else if (!strcmp(opt, "bindpwd")) {
+            free(lctx->bind_pwd);
+            lctx->bind_pwd = strdup(val);
+            if (lctx->bind_pwd == NULL) {
+                status = ENOMEM;
+                goto cleanup;
+            }
+        } else if (!strcmp(opt, "host")) {
+            status = add_server_entry(context, val);
+            if (status)
+                goto cleanup;
+        } else if (!strcmp(opt, "debug")) {
+            lctx->ldap_debug = atoi(val);
+        } else {
+            status = EINVAL;
+            krb5_set_error_message(context, status, _("unknown option '%s'"),
+                                   opt);
+            goto cleanup;
+        }
+
+        free(opt);
+        free(val);
+        opt = val = NULL;
+    }
+
+cleanup:
+    free(opt);
+    free(val);
+    return status;
+}
 
 /*
  * This function reads the parameters from the krb5.conf file. The
@@ -175,12 +311,11 @@ krb5_error_code
 krb5_ldap_read_server_params(krb5_context context, char *conf_section,
                              int srv_type)
 {
-    char                        *tempval=NULL, *save_ptr=NULL;
+    char                        *tempval=NULL, *save_ptr=NULL, *item=NULL;
     const char                  *delims="\t\n\f\v\r ,";
     krb5_error_code             st=0;
     kdb5_dal_handle             *dal_handle=NULL;
     krb5_ldap_context           *ldap_context=NULL;
-    krb5_ldap_server_info       ***server_info=NULL;
 
     dal_handle = context->dal_handle;
     ldap_context = (krb5_ldap_context *) dal_handle->db_context;
@@ -241,8 +376,6 @@ krb5_ldap_read_server_params(krb5_context context, char *conf_section,
             name = KRB5_CONF_LDAP_KDC_DN;
         else if (srv_type == KRB5_KDB_SRV_TYPE_ADMIN)
             name = KRB5_CONF_LDAP_KADMIN_DN;
-        else if (srv_type == KRB5_KDB_SRV_TYPE_PASSWD)
-            name = KRB5_CONF_LDAP_KPASSWDD_DN;
 
         if (name) {
             st = prof_get_string_def (context, conf_section, name,
@@ -271,17 +404,6 @@ krb5_ldap_read_server_params(krb5_context context, char *conf_section,
      */
 
     if (ldap_context->server_info_list == NULL) {
-        unsigned int ele=0;
-
-        server_info = &(ldap_context->server_info_list);
-        *server_info = (krb5_ldap_server_info **) calloc (SERV_COUNT+1,
-                                                          sizeof (krb5_ldap_server_info *));
-
-        if (*server_info == NULL) {
-            st = ENOMEM;
-            goto cleanup;
-        }
-
         if ((st=profile_get_string(context->profile, KDB_MODULE_SECTION, conf_section,
                                    KRB5_CONF_LDAP_SERVERS, NULL, &tempval)) != 0) {
             krb5_set_error_message(context, st, _("Error reading "
@@ -290,36 +412,16 @@ krb5_ldap_read_server_params(krb5_context context, char *conf_section,
         }
 
         if (tempval == NULL) {
-
-            (*server_info)[ele] = (krb5_ldap_server_info *)calloc(1,
-                                                                  sizeof(krb5_ldap_server_info));
-
-            (*server_info)[ele]->server_name = strdup("ldapi://");
-            if ((*server_info)[ele]->server_name == NULL) {
-                st = ENOMEM;
+            st = add_server_entry(context, "ldapi://");
+            if (st)
                 goto cleanup;
-            }
-            (*server_info)[ele]->server_status = NOTSET;
         } else {
-            char *item=NULL;
-
-            item = strtok_r(tempval,delims,&save_ptr);
-            while (item != NULL && ele<SERV_COUNT) {
-                (*server_info)[ele] = (krb5_ldap_server_info *)calloc(1,
-                                                                      sizeof(krb5_ldap_server_info));
-                if ((*server_info)[ele] == NULL) {
-                    st = ENOMEM;
+            item = strtok_r(tempval, delims, &save_ptr);
+            while (item != NULL) {
+                st = add_server_entry(context, item);
+                if (st)
                     goto cleanup;
-                }
-                (*server_info)[ele]->server_name = strdup(item);
-                if ((*server_info)[ele]->server_name == NULL) {
-                    st = ENOMEM;
-                    goto cleanup;
-                }
-
-                (*server_info)[ele]->server_status = NOTSET;
                 item = strtok_r(NULL,delims,&save_ptr);
-                ++ele;
             }
             profile_release_string(tempval);
         }
@@ -365,55 +467,45 @@ krb5_ldap_free_server_context_params(krb5_ldap_context *ldap_context)
                     ldap_unbind_ext_s(ldap_server_handle->ldap_handle, NULL, NULL);
                     ldap_server_handle->ldap_handle = NULL;
                     next_ldap_server_handle = ldap_server_handle->next;
-                    krb5_xfree(ldap_server_handle);
+                    free(ldap_server_handle);
                     ldap_server_handle = next_ldap_server_handle;
                 }
             }
-            krb5_xfree(ldap_context->server_info_list[i]);
+            free(ldap_context->server_info_list[i]);
             i++;
         }
-        krb5_xfree(ldap_context->server_info_list);
+        free(ldap_context->server_info_list);
     }
 
     if (ldap_context->conf_section != NULL) {
-        krb5_xfree(ldap_context->conf_section);
+        free(ldap_context->conf_section);
         ldap_context->conf_section = NULL;
     }
 
     if (ldap_context->bind_dn != NULL) {
-        krb5_xfree(ldap_context->bind_dn);
+        free(ldap_context->bind_dn);
         ldap_context->bind_dn = NULL;
     }
 
     if (ldap_context->bind_pwd != NULL) {
         memset(ldap_context->bind_pwd, 0, strlen(ldap_context->bind_pwd));
-        krb5_xfree(ldap_context->bind_pwd);
+        free(ldap_context->bind_pwd);
         ldap_context->bind_pwd = NULL;
     }
 
     if (ldap_context->service_password_file != NULL) {
-        krb5_xfree(ldap_context->service_password_file);
+        free(ldap_context->service_password_file);
         ldap_context->service_password_file = NULL;
-    }
-
-    if (ldap_context->service_cert_path != NULL) {
-        krb5_xfree(ldap_context->service_cert_path);
-        ldap_context->service_cert_path = NULL;
-    }
-
-    if (ldap_context->service_cert_pass != NULL) {
-        krb5_xfree(ldap_context->service_cert_pass);
-        ldap_context->service_cert_pass = NULL;
     }
 
     if (ldap_context->certificates) {
         i=0;
         while (ldap_context->certificates[i] != NULL) {
-            krb5_xfree(ldap_context->certificates[i]->certificate);
-            krb5_xfree(ldap_context->certificates[i]);
+            free(ldap_context->certificates[i]->certificate);
+            free(ldap_context->certificates[i]);
             ++i;
         }
-        krb5_xfree(ldap_context->certificates);
+        free(ldap_context->certificates);
     }
 
     return(0);
@@ -428,7 +520,7 @@ krb5_ldap_free_server_params(krb5_ldap_context *ldap_context)
     krb5_ldap_free_server_context_params(ldap_context);
 
     k5_mutex_destroy(&ldap_context->hndl_lock);
-    krb5_xfree(ldap_context);
+    free(ldap_context);
     return(0);
 }
 
@@ -444,12 +536,10 @@ krb5_error_code
 is_principal_in_realm(krb5_ldap_context *ldap_context,
                       krb5_const_principal searchfor)
 {
-    size_t                      defrealmlen=0;
     char                        *defrealm=NULL;
 
 #define FIND_MAX(a,b) ((a) > (b) ? (a) : (b))
 
-    defrealmlen = strlen(ldap_context->lrparams->realm_name);
     defrealm = ldap_context->lrparams->realm_name;
 
     /*
@@ -734,11 +824,9 @@ decode_tl_data(krb5_tl_data *tl_data, int tl_type, void **data)
                 UNSTORE16_INT(curr, sublen);
                 /* forward by 2 bytes */
                 curr += 2;
-                DN = malloc (sublen + 1);
+                DN = k5memdup0(curr, sublen, &st);
                 if (DN == NULL)
-                    return ENOMEM;
-                memcpy(DN, curr, sublen);
-                DN[sublen] = 0;
+                    return st;
                 *data = DN;
                 curr += sublen;
                 st = 0;
@@ -762,11 +850,9 @@ decode_tl_data(krb5_tl_data *tl_data, int tl_type, void **data)
                 UNSTORE16_INT(curr, sublen);
                 /* forward by 2 bytes */
                 curr += 2;
-                DNarr[i] = malloc (sublen + 1);
+                DNarr[i] = k5memdup0(curr, sublen, &st);
                 if (DNarr[i] == NULL)
-                    return ENOMEM;
-                memcpy(DNarr[i], curr, sublen);
-                DNarr[i][sublen] = 0;
+                    return st;
                 ++i;
                 curr += sublen;
                 *data = DNarr;
@@ -973,225 +1059,6 @@ cleanup:
     return st;
 }
 
-
-/*
- * This function updates a single attribute with a single value of a
- * specified dn.  This function is mainly used to update
- * krbRealmReferences, krbKdcServers, krbAdminServers... when KDC,
- * ADMIN, PASSWD servers are associated with some realms or vice
- * versa.
- */
-
-krb5_error_code
-updateAttribute(LDAP *ld, char *dn, char *attribute, char *value)
-{
-    int                         st=0;
-    LDAPMod                     modAttr, *mods[2]={NULL};
-    char                        *values[2]={NULL};
-
-    values[0] = value;
-
-    /* data to update the {attr,attrval} combination */
-    memset(&modAttr, 0, sizeof(modAttr));
-    modAttr.mod_type = attribute;
-    modAttr.mod_op = LDAP_MOD_ADD;
-    modAttr.mod_values = values;
-    mods[0] = &modAttr;
-
-    /* ldap modify operation */
-    st = ldap_modify_ext_s(ld, dn, mods, NULL, NULL);
-
-    /* if the {attr,attrval} combination is already present return a success
-     * LDAP_ALREADY_EXISTS is for single-valued attribute
-     * LDAP_TYPE_OR_VALUE_EXISTS is for multi-valued attribute
-     */
-    if (st == LDAP_ALREADY_EXISTS || st == LDAP_TYPE_OR_VALUE_EXISTS)
-        st = 0;
-
-    if (st != 0) {
-        st = set_ldap_error (0, st, OP_MOD);
-    }
-
-    return st;
-}
-
-/*
- * This function deletes a single attribute with a single value of a
- * specified dn.  This function is mainly used to delete
- * krbRealmReferences, krbKdcServers, krbAdminServers... when KDC,
- * ADMIN, PASSWD servers are disassociated with some realms or vice
- * versa.
- */
-
-krb5_error_code
-deleteAttribute(LDAP *ld, char *dn, char *attribute, char *value)
-{
-    krb5_error_code             st=0;
-    LDAPMod                     modAttr, *mods[2]={NULL};
-    char                        *values[2]={NULL};
-
-    values[0] = value;
-
-    /* data to delete the {attr,attrval} combination */
-    memset(&modAttr, 0, sizeof(modAttr));
-    modAttr.mod_type = attribute;
-    modAttr.mod_op = LDAP_MOD_DELETE;
-    modAttr.mod_values = values;
-    mods[0] = &modAttr;
-
-    /* ldap modify operation */
-    st = ldap_modify_ext_s(ld, dn, mods, NULL, NULL);
-
-    /* if either the attribute or the attribute value is missing return a success */
-    if (st == LDAP_NO_SUCH_ATTRIBUTE || st == LDAP_UNDEFINED_TYPE)
-        st = 0;
-
-    if (st != 0) {
-        st = set_ldap_error (0, st, OP_MOD);
-    }
-
-    return st;
-}
-
-
-/*
- * This function takes in 2 string arrays, compares them to remove the
- * matching entries.  The first array is the original list and the
- * second array is the modified list.  Removing the matching entries
- * will result in a reduced array, where the left over first array
- * elements are the deleted entries and the left over second array
- * elements are the added entries.  These additions and deletions has
- * resulted in the modified second array.
- */
-
-krb5_error_code
-disjoint_members(char **src, char **dest)
-{
-    int                         i=0, j=0, slen=0, dlen=0;
-
-    /* validate the input parameters */
-    if (src == NULL || dest == NULL)
-        return 0;
-
-    /* compute the first array length */
-    for (i=0;src[i]; ++i)
-        ;
-
-    /* return if the length is 0 */
-    if (i==0)
-        return 0;
-
-    /* index of the last element and also the length of the array */
-    slen = i-1;
-
-    /* compute the second array length */
-    for (i=0;dest[i]; ++i)
-        ;
-
-    /* return if the length is 0 */
-    if (i==0)
-        return 0;
-
-    /* index of the last element and also the length of the array */
-    dlen = i-1;
-
-    /* check for the similar elements and delete them from both the arrays */
-    for (i=0; src[i]; ++i) {
-
-        for (j=0; dest[j]; ++j) {
-
-            /* if the element are same */
-            if (strcasecmp(src[i], dest[j]) == 0) {
-                /*
-                 * If the matched element is in the middle, then copy
-                 * the last element to the matched index.
-                 */
-                if (i != slen) {
-                    free (src[i]);
-                    src[i] = src[slen];
-                    src[slen] = NULL;
-                } else {
-                    /*
-                     * If the matched element is the last, free it and
-                     * set it to NULL.
-                     */
-                    free (src[i]);
-                    src[i] = NULL;
-                }
-                /* reduce the array length by 1 */
-                slen -= 1;
-
-                /* repeat the same processing for the second array too */
-                if (j != dlen) {
-                    free(dest[j]);
-                    dest[j] = dest[dlen];
-                    dest[dlen] = NULL;
-                } else {
-                    free(dest[j]);
-                    dest[j] = NULL;
-                }
-                dlen -=1;
-
-                /*
-                 * The source array is reduced by 1, so reduce the
-                 * index variable used for source array by 1.  No need
-                 * to adjust the second array index variable as it is
-                 * reset while entering the inner loop.
-                 */
-                i -= 1;
-                break;
-            }
-        }
-    }
-    return 0;
-}
-
-/*
- * This function replicates the contents of the src array for later
- * use. Mostly the contents of the src array is obtained from a
- * ldap_search operation and the contents are required for later use.
- */
-
-krb5_error_code
-copy_arrays(char **src, char ***dest, int count)
-{
-    krb5_error_code             st=0;
-    int                         i=0;
-
-    /* validate the input parameters */
-    if (src == NULL || dest == NULL)
-        return 0;
-
-    /* allocate memory for the dest array */
-    *dest = (char **) calloc((unsigned) count+1, sizeof(char *));
-    if (*dest == NULL) {
-        st = ENOMEM;
-        goto cleanup;
-    }
-
-    /* copy the members from src to dest array. */
-    for (i=0; i < count && src[i] != NULL; ++i) {
-        (*dest)[i] = strdup(src[i]);
-        if ((*dest)[i] == NULL) {
-            st = ENOMEM;
-            goto cleanup;
-        }
-    }
-
-cleanup:
-    /* in case of error free up everything and return */
-    if (st != 0) {
-        if (*dest != NULL) {
-            for (i=0; (*dest)[i]; ++i) {
-                free ((*dest)[i]);
-                (*dest)[i] = NULL;
-            }
-            free (*dest);
-            *dest = NULL;
-        }
-    }
-    return st;
-}
 
 static krb5_error_code
 getepochtime(char *strtime, krb5_timestamp *epochtime)
@@ -1419,12 +1286,10 @@ krb5_add_ber_mem_ldap_mod(LDAPMod ***mods, char *attribute, int op,
             return ENOMEM;
 
         (*mods)[i]->mod_bvalues[j]->bv_len = ber_values[j]->bv_len;
-        (*mods)[i]->mod_bvalues[j]->bv_val = malloc((*mods)[i]->mod_bvalues[j]->bv_len);
+        (*mods)[i]->mod_bvalues[j]->bv_val =
+            k5memdup(ber_values[j]->bv_val, ber_values[j]->bv_len, &st);
         if ((*mods)[i]->mod_bvalues[j]->bv_val == NULL)
             return ENOMEM;
-
-        memcpy((*mods)[i]->mod_bvalues[j]->bv_val, ber_values[j]->bv_val,
-               ber_values[j]->bv_len);
     }
     (*mods)[i]->mod_bvalues[j] = NULL;
     return 0;
@@ -1436,34 +1301,6 @@ format_d (int val)
     char tmpbuf[2+3*sizeof(val)];
     snprintf(tmpbuf, sizeof(tmpbuf), "%d", val);
     return strdup(tmpbuf);
-}
-
-krb5_error_code
-krb5_add_int_arr_mem_ldap_mod(LDAPMod ***mods, char *attribute, int op,
-                              int *value)
-{
-    int i=0, j=0;
-    krb5_error_code   st=0;
-
-    if ((st=krb5_add_member(mods, &i)) != 0)
-        return st;
-
-    (*mods)[i]->mod_type = strdup(attribute);
-    if ((*mods)[i]->mod_type == NULL)
-        return ENOMEM;
-    (*mods)[i]->mod_op = op;
-
-    for (j=0; value[j] != -1; ++j)
-        ;
-
-    (*mods)[i]->mod_values = malloc(sizeof(char *) * (j+1));
-
-    for (j=0; value[j] != -1; ++j) {
-        if (((*mods)[i]->mod_values[j] = format_d(value[j])) == NULL)
-            return ENOMEM;
-    }
-    (*mods)[i]->mod_values[j] = NULL;
-    return 0;
 }
 
 krb5_error_code
@@ -1807,6 +1644,7 @@ populate_krb5_db_entry(krb5_context context, krb5_ldap_context *ldap_context,
 {
     krb5_error_code st = 0;
     unsigned int    mask = 0;
+    int             val;
     krb5_boolean    attr_present = FALSE;
     char            **values = NULL, *policydn = NULL, *pwdpolicydn = NULL;
     char            *polname = NULL, *tktpolname = NULL;
@@ -1881,9 +1719,10 @@ populate_krb5_db_entry(krb5_context context, krb5_ldap_context *ldap_context,
         mask |= KDB_LAST_FAILED_ATTR;
 
     /* KRBLOGINFAILEDCOUNT */
-    if (krb5_ldap_get_value(ld, ent, "krbLoginFailedCount",
-                            &(entry->fail_auth_count)) == 0)
+    if (krb5_ldap_get_value(ld, ent, "krbLoginFailedCount", &val) == 0) {
+        entry->fail_auth_count = val;
         mask |= KDB_FAIL_AUTH_COUNT_ATTR;
+    }
 
     /* KRBMAXTICKETLIFE */
     if (krb5_ldap_get_value(ld, ent, "krbmaxticketlife", &(entry->max_life)) == 0)
@@ -2066,30 +1905,6 @@ populate_krb5_db_entry(krb5_context context, krb5_ldap_context *ldap_context,
     if ((st=krb5_read_tkt_policy (context, ldap_context, entry, tktpolname)) !=0)
         goto cleanup;
 
-    /* We already know that the policy is inside the realm container. */
-    if (polname) {
-        osa_policy_ent_t   pwdpol;
-        krb5_timestamp     last_pw_changed;
-        krb5_ui_4          pw_max_life;
-
-        memset(&pwdpol, 0, sizeof(pwdpol));
-
-        if ((st=krb5_ldap_get_password_policy(context, polname, &pwdpol)) != 0)
-            goto cleanup;
-        pw_max_life = pwdpol->pw_max_life;
-        krb5_ldap_free_password_policy(context, pwdpol);
-
-        if (pw_max_life > 0) {
-            if ((st=krb5_dbe_lookup_last_pwd_change(context, entry, &last_pw_changed)) != 0)
-                goto cleanup;
-
-            if (mask & KDB_PWD_EXPIRE_TIME_ATTR) {
-                if ((last_pw_changed + pw_max_life) < entry->pw_expiration)
-                    entry->pw_expiration = last_pw_changed + pw_max_life;
-            } else
-                entry->pw_expiration = last_pw_changed + pw_max_life;
-        }
-    }
     /* XXX so krb5_encode_princ_contents() will be happy */
     entry->len = KRB5_KDB_V1_BASE_LENGTH;
 

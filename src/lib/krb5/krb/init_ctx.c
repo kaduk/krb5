@@ -51,6 +51,7 @@
 
 #include "k5-int.h"
 #include "int-proto.h"
+#include "os-proto.h"
 #include <ctype.h>
 #include "brand.c"
 #include "../krb5_libinit.h"
@@ -189,13 +190,14 @@ krb5_init_context_profile(profile_t profile, krb5_flags flags,
 
     ctx->profile_secure = (flags & KRB5_INIT_CONTEXT_SECURE) != 0;
 
-    if ((retval = krb5_os_init_context(ctx, profile, flags)) != 0)
+    retval = k5_os_init_context(ctx, profile, flags);
+    if (retval)
         goto cleanup;
 
     ctx->trace_callback = NULL;
 #ifndef DISABLE_TRACING
     if (!ctx->profile_secure)
-        krb5int_init_trace(ctx);
+        k5_init_trace(ctx);
 #endif
 
     retval = get_boolean(ctx, KRB5_CONF_ALLOW_WEAK_CRYPTO, 0, &tmp);
@@ -207,6 +209,11 @@ krb5_init_context_profile(profile_t profile, krb5_flags flags,
     if (retval)
         goto cleanup;
     ctx->ignore_acceptor_hostname = tmp;
+
+    retval = get_boolean(ctx, KRB5_CONF_DNS_CANONICALIZE_HOSTNAME, 1, &tmp);
+    if (retval)
+        goto cleanup;
+    ctx->dns_canonicalize_hostname = tmp;
 
     /* initialize the prng (not well, but passable) */
     if ((retval = krb5_c_random_os_entropy( ctx, 0, NULL)) !=0)
@@ -287,7 +294,7 @@ krb5_free_context(krb5_context ctx)
 {
     if (ctx == NULL)
         return;
-    krb5_os_free_context(ctx);
+    k5_os_free_context(ctx);
 
     free(ctx->in_tkt_etypes);
     ctx->in_tkt_etypes = NULL;
@@ -308,6 +315,8 @@ krb5_free_context(krb5_context ctx)
 #endif
 
     k5_ccselect_free_context(ctx);
+    k5_hostrealm_free_context(ctx);
+    k5_localauth_free_context(ctx);
     k5_plugin_free_context(ctx);
     free(ctx->plugin_base_dir);
 
@@ -543,7 +552,7 @@ krb5_get_default_in_tkt_ktypes(krb5_context context, krb5_enctype **ktypes)
 
 void
 KRB5_CALLCONV
-krb5_free_ktypes (krb5_context context, krb5_enctype *val)
+krb5_free_enctypes(krb5_context context, krb5_enctype *val)
 {
     free (val);
 }
@@ -582,6 +591,6 @@ krb5_is_permitted_enctype(krb5_context context, krb5_enctype etype)
     if (krb5_get_permitted_enctypes(context, &list))
         return FALSE;
     ret = k5_etypes_contains(list, etype);
-    krb5_free_ktypes(context, list);
+    krb5_free_enctypes(context, list);
     return ret;
 }

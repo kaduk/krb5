@@ -440,8 +440,8 @@ typedef struct _krb5_crypto_iov {
 #define ENCTYPE_AES256_CTS_HMAC_SHA1_96 0x0012 /**< RFC 3962 */
 #define ENCTYPE_ARCFOUR_HMAC            0x0017
 #define ENCTYPE_ARCFOUR_HMAC_EXP        0x0018
-#define ENCTYPE_CAMELLIA128_CTS_CMAC    0x0019
-#define ENCTYPE_CAMELLIA256_CTS_CMAC    0x001a
+#define ENCTYPE_CAMELLIA128_CTS_CMAC    0x0019 /**< RFC 6803 */
+#define ENCTYPE_CAMELLIA256_CTS_CMAC    0x001a /**< RFC 6803 */
 #define ENCTYPE_UNKNOWN                 0x01ff
 
 #define CKSUMTYPE_CRC32         0x0001
@@ -458,8 +458,8 @@ typedef struct _krb5_crypto_iov {
                                                 ENCTYPE_AES128_CTS_HMAC_SHA1_96 */
 #define CKSUMTYPE_HMAC_SHA1_96_AES256 0x0010 /**< RFC 3962. Used with
                                                 ENCTYPE_AES256_CTS_HMAC_SHA1_96 */
-#define CKSUMTYPE_CMAC_CAMELLIA128 0x0011
-#define CKSUMTYPE_CMAC_CAMELLIA256 0x0012
+#define CKSUMTYPE_CMAC_CAMELLIA128 0x0011 /**< RFC 6803 */
+#define CKSUMTYPE_CMAC_CAMELLIA256 0x0012 /**< RFC 6803 */
 #define CKSUMTYPE_MD5_HMAC_ARCFOUR -137 /*Microsoft netlogon cksumtype*/
 #define CKSUMTYPE_HMAC_MD5_ARCFOUR -138 /*Microsoft md5 hmac cksumtype*/
 
@@ -1783,44 +1783,46 @@ krb5_verify_checksum(krb5_context context, krb5_cksumtype ctype,
 #define KRB5_PADATA_NONE                0
 #define KRB5_PADATA_AP_REQ              1
 #define KRB5_PADATA_TGS_REQ             KRB5_PADATA_AP_REQ
-#define KRB5_PADATA_ENC_TIMESTAMP       2
-#define KRB5_PADATA_PW_SALT             3
+#define KRB5_PADATA_ENC_TIMESTAMP       2 /**< RFC 4120 */
+#define KRB5_PADATA_PW_SALT             3 /**< RFC 4120 */
 #if 0                           /* Not used */
 #define KRB5_PADATA_ENC_ENCKEY          4  /* Key encrypted within itself */
 #endif
-#define KRB5_PADATA_ENC_UNIX_TIME       5  /**< timestamp encrypted in key */
-#define KRB5_PADATA_ENC_SANDIA_SECURID  6  /**< SecurId passcode */
-#define KRB5_PADATA_SESAME              7  /**< Sesame project */
-#define KRB5_PADATA_OSF_DCE             8  /**< OSF DCE */
-#define KRB5_CYBERSAFE_SECUREID         9  /**< Cybersafe */
-#define KRB5_PADATA_AFS3_SALT           10 /**< Cygnus */
-#define KRB5_PADATA_ETYPE_INFO          11 /**< Etype info for preauth */
-#define KRB5_PADATA_SAM_CHALLENGE       12 /**< draft challenge system */
-#define KRB5_PADATA_SAM_RESPONSE        13 /**< draft challenge system response */
+#define KRB5_PADATA_ENC_UNIX_TIME       5  /**< timestamp encrypted in key. RFC 4120 */
+#define KRB5_PADATA_ENC_SANDIA_SECURID  6  /**< SecurId passcode. RFC 4120 */
+#define KRB5_PADATA_SESAME              7  /**< Sesame project. RFC 4120 */
+#define KRB5_PADATA_OSF_DCE             8  /**< OSF DCE. RFC 4120 */
+#define KRB5_CYBERSAFE_SECUREID         9  /**< Cybersafe. RFC 4120 */
+#define KRB5_PADATA_AFS3_SALT           10 /**< Cygnus. RFC 4120, 3961 */
+#define KRB5_PADATA_ETYPE_INFO          11 /**< Etype info for preauth. RFC 4120 */
+#define KRB5_PADATA_SAM_CHALLENGE       12 /**< SAM/OTP */
+#define KRB5_PADATA_SAM_RESPONSE        13 /**< SAM/OTP */
 #define KRB5_PADATA_PK_AS_REQ_OLD       14 /**< PKINIT */
 #define KRB5_PADATA_PK_AS_REP_OLD       15 /**< PKINIT */
-#define KRB5_PADATA_PK_AS_REQ           16 /**< PKINIT */
-#define KRB5_PADATA_PK_AS_REP           17 /**< PKINIT */
-#define KRB5_PADATA_ETYPE_INFO2         19
-#define KRB5_PADATA_USE_SPECIFIED_KVNO  20
-#define KRB5_PADATA_SVR_REFERRAL_INFO   20 /**< Windows 2000 referrals */
-#define KRB5_PADATA_SAM_REDIRECT        21
-#define KRB5_PADATA_GET_FROM_TYPED_DATA 22
+#define KRB5_PADATA_PK_AS_REQ           16 /**< PKINIT. RFC 4556 */
+#define KRB5_PADATA_PK_AS_REP           17 /**< PKINIT. RFC 4556 */
+#define KRB5_PADATA_ETYPE_INFO2         19 /**< RFC 4120 */
+#define KRB5_PADATA_USE_SPECIFIED_KVNO  20 /**< RFC 4120 */
+#define KRB5_PADATA_SVR_REFERRAL_INFO   20 /**< Windows 2000 referrals. RFC 6820 */
+#define KRB5_PADATA_SAM_REDIRECT        21 /**< SAM/OTP. RFC 4120 */
+#define KRB5_PADATA_GET_FROM_TYPED_DATA 22 /**< Embedded in typed data. RFC 4120 */
 #define KRB5_PADATA_REFERRAL            25 /**< draft referral system */
 #define KRB5_PADATA_SAM_CHALLENGE_2     30 /**< draft challenge system, updated */
 #define KRB5_PADATA_SAM_RESPONSE_2      31 /**< draft challenge system, updated */
+/* MS-KILE */
 #define KRB5_PADATA_PAC_REQUEST         128 /**< include Windows PAC */
 #define KRB5_PADATA_FOR_USER            129 /**< username protocol transition request */
 #define KRB5_PADATA_S4U_X509_USER       130 /**< certificate protocol transition request */
-#define KRB5_PADATA_FX_COOKIE           133
-#define KRB5_PADATA_FX_FAST             136
-#define KRB5_PADATA_FX_ERROR            137
-#define KRB5_PADATA_ENCRYPTED_CHALLENGE 138
-#define KRB5_PADATA_OTP_CHALLENGE       141 /**< See RFC 6560 section 4.1 */
-#define KRB5_PADATA_OTP_REQUEST         142 /**< See RFC 6560 section 4.2 */
-#define KRB5_PADATA_OTP_PIN_CHANGE      144 /**< See RFC 6560 section 4.3 */
-#define KRB5_PADATA_PKINIT_KX           147
-#define KRB5_ENCPADATA_REQ_ENC_PA_REP   149
+#define KRB5_PADATA_AS_CHECKSUM         132 /**< AS checksum */
+#define KRB5_PADATA_FX_COOKIE           133 /**< RFC 6113 */
+#define KRB5_PADATA_FX_FAST             136 /**< RFC 6113 */
+#define KRB5_PADATA_FX_ERROR            137 /**< RFC 6113 */
+#define KRB5_PADATA_ENCRYPTED_CHALLENGE 138 /**< RFC 6113 */
+#define KRB5_PADATA_OTP_CHALLENGE       141 /**< RFC 6560 section 4.1 */
+#define KRB5_PADATA_OTP_REQUEST         142 /**< RFC 6560 section 4.2 */
+#define KRB5_PADATA_OTP_PIN_CHANGE      144 /**< RFC 6560 section 4.3 */
+#define KRB5_PADATA_PKINIT_KX           147 /**< RFC 6112 */
+#define KRB5_ENCPADATA_REQ_ENC_PA_REP   149 /**< RFC 6806 */
 
 #define KRB5_SAM_USE_SAD_AS_KEY         0x80000000
 #define KRB5_SAM_SEND_ENCRYPTED_SAD     0x40000000
@@ -2275,7 +2277,7 @@ krb5_cc_get_name(krb5_context context, krb5_ccache cache);
  *
  * Use krb5_free_string() to free @a fullname_out when it is no longer needed.
  *
- * @version First introduced in 1.10
+ * @version New in 1.10
  */
 krb5_error_code KRB5_CALLCONV
 krb5_cc_get_full_name(krb5_context context, krb5_ccache cache,
@@ -2342,9 +2344,9 @@ krb5_cc_close(krb5_context context, krb5_ccache cache);
 /**
  * Store credentials in a credential cache.
  *
- * @param [in]     context      Library context
- * @param [in,out] cache        Credential cache handle
- * @param [in]     creds        Credentials to be stored in cache
+ * @param [in] context          Library context
+ * @param [in] cache            Credential cache handle
+ * @param [in] creds            Credentials to be stored in cache
  *
  * This function stores @a creds into @a cache.  If @a creds->server and the
  * server in the decoded ticket @a creds->ticket differ, the credentials will
@@ -2437,10 +2439,10 @@ krb5_cc_start_seq_get(krb5_context context, krb5_ccache cache,
 /**
  * Retrieve the next entry from the credential cache.
  *
- * @param [in]     context      Library context
- * @param [in]     cache        Credential cache handle
- * @param [in,out] cursor       Cursor
- * @param [out]    creds        Next credential cache entry
+ * @param [in]  context         Library context
+ * @param [in]  cache           Credential cache handle
+ * @param [in]  cursor          Cursor
+ * @param [out] creds           Next credential cache entry
  *
  * This function fills in @a creds with the next entry in @a cache and advances
  * @a cursor.
@@ -2458,9 +2460,9 @@ krb5_cc_next_cred(krb5_context context, krb5_ccache cache,
 /**
  * Finish a series of sequential processing credential cache entries.
  *
- * @param [in]     context      Library context
- * @param [in]     cache        Credential cache handle
- * @param [in,out] cursor       Cursor
+ * @param [in] context          Library context
+ * @param [in] cache            Credential cache handle
+ * @param [in] cursor           Cursor
  *
  * This function finishes processing credential cache entries and invalidates
  * @a cursor.
@@ -2495,9 +2497,9 @@ krb5_cc_remove_cred(krb5_context context, krb5_ccache cache, krb5_flags flags,
 /**
  * Set options flags on a credential cache.
  *
- * @param [in]     context      Library context
- * @param [in,out] cache        Credential cache handle
- * @param [in]     flags        Flag bit mask
+ * @param [in] context          Library context
+ * @param [in] cache            Credential cache handle
+ * @param [in] flags            Flag bit mask
  *
  * This function resets @a cache flags to @a flags.
  *
@@ -2592,8 +2594,8 @@ krb5_cc_unlock(krb5_context context, krb5_ccache ccache);
 /**
  * Prepare to iterate over the collection of known credential caches.
  *
- * @param [in]     context      Library context
- * @param [in,out] cursor       Cursor
+ * @param [in]  context         Library context
+ * @param [out] cursor          Cursor
  *
  * Get a new cache iteration @a cursor that will iterate over all known
  * credential caches independent of type.
@@ -2611,9 +2613,9 @@ krb5_cccol_cursor_new(krb5_context context, krb5_cccol_cursor *cursor);
 /**
  * Get the next credential cache in the collection.
  *
- * @param [in]     context      Library context
- * @param [in,out] cursor       Cursor
- * @param [out]    ccache       Credential cache handle
+ * @param [in]  context         Library context
+ * @param [in]  cursor          Cursor
+ * @param [out] ccache          Credential cache handle
  *
  * @note When all caches are iterated over and the end of the list is reached,
  * @a ccache is set to NULL.
@@ -2646,7 +2648,7 @@ krb5_cccol_cursor_free(krb5_context context, krb5_cccol_cursor *cursor);
  *
  * @param [in]  context         Library context
  *
- * @version First introduced in 1.11
+ * @version New in 1.11
  *
  * @retval 0 Credentials are available in the collection
  * @retval KRB5_CC_NOTFOUND The collection contains no credentials
@@ -2859,7 +2861,7 @@ krb5_kt_start_seq_get(krb5_context context, krb5_keytab keytab,
  * @param [in]  context         Library context
  * @param [in]  keytab          Key table handle
  * @param [out] entry           Returned key table entry
- * @param [in,out] cursor       Key table cursor
+ * @param [in]  cursor          Key table cursor
  *
  * Return the next sequential entry in @a keytab and advance @a cursor.
  *
@@ -2901,7 +2903,7 @@ krb5_kt_end_seq_get(krb5_context context, krb5_keytab keytab,
  * @param [in]  context         Library context
  * @param [in]  keytab          Key table handle
  *
- * @version First introduced in 1.11
+ * @version New in 1.11
  *
  * @retval 0 Keytab exists and contains entries
  * @retval KRB5_KT_NOTFOUND Keytab does not contain entries
@@ -3010,8 +3012,8 @@ krb5_copy_context(krb5_context ctx, krb5_context *nctx_out);
 /**
  * Set default TGS encryption types in a krb5_context structure.
  *
- * @param [in,out] context      Library context
- * @param [in]     etypes       Encryption type(s) to set
+ * @param [in] context          Library context
+ * @param [in] etypes           Encryption type(s) to set
  *
  * This function sets the default enctype list for TGS requests
  * made using @a context to @a etypes.
@@ -3038,6 +3040,8 @@ krb5_set_default_tgs_enctypes(krb5_context context, const krb5_enctype *etypes);
  * keys within @a context, as determined by configuration or by a previous call
  * to krb5_set_default_tgs_enctypes().
  *
+ * Use krb5_free_enctypes() to free @a ktypes when it is no longer needed.
+ *
  * @retval 0 Success; otherwise - Kerberos error codes
  */
 krb5_error_code KRB5_CALLCONV
@@ -3057,9 +3061,9 @@ krb5_is_thread_safe(void);
 /**
  * Decrypt a ticket using the specified key table.
  *
- * @param [in]     context      Library context
- * @param [in]     kt           Key table
- * @param [in,out] ticket       Ticket to be decrypted
+ * @param [in] context          Library context
+ * @param [in] kt               Key table
+ * @param [in] ticket           Ticket to be decrypted
  *
  * This function takes a @a ticket as input and decrypts it using
  * key data from @a kt.  The result is placed into @a ticket->enc_part2.
@@ -3096,11 +3100,11 @@ krb5_free_tgt_creds(krb5_context context, krb5_creds **tgts);
 /**
  * Get an additional ticket.
  *
- * @param [in]     context      Library context
- * @param [in]     options      Options
- * @param [in,out] ccache       Credential cache handle
- * @param [in]     in_creds     Input credentials
- * @param [out]    out_creds    Output updated credentials
+ * @param [in]  context         Library context
+ * @param [in]  options         Options
+ * @param [in]  ccache          Credential cache handle
+ * @param [in]  in_creds        Input credentials
+ * @param [out] out_creds       Output updated credentials
  *
  * Use @a ccache or a TGS exchange to get a service ticket matching @a
  * in_creds.
@@ -3221,9 +3225,9 @@ krb5_mk_req_extended(krb5_context context, krb5_auth_context *auth_context,
 /**
  * Format and encrypt a @c KRB_AP_REP message.
  *
- * @param [in]     context      Library context
- * @param [in,out] auth_context Authentication context
- * @param [out]    outbuf       @c AP-REP message
+ * @param [in]  context         Library context
+ * @param [in]  auth_context    Authentication context
+ * @param [out] outbuf          @c AP-REP message
  *
  * This function fills in @a outbuf with an AP-REP message using information
  * from @a auth_context.
@@ -3244,9 +3248,9 @@ krb5_mk_rep(krb5_context context, krb5_auth_context auth_context, krb5_data *out
 /**
  * Format and encrypt a @c KRB_AP_REP message for DCE RPC.
  *
- * @param [in]     context           Library context
- * @param [in,out] auth_context      Authentication context
- * @param [out]    outbuf            @c AP-REP message
+ * @param [in]  context         Library context
+ * @param [in]  auth_context    Authentication context
+ * @param [out] outbuf          @c AP-REP message
  *
  * Use krb5_free_data_contents() to free @a outbuf when it is no longer needed.
  *
@@ -3258,10 +3262,10 @@ krb5_mk_rep_dce(krb5_context context, krb5_auth_context auth_context, krb5_data 
 /**
  * Parse and decrypt a @c KRB_AP_REP message.
  *
- * @param [in]     context      Library context
- * @param [in,out] auth_context Authentication context
- * @param [in]     inbuf        AP-REP message
- * @param [out]    repl         Decrypted reply message
+ * @param [in]  context         Library context
+ * @param [in]  auth_context    Authentication context
+ * @param [in]  inbuf           AP-REP message
+ * @param [out] repl            Decrypted reply message
  *
  * This function parses, decrypts and verifies a message from @a inbuf and
  * fills in @a repl with a pointer to allocated memory containing the fields
@@ -3278,10 +3282,10 @@ krb5_rd_rep(krb5_context context, krb5_auth_context auth_context,
 /**
  * Parse and decrypt a @c KRB_AP_REP message for DCE RPC.
  *
- * @param [in]     context      Library context
- * @param [in,out] auth_context Authentication context
- * @param [in]     inbuf        AP-REP message
- * @param [out]    nonce        Sequence number from the decrypted reply
+ * @param [in]  context         Library context
+ * @param [in]  auth_context    Authentication context
+ * @param [in]  inbuf           AP-REP message
+ * @param [out] nonce           Sequence number from the decrypted reply
  *
  * This function parses, decrypts and verifies a message from @a inbuf and
  * fills in @a nonce with a decrypted reply sequence number.
@@ -3328,11 +3332,11 @@ krb5_rd_error(krb5_context context, const krb5_data *enc_errbuf,
 /**
  * Process @c KRB-SAFE message.
  *
- * @param [in]     context      Library context
- * @param [in,out] auth_context Authentication structure
- * @param [in]     inbuf        @c KRB-SAFE message to be parsed
- * @param [out]    outbuf       Data parsed from @c KRB-SAFE message
- * @param [out]    outdata      Replay data. Specify NULL if not needed
+ * @param [in]  context         Library context
+ * @param [in]  auth_context    Authentication context
+ * @param [in]  inbuf           @c KRB-SAFE message to be parsed
+ * @param [out] outbuf          Data parsed from @c KRB-SAFE message
+ * @param [out] outdata         Replay data. Specify NULL if not needed
  *
  * This function parses a @c KRB-SAFE message, verifies its integrity, and
  * stores its data into @a outbuf.
@@ -3369,11 +3373,11 @@ krb5_rd_safe(krb5_context context, krb5_auth_context auth_context,
 /**
  * Process a @c KRB-PRIV message.
  *
- * @param [in]     context      Library context
- * @param [in,out] auth_context Authentication structure
- * @param [in]     inbuf        @c KRB-PRIV message to be parsed
- * @param [out]    outbuf       Data parsed from @c KRB-PRIV message
- * @param [out]    outdata      Replay data. Specify NULL if not needed
+ * @param [in]  context         Library context
+ * @param [in]  auth_context    Authentication structure
+ * @param [in]  inbuf           @c KRB-PRIV message to be parsed
+ * @param [out] outbuf          Data parsed from @c KRB-PRIV message
+ * @param [out] outdata         Replay data. Specify NULL if not needed
  *
  * This function parses a @c KRB-PRIV message, verifies its integrity, and
  * stores its unencrypted data into @a outbuf.
@@ -3585,9 +3589,9 @@ krb5_unparse_name_flags_ext(krb5_context context, krb5_const_principal principal
 /**
  * Set the realm field of a principal
  *
- * @param [in,out] context      Library context
- * @param [in]     principal    Principal name
- * @param [in]     realm        Realm name
+ * @param [in] context          Library context
+ * @param [in] principal        Principal name
+ * @param [in] realm            Realm name
  *
  * Set the realm name part of @a principal to @a realm, overwriting the
  * previous realm.
@@ -3894,7 +3898,7 @@ krb5_copy_authdata(krb5_context context,
  * found in either list.  Use krb5_free_authdata() to free @a results when it
  * is no longer needed.
  *
- * @version First introduced in 1.10
+ * @version New in 1.10
  */
 krb5_error_code KRB5_CALLCONV
 krb5_find_authdata(krb5_context context, krb5_authdata *const *ticket_authdata,
@@ -4186,6 +4190,21 @@ krb5_error_code KRB5_CALLCONV
 krb5_kt_resolve(krb5_context context, const char *name, krb5_keytab *ktid);
 
 /**
+ * Duplicate keytab handle.
+ *
+ * @param [in]  context         Library context
+ * @param [in]  in              Key table handle to be duplicated
+ * @param [out] out             Key table handle
+ *
+ * Create a new handle referring to the same key table as @a in.  The new
+ * handle and @a in can be closed independently.
+ *
+ * @version New in 1.12
+ */
+krb5_error_code KRB5_CALLCONV
+krb5_kt_dup(krb5_context context, krb5_keytab in, krb5_keytab *out);
+
+/**
  * Get the default key table name.
  *
  * @param [in]     context      Library context
@@ -4231,7 +4250,7 @@ krb5_kt_default(krb5_context context, krb5_keytab *id);
  *
  * Fill @a keytab_out with a handle to the default client key table.
  *
- * @version First introduced in 1.11
+ * @version New in 1.11
  *
  * @retval
  * 0  Success
@@ -4368,8 +4387,8 @@ krb5_cc_default_name(krb5_context context);
 /**
  * Set the default credential cache name.
  *
- * @param [in,out]  context     Library context
- * @param [in]      name        Default credential cache name
+ * @param [in] context          Library context
+ * @param [in] name             Default credential cache name
  *
  * This function frees the old default credential cache name and then sets it
  * to @a name.
@@ -4387,8 +4406,8 @@ krb5_cc_set_default_name(krb5_context context, const char *name);
 /**
  * Resolve the default crendentials cache name.
  *
- * @param [in,out] context      Library context
- * @param [out]    ccache       Pointer to credential cache name
+ * @param [in]  context         Library context
+ * @param [out] ccache          Pointer to credential cache name
  *
  * @retval
  * 0  Success
@@ -4497,7 +4516,7 @@ krb5_cc_switch(krb5_context context, krb5_ccache cache);
  * @param [in] context          Library context
  * @param [in] type             Credential cache type
  *
- * @version First introduced in 1.10
+ * @version New in 1.10
  *
  * @retval TRUE if @a type supports switching
  * @retval FALSE if it does not or is not a valid credential cache type.
@@ -4520,7 +4539,7 @@ krb5_cc_support_switch(krb5_context context, const char *type);
  *
  * @sa krb5_cccol_cursor_new
  *
- * @version First introduced in 1.10
+ * @version New in 1.10
  */
 krb5_error_code KRB5_CALLCONV
 krb5_cc_cache_match(krb5_context context, krb5_principal client,
@@ -4558,7 +4577,7 @@ krb5_cc_cache_match(krb5_context context, krb5_principal client,
  * Any other error code indicates a fatal error in the processing of a cache
  * selection mechanism.
  *
- * @version First introduced in 1.10
+ * @version New in 1.10
  */
 krb5_error_code KRB5_CALLCONV
 krb5_cc_select(krb5_context context, krb5_principal server,
@@ -4751,10 +4770,21 @@ krb5_free_unparsed_name(krb5_context context, char *val);
  * @param [in] context          Library context
  * @param [in] val              String to be freed
  *
- * @version First introduced in 1.10
+ * @version New in 1.10
  */
 void KRB5_CALLCONV
 krb5_free_string(krb5_context context, char *val);
+
+/**
+ * Free an array of encryption types.
+ *
+ * @param [in] context          Library context
+ * @param [in] val              Array of enctypes to be freed
+ *
+ * @version New in 1.12
+ */
+void KRB5_CALLCONV
+krb5_free_enctypes(krb5_context context, krb5_enctype *val);
 
 /**
  * Free an array of checksum types.
@@ -4790,8 +4820,8 @@ krb5_us_timeofday(krb5_context context,
 /**
  * Retrieve the current time with context specific time offset adjustment.
  *
- * @param [in]     context      Library context
- * @param [in,out] timeret      Timestamp to fill in
+ * @param [in]  context         Library context
+ * @param [out] timeret         Timestamp to fill in
  *
  * This function retrieves the system time of day with the context specific
  * time offset adjustment.
@@ -4813,7 +4843,7 @@ krb5_timeofday(krb5_context context, register krb5_timestamp *timeret);
  * This function checks if @a date is close enough to the current time
  * according to the configured allowable clock skew.
  *
- * @version First introduced in 1.10
+ * @version New in 1.10
  *
  * @retval 0 Success
  * @retval KRB5KRB_AP_ERR_SKEW @a date is not within allowable clock skew
@@ -5054,7 +5084,7 @@ krb5_set_password_using_ccache(krb5_context context, krb5_ccache ccache,
  * @return
  * Kerberos error codes
  *
- * @version First introduced in 1.11
+ * @version New in 1.11
  */
 krb5_error_code KRB5_CALLCONV
 krb5_chpw_message(krb5_context context, const krb5_data *server_string,
@@ -5199,11 +5229,11 @@ krb5_kt_read_service_key(krb5_context context, krb5_pointer keyprocarg,
 /**
  * Format a @c KRB-SAFE message.
  *
- * @param [in]     context      Library context
- * @param [in,out] auth_context Authentication context
- * @param [in]     userdata     User data in the message
- * @param [out]    outbuf       Formatted @c KRB-SAFE buffer
- * @param [out]    outdata      Replay data. Specify NULL if not needed
+ * @param [in]  context         Library context
+ * @param [in]  auth_context    Authentication context
+ * @param [in]  userdata        User data in the message
+ * @param [out] outbuf          Formatted @c KRB-SAFE buffer
+ * @param [out] outdata         Replay data. Specify NULL if not needed
  *
  * This function creates an integrity protected @c KRB-SAFE message
  * using data supplied by the application.
@@ -5242,11 +5272,11 @@ krb5_mk_safe(krb5_context context, krb5_auth_context auth_context,
 /**
  * Format a @c KRB-PRIV message.
  *
- * @param [in]     context      Library context
- * @param [in,out] auth_context Authentication context
- * @param [in]     userdata     User data for @c KRB-PRIV message
- * @param [out]    outbuf       Formatted @c KRB-PRIV message
- * @param [out]    outdata      Replay cache handle (NULL if not needed)
+ * @param [in]  context         Library context
+ * @param [in]  auth_context    Authentication context
+ * @param [in]  userdata        User data for @c KRB-PRIV message
+ * @param [out] outbuf          Formatted @c KRB-PRIV message
+ * @param [out] outdata         Replay cache handle (NULL if not needed)
  *
  * This function is similar to krb5_mk_safe(), but the message is encrypted and
  * integrity-protected, not just integrity-protected.
@@ -5282,7 +5312,7 @@ krb5_mk_priv(krb5_context context, krb5_auth_context auth_context,
  * Client function for @c sendauth protocol.
  *
  * @param [in]     context        Library context
- * @param [in,out] auth_context   Authentication context
+ * @param [in,out] auth_context   Pre-existing or newly created auth context
  * @param [in]     fd             File descriptor that describes network socket
  * @param [in]     appl_version   Application protocol version to be matched
  *                                with the receiver's application version
@@ -5339,7 +5369,7 @@ krb5_sendauth(krb5_context context, krb5_auth_context *auth_context,
  * Server function for @a sendauth protocol.
  *
  * @param [in]     context      Library context
- * @param [in,out] auth_context Authentication context
+ * @param [in,out] auth_context Pre-existing or newly created auth context
  * @param [in]     fd           File descriptor
  * @param [in]     appl_version Application protocol version to be matched
  *                              against the client's application version
@@ -5348,7 +5378,7 @@ krb5_sendauth(krb5_context context, krb5_auth_context *auth_context,
  * @param [in]     keytab       Key table containing service keys
  * @param [out]    ticket       Ticket (NULL if not needed)
  *
- * This function performs the srever side of a sendauth/recvauth exchange by
+ * This function performs the server side of a sendauth/recvauth exchange by
  * sending and receiving messages over @a fd.
  *
  * Use krb5_free_ticket() to free @a ticket when it is no longer needed.
@@ -5366,7 +5396,7 @@ krb5_recvauth(krb5_context context, krb5_auth_context *auth_context,
  * Server function for @a sendauth protocol with version parameter.
  *
  * @param [in]     context      Library context
- * @param [in,out] auth_context Authentication context
+ * @param [in,out] auth_context Pre-existing or newly created auth context
  * @param [in]     fd           File descriptor
  * @param [in]     server       Server principal (NULL for any in @a keytab)
  * @param [in]     flags        Additional specifications
@@ -5392,11 +5422,11 @@ krb5_recvauth_version(krb5_context context,
 /**
  * Format a @c KRB-CRED message for an array of credentials.
  *
- * @param [in]     context      Library context
- * @param [in,out] auth_context Authentication context
- * @param [in]     ppcreds      Null-terminated array of credentials
- * @param [out]    ppdata       Encoded credentials
- * @param [out]    outdata      Replay cache information (NULL if not needed)
+ * @param [in]  context         Library context
+ * @param [in]  auth_context    Authentication context
+ * @param [in]  ppcreds         Null-terminated array of credentials
+ * @param [out] ppdata          Encoded credentials
+ * @param [out] outdata         Replay cache information (NULL if not needed)
  *
  * This function takes an array of credentials @a ppcreds and formats
  * a @c KRB-CRED message @a ppdata to pass to krb5_rd_cred().
@@ -5424,11 +5454,11 @@ krb5_mk_ncred(krb5_context context, krb5_auth_context auth_context,
 /**
  * Format a @c KRB-CRED message for a single set of credentials.
  *
- * @param [in]     context      Library context
- * @param [in,out] auth_context Authentication context
- * @param [in]     pcreds       Pointer to credentials
- * @param [out]    ppdata       Encoded credentials
- * @param [out]    outdata      Replay cache data (NULL if not needed)
+ * @param [in]  context         Library context
+ * @param [in]  auth_context    Authentication context
+ * @param [in]  pcreds          Pointer to credentials
+ * @param [out] ppdata          Encoded credentials
+ * @param [out] outdata         Replay cache data (NULL if not needed)
  *
  * This is a convenience function that calls krb5_mk_ncred() with a single set
  * of credentials.
@@ -5450,11 +5480,11 @@ krb5_mk_1cred(krb5_context context, krb5_auth_context auth_context,
 /**
  * Read and validate a @c KRB-CRED message.
  *
- * @param [in]     context      Library context
- * @param [in,out] auth_context Authentication context
- * @param [in]     pcreddata    @c KRB-CRED message
- * @param [out]    pppcreds     Null-terminated array of forwarded credentials
- * @param [out]    outdata      Replay data (NULL if not needed)
+ * @param [in]  context         Library context
+ * @param [in]  auth_context    Authentication context
+ * @param [in]  pcreddata       @c KRB-CRED message
+ * @param [out] pppcreds        Null-terminated array of forwarded credentials
+ * @param [out] outdata         Replay data (NULL if not needed)
  *
  * @note The @a outdata argument is required if #KRB5_AUTH_CONTEXT_RET_TIME or
  *       #KRB5_AUTH_CONTEXT_RET_SEQUENCE flag is set in the @a auth_context.`
@@ -5544,9 +5574,9 @@ krb5_auth_con_free(krb5_context context, krb5_auth_context auth_context);
 /**
  * Set a flags field in a krb5_auth_context structure.
  *
- * @param [in]     context      Library context
- * @param [in,out] auth_context Authentication context
- * @param [in]     flags        Flags bit mask
+ * @param [in] context          Library context
+ * @param [in] auth_context     Authentication context
+ * @param [in] flags            Flags bit mask
  *
  * Valid values for @a flags are:
  * @li #KRB5_AUTH_CONTEXT_DO_TIME Use timestamps
@@ -5802,7 +5832,7 @@ krb5_auth_con_setsendsubkey(krb5_context ctx, krb5_auth_context ac,
  * This function sets the send subkey in @a ac to @a key, incrementing its
  * reference count.
  *
- * @version First introduced in 1.9
+ * @version New in 1.9
  *
  * @retval 0 Success; otherwise - Kerberos error codes
  */
@@ -5834,7 +5864,7 @@ krb5_auth_con_setrecvsubkey(krb5_context ctx, krb5_auth_context ac,
  * This function sets the receiving subkey in @a ac to @a key, incrementing its
  * reference count.
  *
- * @version First introduced in 1.9
+ * @version New in 1.9
  *
  * @retval 0 Success; otherwise - Kerberos error codes
  */
@@ -6245,7 +6275,7 @@ krb5_enctype_to_string(krb5_enctype enctype, char *buffer, size_t buflen);
  * (like "aes128-cts-hmac-sha1-96").  If @a shortest is TRUE, it return the
  * enctype's shortest alias (like "aes128-cts").
  *
- * @version First introduced in 1.9
+ * @version New in 1.9
  *
  * @retval 0  Success; otherwise - Kerberos error codes
  */
@@ -6347,12 +6377,12 @@ typedef krb5_error_code
 /**
  * Prompt user for password.
  *
- * @param [in]     context      Library context
- * @param          data         Unused (callback argument)
- * @param [in]     name         Name to output during prompt
- * @param [in]     banner       Banner to output during prompt
- * @param [in]     num_prompts  Number of prompts in @a prompts
- * @param [in,out] prompts      Array of output prompts and replies
+ * @param [in] context          Library context
+ * @param      data             Unused (callback argument)
+ * @param [in] name             Name to output during prompt
+ * @param [in] banner           Banner to output during prompt
+ * @param [in] num_prompts      Number of prompts in @a prompts
+ * @param [in] prompts          Array of prompts and replies
  *
  * This function is intended to be used as a prompter callback for
  * krb5_get_init_creds_password() or krb5_init_creds_init().
@@ -6380,7 +6410,7 @@ krb5_prompter_posix(krb5_context context, void *data, const char *name,
  * This question is asked when the long-term password is needed. It has no
  * challenge and the response is simply the password string.
  *
- * @version First introduced in 1.11
+ * @version New in 1.11
  */
 #define KRB5_RESPONDER_QUESTION_PASSWORD "password"
 
@@ -6390,32 +6420,34 @@ krb5_prompter_posix(krb5_context context, void *data, const char *name,
  * The OTP responder question is asked when the KDC indicates that an OTP
  * value is required in order to complete the authentication.  The JSON format
  * of the challenge is:
- *   {
- *     "service": <string (optional)>,
- *     "tokenInfo": [
- *       {
- *         "flags":     <number>,
- *         "vendor":    <string (optional)>,
- *         "challenge": <string (optional)>,
- *         "length":    <number (optional)>,
- *         "format":    <number (optional)>,
- *         "tokenID":   <string (optional)>,
- *         "algID":     <string (optional)>,
- *       },
- *       ...
- *     ]
- *   }
+ *
+ *  @n {
+ *  @n   "service": <string (optional)>,
+ *  @n   "tokenInfo": [
+ *  @n      {
+ *  @n        "flags":     <number>,
+ *  @n        "vendor":    <string (optional)>,
+ *  @n        "challenge": <string (optional)>,
+ *  @n        "length":    <number (optional)>,
+ *  @n        "format":    <number (optional)>,
+ *  @n        "tokenID":   <string (optional)>,
+ *  @n        "algID":     <string (optional)>,
+ *  @n      },
+ *  @n      ...
+ *  @n    ]
+ *  @n  }
  *
  * The answer to the question MUST be JSON formatted:
- *   {
- *     "tokeninfo": <number>,
- *     "value":     <string (optional)>,
- *     "pin":       <string (optional)>,
- *   }
+ *
+ * @n  {
+ * @n    "tokeninfo": <number>,
+ * @n    "value":     <string (optional)>,
+ * @n    "pin":       <string (optional)>,
+ * @n  }
  *
  * For more detail, please see RFC 6560.
  *
- * @version First introduced in 1.11
+ * @version New in 1.11
  */
 #define KRB5_RESPONDER_QUESTION_OTP "otp"
 
@@ -6452,6 +6484,63 @@ krb5_prompter_posix(krb5_context context, void *data, const char *name,
  */
 #define KRB5_RESPONDER_OTP_FLAGS_SEPARATE_PIN  0x0008
 
+/**
+ * PKINIT responder question
+ *
+ * The PKINIT responder question is asked when the client needs a password
+ * that's being used to protect key information, and is formatted as a JSON
+ * object.  A specific identity's flags value, if not zero, is the bitwise-OR
+ * of one or more of the KRB5_RESPONDER_PKINIT_FLAGS_TOKEN_* flags defined
+ * below, and possibly other flags to be added later.  Any resemblance to
+ * similarly-named CKF_* values in the PKCS#11 API should not be depended on.
+ *
+ *  @n {
+ *  @n     identity <string> : flags <number>,
+ *  @n     ...
+ *  @n }
+ *
+ * The answer to the question MUST be JSON formatted:
+ *
+ *  @n {
+ *  @n     identity <string> : password <string>,
+ *  @n     ...
+ *  @n }
+ *
+ * @version New in 1.12
+ */
+#define KRB5_RESPONDER_QUESTION_PKINIT "pkinit"
+
+/**
+ * This flag indicates that an incorrect PIN was supplied at least once since
+ * the last time the correct PIN was supplied.
+ */
+#define KRB5_RESPONDER_PKINIT_FLAGS_TOKEN_USER_PIN_COUNT_LOW       (1 << 0)
+
+/**
+ * This flag indicates that supplying an incorrect PIN will cause the token to
+ * lock itself.
+ */
+#define KRB5_RESPONDER_PKINIT_FLAGS_TOKEN_USER_PIN_FINAL_TRY       (1 << 1)
+
+/**
+ * This flag indicates that the user PIN is locked, and you can't log in to the
+ * token with it.
+ */
+#define KRB5_RESPONDER_PKINIT_FLAGS_TOKEN_USER_PIN_LOCKED          (1 << 2)
+
+/**
+ * A container for a set of preauthentication questions and answers
+ *
+ * A responder context is supplied by the krb5 authentication system to a @ref
+ * krb5_responder_fn callback.  It contains a list of questions and can receive
+ * answers.  Questions contained in a responder context can be listed using
+ * krb5_responder_list_questions(), retrieved using
+ * krb5_responder_get_challenge(), or answered using
+ * krb5_responder_set_answer().  The form of a question's challenge and
+ * answer depend on the question name.
+ *
+ * @version New in 1.11
+ */
 typedef struct krb5_responder_context_st *krb5_responder_context;
 
 /**
@@ -6460,7 +6549,13 @@ typedef struct krb5_responder_context_st *krb5_responder_context;
  * @param [in] ctx              Library context
  * @param [in] rctx             Responder context
  *
- * @version First introduced in 1.11
+ * Return a pointer to a null-terminated list of question names which are
+ * present in @a rctx.  The pointer is an alias, valid only as long as the
+ * lifetime of @a rctx, and should not be modified or freed by the caller.  A
+ * question's challenge can be retrieved using krb5_responder_get_challenge()
+ * and answered using krb5_responder_set_answer().
+ *
+ * @version New in 1.11
  */
 const char * const * KRB5_CALLCONV
 krb5_responder_list_questions(krb5_context ctx, krb5_responder_context rctx);
@@ -6472,7 +6567,14 @@ krb5_responder_list_questions(krb5_context ctx, krb5_responder_context rctx);
  * @param [in] rctx             Responder context
  * @param [in] question         Question name
  *
- * @version First introduced in 1.11
+ * Return a pointer to a C string containing the challenge for @a question
+ * within @a rctx, or NULL if the question is not present in @a rctx.  The
+ * structure of the question depends on the question name, but will always be
+ * printable UTF-8 text.  The returned pointer is an alias, valid only as long
+ * as the lifetime of @a rctx, and should not be modified or freed by the
+ * caller.
+ *
+ * @version New in 1.11
  */
 const char * KRB5_CALLCONV
 krb5_responder_get_challenge(krb5_context ctx, krb5_responder_context rctx,
@@ -6486,7 +6588,12 @@ krb5_responder_get_challenge(krb5_context ctx, krb5_responder_context rctx,
  * @param [in] question         Question name
  * @param [in] answer           The string to set (MUST be printable UTF-8)
  *
- * @version First introduced in 1.11
+ * This function supplies an answer to @a question within @a rctx.  The
+ * appropriate form of the answer depends on the question name.
+ *
+ * @retval EINVAL @a question is not present within @a rctx
+ *
+ * @version New in 1.11
  */
 krb5_error_code KRB5_CALLCONV
 krb5_responder_set_answer(krb5_context ctx, krb5_responder_context rctx,
@@ -6546,7 +6653,7 @@ typedef struct _krb5_responder_otp_challenge {
  * @param [in]  rctx            Responder context
  * @param [out] chl             Challenge structure
  *
- * @version First introduced in 1.11
+ * @version New in 1.11
  */
 krb5_error_code KRB5_CALLCONV
 krb5_responder_otp_get_challenge(krb5_context ctx,
@@ -6562,7 +6669,7 @@ krb5_responder_otp_get_challenge(krb5_context ctx,
  * @param [in] value            The value to set, or NULL for none
  * @param [in] pin              The pin to set, or NULL for none
  *
- * @version First introduced in 1.11
+ * @version New in 1.11
  */
 krb5_error_code KRB5_CALLCONV
 krb5_responder_otp_set_answer(krb5_context ctx, krb5_responder_context rctx,
@@ -6575,12 +6682,71 @@ krb5_responder_otp_set_answer(krb5_context ctx, krb5_responder_context rctx,
  * @param [in] rctx             Responder context
  * @param [in] chl              The challenge to free
  *
- * @version First introduced in 1.11
+ * @version New in 1.11
  */
 void KRB5_CALLCONV
 krb5_responder_otp_challenge_free(krb5_context ctx,
                                   krb5_responder_context rctx,
                                   krb5_responder_otp_challenge *chl);
+
+typedef struct _krb5_responder_pkinit_identity {
+    char *identity;
+    krb5_int32 token_flags;     /* 0 when not specified or not applicable. */
+} krb5_responder_pkinit_identity;
+
+typedef struct _krb5_responder_pkinit_challenge {
+    krb5_responder_pkinit_identity **identities;
+} krb5_responder_pkinit_challenge;
+
+/**
+ * Decode the KRB5_RESPONDER_QUESTION_PKINIT to a C struct.
+ *
+ * A convenience function which parses the KRB5_RESPONDER_QUESTION_PKINIT
+ * question challenge data, making it available in native C.  The main feature
+ * of this function is the ability to read the challenge without parsing
+ * the JSON.
+ *
+ * The returned value must be passed to krb5_responder_pkinit_challenge_free()
+ * to be freed.
+ *
+ * @param [in]  ctx             Library context
+ * @param [in]  rctx            Responder context
+ * @param [out] chl_out         Challenge structure
+ *
+ * @version New in 1.12
+ */
+krb5_error_code KRB5_CALLCONV
+krb5_responder_pkinit_get_challenge(krb5_context ctx,
+                                    krb5_responder_context rctx,
+                                    krb5_responder_pkinit_challenge **chl_out);
+
+/**
+ * Answer the KRB5_RESPONDER_QUESTION_PKINIT question for one identity.
+ *
+ * @param [in] ctx              Library context
+ * @param [in] rctx             Responder context
+ * @param [in] identity         The identity for which a PIN is being supplied
+ * @param [in] pin              The provided PIN, or NULL for none
+ *
+ * @version New in 1.12
+ */
+krb5_error_code KRB5_CALLCONV
+krb5_responder_pkinit_set_answer(krb5_context ctx, krb5_responder_context rctx,
+                                 const char *identity, const char *pin);
+
+/**
+ * Free the value returned by krb5_responder_pkinit_get_challenge().
+ *
+ * @param [in] ctx              Library context
+ * @param [in] rctx             Responder context
+ * @param [in] chl              The challenge to free
+ *
+ * @version New in 1.12
+ */
+void KRB5_CALLCONV
+krb5_responder_pkinit_challenge_free(krb5_context ctx,
+                                     krb5_responder_context rctx,
+                                     krb5_responder_pkinit_challenge *chl);
 
 /** Store options for @c _krb5_get_init_creds */
 typedef struct _krb5_get_init_creds_opt {
@@ -6828,7 +6994,7 @@ krb5_get_init_creds_opt_set_fast_ccache_name(krb5_context context,
  * This function is similar to krb5_get_init_creds_opt_set_fast_ccache_name(),
  * but uses a credential cache handle instead of a name.
  *
- * @version First introduced in 1.9
+ * @version New in 1.9
  */
 krb5_error_code KRB5_CALLCONV
 krb5_get_init_creds_opt_set_fast_ccache(krb5_context context,
@@ -6849,7 +7015,7 @@ krb5_get_init_creds_opt_set_fast_ccache(krb5_context context,
  * sensitive choices) as the previous authentication attempt, which stored
  * information in the passed-in ccache.
  *
- * @version First introduced in 1.11
+ * @version New in 1.11
  */
 krb5_error_code KRB5_CALLCONV
 krb5_get_init_creds_opt_set_in_ccache(krb5_context context,
@@ -6953,7 +7119,7 @@ typedef void
  * krb5_get_init_creds_password() not to send password expiry warnings to the
  * prompter, as it ordinarily may.
  *
- * @version First introduced in 1.9
+ * @version New in 1.9
  */
 krb5_error_code KRB5_CALLCONV
 krb5_get_init_creds_opt_set_expire_callback(krb5_context context,
@@ -6969,7 +7135,7 @@ krb5_get_init_creds_opt_set_expire_callback(krb5_context context,
  * @param [in] responder        Responder function
  * @param [in] data             Responder data argument
  *
- * @version First introduced in 1.11
+ * @version New in 1.11
  */
 krb5_error_code KRB5_CALLCONV
 krb5_get_init_creds_opt_set_responder(krb5_context context,
@@ -7230,7 +7396,7 @@ typedef struct _krb5_tkt_creds_context *krb5_tkt_creds_context;
  *
  * Use krb5_tkt_creds_free() to free @a ctx when it is no longer needed.
  *
- * @version First introduced in 1.9
+ * @version New in 1.9
  *
  * @retval 0  Success; otherwise - Kerberos error codes
  */
@@ -7249,7 +7415,7 @@ krb5_tkt_creds_init(krb5_context context, krb5_ccache ccache,
  * krb5_tkt_creds_init().  On successful return, the credentials can be
  * retrieved with krb5_tkt_creds_get_creds().
  *
- * @version First introduced in 1.9
+ * @version New in 1.9
  *
  * @retval 0  Success; otherwise - Kerberos error codes
  */
@@ -7268,7 +7434,7 @@ krb5_tkt_creds_get(krb5_context context, krb5_tkt_creds_context ctx);
  * krb5_tkt_creds_step().  Use krb5_free_cred_contents() to free @a creds when
  * it is no longer needed.
  *
- * @version First introduced in 1.9
+ * @version New in 1.9
  *
  * @retval 0  Success; otherwise - Kerberos error codes
  */
@@ -7282,7 +7448,7 @@ krb5_tkt_creds_get_creds(krb5_context context, krb5_tkt_creds_context ctx,
  * @param[in]  context  Library context
  * @param[in]  ctx      TGS request context
  *
- * @version First introduced in 1.9
+ * @version New in 1.9
  */
 void KRB5_CALLCONV
 krb5_tkt_creds_free(krb5_context context, krb5_tkt_creds_context ctx);
@@ -7313,7 +7479,7 @@ krb5_tkt_creds_free(krb5_context context, krb5_tkt_creds_context ctx);
  * transmit the next request using TCP rather than UDP.  If this function
  * returns any other error, the TGS exchange has failed.
  *
- * @version First introduced in 1.9
+ * @version New in 1.9
  *
  * @retval 0  Success; otherwise - Kerberos error codes
  */
@@ -7332,7 +7498,7 @@ krb5_tkt_creds_step(krb5_context context, krb5_tkt_creds_context ctx,
  * The TGS request context must have completed obtaining credentials via either
  * krb5_tkt_creds_get() or krb5_tkt_creds_step().
  *
- * @version First introduced in 1.9
+ * @version New in 1.9
  *
  * @retval 0  Success; otherwise - Kerberos error codes
  */
@@ -7407,12 +7573,12 @@ krb5_verify_init_creds_opt_set_ap_req_nofail(krb5_verify_init_creds_opt * k5_vic
 /**
  * Verify initial credentials against a keytab.
  *
- * @param [in]     context      Library context
- * @param [in]     creds        Initial credentials to be verified
- * @param [in]     server       Server principal (or NULL)
- * @param [in]     keytab       Key table (NULL to use default keytab)
- * @param [in,out] ccache       Credential cache for fetched creds (or NULL)
- * @param [in]     options      Verification options (NULL for default options)
+ * @param [in] context          Library context
+ * @param [in] creds            Initial credentials to be verified
+ * @param [in] server           Server principal (or NULL)
+ * @param [in] keytab           Key table (NULL to use default keytab)
+ * @param [in] ccache           Credential cache for fetched creds (or NULL)
+ * @param [in] options          Verification options (NULL for default options)
  *
  * This function attempts to verify that @a creds were obtained from a KDC with
  * knowledge of a key in @a keytab, or the default keytab if @a keytab is NULL.
@@ -7911,7 +8077,7 @@ krb5_pac_verify(krb5_context context, const krb5_pac pac,
  * the server and KDC checksum buffers.  Use krb5_free_data_contents() to free
  * @a data when it is no longer needed.
  *
- * @version First introduced in 1.10
+ * @version New in 1.10
  */
 krb5_error_code KRB5_CALLCONV
 krb5_pac_sign(krb5_context context, krb5_pac pac, krb5_timestamp authtime,
@@ -7966,7 +8132,7 @@ typedef void
  * @note This function overrides the information passed through the
  * @a KRB5_TRACE environment variable.
  *
- * @version First introduced in 1.9
+ * @version New in 1.9
  *
  * @return Returns KRB5_TRACE_NOSUPP if tracing is not supported in the library
  * (unless @a fn is NULL).
@@ -7987,7 +8153,7 @@ krb5_set_trace_callback(krb5_context context, krb5_trace_callback fn,
  * @note This function overrides the information passed through the
  * @a KRB5_TRACE environment variable.
  *
- * @version First introduced in 1.9
+ * @version New in 1.9
  *
  * @retval KRB5_TRACE_NOSUPP Tracing is not supported in the library.
  */

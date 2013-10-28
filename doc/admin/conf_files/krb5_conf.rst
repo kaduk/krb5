@@ -137,12 +137,13 @@ The libdefaults section may contain any of the following relations:
 **default_ccache_name**
     This relation specifies the name of the default credential cache.
     The default is |ccache|.  This relation is subject to parameter
-    expansion (see below).
+    expansion (see below).  New in release 1.11.
 
 **default_client_keytab_name**
     This relation specifies the name of the default keytab for
     obtaining client credentials.  The default is |ckeytab|.  This
     relation is subject to parameter expansion (see below).
+    New in release 1.11.
 
 **default_keytab_name**
     This relation specifies the default keytab name to be used by
@@ -184,6 +185,13 @@ The libdefaults section may contain any of the following relations:
     clients from taking advantage of new stronger enctypes when the
     libraries are upgraded.
 
+**dns_canonicalize_hostname**
+    Indicate whether name lookups will be used to canonicalize
+    hostnames for use in service principal names.  Setting this flag
+    to false can improve security by reducing reliance on DNS, but
+    means that short hostnames will not be canonicalized to
+    fully-qualified hostnames.  The default value is true.
+
 **dns_lookup_kdc**
     Indicate whether DNS SRV records should be used to locate the KDCs
     and other servers for a realm, if they are not listed in the
@@ -219,7 +227,7 @@ The libdefaults section may contain any of the following relations:
     (if given).  This option can improve the administrative
     flexibility of server applications on multihomed hosts, but could
     compromise the security of virtual hosting environments.  The
-    default value is false.
+    default value is false.  New in release 1.10.
 
 **k5login_authoritative**
     If this flag is true, principals must be listed in a local user's
@@ -301,7 +309,8 @@ The libdefaults section may contain any of the following relations:
 **rdns**
     If this flag is true, reverse name lookup will be used in addition
     to forward name lookup to canonicalizing hostnames for use in
-    service principal names.  The default value is true.
+    service principal names.  If **dns_canonicalize_hostname** is set
+    to false, this flag has no effect.  The default value is true.
 
 **realm_try_domains**
     Indicate whether a host's domain components should be used to
@@ -466,7 +475,9 @@ The [domain_realm] section provides a translation from a domain name
 or hostname to a Kerberos realm name.  The tag name can be a host name
 or domain name, where domain names are indicated by a prefix of a
 period (``.``).  The value of the relation is the Kerberos realm name
-for that particular host or domain.  The Kerberos realm may be
+for that particular host or domain.  A host name relation implicitly
+provides the corresponding domain name relation, unless an explicit domain
+name relation is provided.  The Kerberos realm may be
 identified either in the realms_ section or using DNS SRV records.
 Host names and domain names should be in lower case.  For example:
 
@@ -474,14 +485,16 @@ Host names and domain names should be in lower case.  For example:
 
     [domain_realm]
         crash.mit.edu = TEST.ATHENA.MIT.EDU
-        .mit.edu = ATHENA.MIT.EDU
+	.dev.mit.edu = TEST.ATHENA.MIT.EDU
         mit.edu = ATHENA.MIT.EDU
 
-maps the host with the exact name ``crash.mit.edu`` into the
-TEST.ATHENA.MIT.EDU realm.  The period prefix in ``.mit.edu`` denotes
-that all systems in the ``mit.edu`` domain belong to
-``ATHENA.MIT.EDU`` realm.  The third entry maps the host ``mit.edu``
-itself to the ``ATHENA.MIT.EDU`` realm.
+maps the host with the name ``crash.mit.edu`` into the
+``TEST.ATHENA.MIT.EDU`` realm.  The second entry maps all hosts under the
+domain ``dev.mit.edu`` into the ``TEST.ATHENA.MIT.EDU`` realm, but not
+the host with the name ``dev.mit.edu``.  That host is matched
+by the third entry, which maps the host ``mit.edu`` and all hosts
+under the domain ``mit.edu`` that do not match a preceding rule
+into the realm ``ATHENA.MIT.EDU``.
 
 If no translation entry applies to a hostname used for a service
 principal for a service ticket request, the library will try to get a
@@ -635,6 +648,8 @@ modules and to turn modules on and off.  Not every krb5 pluggable
 interface uses the [plugins] section; the ones that do are documented
 here.
 
+New in release 1.9.
+
 Each pluggable interface corresponds to a subsection of [plugins].
 All subsections support the same tags:
 
@@ -655,6 +670,12 @@ All subsections support the same tags:
     *modulename* for the pluggable interface.  If *pathname* is not an
     absolute path, it will be treated as relative to the
     **plugin_base_dir** value from :ref:`libdefaults`.
+
+For pluggable interfaces where module order matters, modules
+registered with a **module** tag normally come first, in the order
+they are registered, followed by built-in modules in the order they
+are documented below.  If **enable_only** tags are used, then the
+order of those tags overrides the normal module order.
 
 The following subsections are currently supported within the [plugins]
 section:
@@ -729,6 +750,67 @@ built-in modules exist for these interfaces:
 
 **encrypted_timestamp**
     This module implements the encrypted timestamp mechanism.
+
+.. _hostrealm:
+
+hostrealm interface
+###################
+
+The hostrealm section (introduced in release 1.12) controls modules
+for the host-to-realm interface, which affects the local mapping of
+hostnames to realm names and the choice of default realm.  The following
+built-in modules exist for this interface:
+
+**profile**
+    This module consults the [domain_realm] section of the profile for
+    authoritative host-to-realm mappings, and the **default_realm**
+    variable for the default realm.
+
+**dns**
+    This module looks for DNS records for fallback host-to-realm
+    mappings and the default realm.  It only operates if the
+    **dns_lookup_realm** variable is set to true.
+
+**domain**
+    This module applies heuristics for fallback host-to-realm
+    mappings.  It implements the **realm_try_domains** variable, and
+    uses the uppercased parent domain of the hostname if that does not
+    produce a result.
+
+.. _localauth:
+
+localauth interface
+###################
+
+The localauth section (introduced in release 1.12) controls modules
+for the local authorization interface, which affects the relationship
+between Kerberos principals and local system accounts.  The following
+built-in modules exist for this interface:
+
+**default**
+    This module implements the **DEFAULT** type for **auth_to_local**
+    values.
+
+**rule**
+    This module implements the **RULE** type for **auth_to_local**
+    values.
+
+**names**
+    This module looks for an **auth_to_local_names** mapping for the
+    principal name.
+
+**auth_to_local**
+    This module processes **auth_to_local** values in the default
+    realm's section, and applies the default method if no
+    **auth_to_local** values exist.
+
+**k5login**
+    This module authorizes a principal to a local account according to
+    the account's :ref:`.k5login(5)` file.
+
+**an2ln**
+    This module authorizes a principal to a local account if the
+    principal name maps to the local account name.
 
 
 PKINIT options

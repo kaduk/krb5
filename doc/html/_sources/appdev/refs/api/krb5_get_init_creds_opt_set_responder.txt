@@ -45,6 +45,6 @@ krb5_get_init_creds_opt_set_responder -  Set the responder function in initial c
 
 .. note::
 
-	 First introduced in 1.11
+	 New in 1.11
  
 

@@ -50,6 +50,6 @@ This function sets the send subkey in *ac* to *key* , incrementing its reference
 
 .. note::
 
-	 First introduced in 1.9
+	 New in 1.9
  
 

@@ -14,7 +14,7 @@ krb5_cc_next_cred -  Retrieve the next entry from the credential cache.
 
 	          **[in]** **cache** - Credential cache handle
 
-	          **[inout]** **cursor** - Cursor
+	          **[in]** **cursor** - Cursor
 
 	          **[out]** **creds** - Next credential cache entry
 

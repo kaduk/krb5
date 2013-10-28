@@ -12,7 +12,7 @@ krb5_mk_ncred -  Format a KRB-CRED message for an array of credentials.
 
 	          **[in]** **context** - Library context
 
-	          **[inout]** **auth_context** - Authentication context
+	          **[in]** **auth_context** - Authentication context
 
 	          **[in]** **ppcreds** - Null-terminated array of credentials
 

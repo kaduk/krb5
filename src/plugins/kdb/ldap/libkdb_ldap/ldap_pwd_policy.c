@@ -140,7 +140,7 @@ krb5_ldap_create_password_policy(krb5_context context, osa_policy_ent_t policy)
     kdb5_dal_handle             *dal_handle=NULL;
     krb5_ldap_context           *ldap_context=NULL;
     krb5_ldap_server_handle     *ldap_server_handle=NULL;
-    char                        **rdns=NULL, *strval[2]={NULL}, *policy_dn;
+    char                        *strval[2]={NULL}, *policy_dn=NULL;
 
     /* Clear the global error string */
     krb5_clear_error_message(context);
@@ -156,16 +156,7 @@ krb5_ldap_create_password_policy(krb5_context context, osa_policy_ent_t policy)
     if (st != 0)
         goto cleanup;
 
-    /* get the first component of the dn to set the cn attribute */
-    rdns = ldap_explode_dn(policy_dn, 1);
-    if (rdns == NULL) {
-        st = EINVAL;
-        krb5_set_error_message(context, st,
-                               _("Invalid password policy DN syntax"));
-        goto cleanup;
-    }
-
-    strval[0] = rdns[0];
+    strval[0] = policy->name;
     if ((st=krb5_add_str_mem_ldap_mod(&mods, "cn", LDAP_MOD_ADD, strval)) != 0)
         goto cleanup;
 
@@ -184,11 +175,7 @@ krb5_ldap_create_password_policy(krb5_context context, osa_policy_ent_t policy)
     }
 
 cleanup:
-    if (rdns)
-        ldap_value_free(rdns);
-
-    if (policy_dn != NULL)
-        free (policy_dn);
+    free(policy_dn);
     ldap_mods_free(mods, 1);
     krb5_ldap_put_handle_to_pool(ldap_context, ldap_server_handle);
     return(st);
@@ -201,7 +188,7 @@ cleanup:
 krb5_error_code
 krb5_ldap_put_password_policy(krb5_context context, osa_policy_ent_t policy)
 {
-    char                        *policy_dn;
+    char                        *policy_dn=NULL;
     krb5_error_code             st=0;
     LDAP                        *ld=NULL;
     LDAPMod                     **mods=NULL;
@@ -239,11 +226,19 @@ krb5_ldap_put_password_policy(krb5_context context, osa_policy_ent_t policy)
     }
 
 cleanup:
-    if (policy_dn != NULL)
-        free (policy_dn);
+    free(policy_dn);
     ldap_mods_free(mods, 1);
     krb5_ldap_put_handle_to_pool(ldap_context, ldap_server_handle);
     return(st);
+}
+
+static void
+get_ui4(LDAP *ld, LDAPMessage *ent, char *name, krb5_ui_4 *out)
+{
+    int val;
+
+    krb5_ldap_get_value(ld, ent, name, &val);
+    *out = val;
 }
 
 static krb5_error_code
@@ -259,19 +254,18 @@ populate_policy(krb5_context context,
     CHECK_NULL(pol_entry->name);
     pol_entry->version = 1;
 
-    krb5_ldap_get_value(ld, ent, "krbmaxpwdlife", &(pol_entry->pw_max_life));
-    krb5_ldap_get_value(ld, ent, "krbminpwdlife", &(pol_entry->pw_min_life));
-    krb5_ldap_get_value(ld, ent, "krbpwdmindiffchars", &(pol_entry->pw_min_classes));
-    krb5_ldap_get_value(ld, ent, "krbpwdminlength", &(pol_entry->pw_min_length));
-    krb5_ldap_get_value(ld, ent, "krbpwdhistorylength", &(pol_entry->pw_history_num));
-
-    krb5_ldap_get_value(ld, ent, "krbpwdmaxfailure", &(pol_entry->pw_max_fail));
-    krb5_ldap_get_value(ld, ent, "krbpwdfailurecountinterval", &(pol_entry->pw_failcnt_interval));
-    krb5_ldap_get_value(ld, ent, "krbpwdlockoutduration", &(pol_entry->pw_lockout_duration));
-    krb5_ldap_get_value(ld, ent, "krbpwdattributes", &(pol_entry->attributes));
-    krb5_ldap_get_value(ld, ent, "krbpwdmaxlife", &(pol_entry->max_life));
-    krb5_ldap_get_value(ld, ent, "krbpwdmaxrenewablelife",
-                        &(pol_entry->max_renewable_life));
+    get_ui4(ld, ent, "krbmaxpwdlife", &pol_entry->pw_max_life);
+    get_ui4(ld, ent, "krbminpwdlife", &pol_entry->pw_min_life);
+    get_ui4(ld, ent, "krbpwdmindiffchars", &pol_entry->pw_min_classes);
+    get_ui4(ld, ent, "krbpwdminlength", &pol_entry->pw_min_length);
+    get_ui4(ld, ent, "krbpwdhistorylength", &pol_entry->pw_history_num);
+    get_ui4(ld, ent, "krbpwdmaxfailure", &pol_entry->pw_max_fail);
+    get_ui4(ld, ent, "krbpwdfailurecountinterval",
+            &pol_entry->pw_failcnt_interval);
+    get_ui4(ld, ent, "krbpwdlockoutduration", &pol_entry->pw_lockout_duration);
+    get_ui4(ld, ent, "krbpwdattributes", &pol_entry->attributes);
+    get_ui4(ld, ent, "krbpwdmaxlife", &pol_entry->max_life);
+    get_ui4(ld, ent, "krbpwdmaxrenewablelife", &pol_entry->max_renewable_life);
 
     st = krb5_ldap_get_string(ld, ent, "krbpwdallowedkeysalts",
                               &(pol_entry->allowed_keysalts), NULL);
@@ -366,15 +360,14 @@ krb5_ldap_get_password_policy(krb5_context context, char *name,
                                                policy);
 
 cleanup:
-    if (policy_dn != NULL)
-        free (policy_dn);
+    free(policy_dn);
     return st;
 }
 
 krb5_error_code
 krb5_ldap_delete_password_policy(krb5_context context, char *policy)
 {
-    int                         mask = 0, refcount;
+    int                         mask = 0;
     char                        *policy_dn = NULL, *class[] = {"krbpwdpolicy", NULL};
     krb5_error_code             st=0;
     LDAP                        *ld=NULL;
@@ -396,13 +389,6 @@ krb5_ldap_delete_password_policy(krb5_context context, char *policy)
     if (st != 0)
         goto cleanup;
 
-    st = krb5_ldap_get_reference_count(context, policy_dn,
-                                       "krbPwdPolicyReference", &refcount, ld);
-    if (st == 0 && refcount != 0)
-        st = KRB5_KDB_POLICY_REF;
-    if (st != 0)
-        goto cleanup;
-
     /* Ensure that the object is a password policy */
     if ((st=checkattributevalue(ld, policy_dn, "objectclass", class, &mask)) != 0)
         goto cleanup;
@@ -419,8 +405,7 @@ krb5_ldap_delete_password_policy(krb5_context context, char *policy)
 
 cleanup:
     krb5_ldap_put_handle_to_pool(ldap_context, ldap_server_handle);
-    if (policy_dn != NULL)
-        free (policy_dn);
+    free(policy_dn);
 
     return st;
 }
@@ -474,8 +459,7 @@ krb5_ldap_iterate_password_policy(krb5_context context, char *match_expr,
     ldap_msgfree(result);
 
 cleanup:
-    if (entry)
-        free (entry);
+    free(entry);
 
     krb5_ldap_put_handle_to_pool(ldap_context, ldap_server_handle);
     return st;
@@ -487,8 +471,7 @@ krb5_ldap_free_password_policy (context, entry)
     osa_policy_ent_t            entry;
 {
     if (entry) {
-        if (entry->name)
-            free(entry->name);
+        free(entry->name);
         free(entry);
     }
     return;

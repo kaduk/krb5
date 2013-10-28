@@ -52,6 +52,6 @@ If *shortest* is FALSE, this function returns the enctype's canonical name (like
 
 .. note::
 
-	 First introduced in 1.9
+	 New in 1.9
  
 

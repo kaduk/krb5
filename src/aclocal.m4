@@ -89,6 +89,7 @@ KRB5_AC_INITFINI
 KRB5_AC_ENABLE_THREADS
 KRB5_AC_FIND_DLOPEN
 KRB5_AC_KEYRING_CCACHE
+KRB5_AC_PERSISTENT_KEYRING
 ])dnl
 
 dnl Maintainer mode, akin to what automake provides, 'cept we don't
@@ -522,7 +523,7 @@ if test "$GCC" = yes ; then
     TRY_WARN_CC_FLAG(-Wno-format-zero-length)
     # Other flags here may not be supported on some versions of
     # gcc that people want to use.
-    for flag in overflow strict-overflow missing-format-attribute missing-prototypes return-type missing-braces parentheses switch unused-function unused-label unused-variable unused-value unknown-pragmas sign-compare newline-eof error=uninitialized ; do
+    for flag in overflow strict-overflow missing-format-attribute missing-prototypes return-type missing-braces parentheses switch unused-function unused-label unused-variable unused-value unknown-pragmas sign-compare newline-eof error=uninitialized error=pointer-arith ; do
       TRY_WARN_CC_FLAG(-W$flag)
     done
     #  old-style-definition? generates many, many warnings
@@ -538,7 +539,7 @@ if test "$GCC" = yes ; then
     #
     # We're currently targeting C89+, not C99, so disallow some
     # constructs.
-    for flag in declaration-after-statement variadic-macros ; do
+    for flag in declaration-after-statement ; do
       TRY_WARN_CC_FLAG(-Werror=$flag)
       if test "$flag_supported" = no; then
         TRY_WARN_CC_FLAG(-W$flag)
@@ -1303,9 +1304,6 @@ dnl KRB5_AC_ENABLE_DNS
 dnl
 AC_DEFUN(KRB5_AC_ENABLE_DNS, [
 enable_dns=yes
-enable_dns_for_kdc=yes
-AC_DEFINE(KRB5_DNS_LOOKUP_KDC,1,[Define to enable DNS lookups of Kerberos KDCs])
-
   AC_ARG_ENABLE([dns-for-realm],
 [  --enable-dns-for-realm  enable DNS lookups of Kerberos realm names], ,
 [enable_dns_for_realm=no])
@@ -1645,10 +1643,7 @@ AC_ARG_WITH([ldap],
     *)  AC_MSG_ERROR(Invalid option value --with-ldap="$withval") ;;
 esac], with_ldap=no)dnl
 
-if test $with_ldap = yes; then
-  if test $with_edirectory = yes; then
-    AC_MSG_ERROR(Cannot enable both OpenLDAP and eDirectory backends; choose one.)
-  fi
+if test "$with_ldap" = yes; then
   AC_MSG_NOTICE(enabling OpenLDAP database backend module support)
   OPENLDAP_PLUGIN=yes
 fi
@@ -1661,6 +1656,15 @@ AC_DEFUN(KRB5_AC_KEYRING_CCACHE,[
       [dnl Pre-reqs were found
        AC_DEFINE(USE_KEYRING_CCACHE, 1, [Define if the keyring ccache should be enabled])
        LIBS="-lkeyutils $LIBS"
+      ]))
+])dnl
+dnl
+dnl If libkeyutils supports persistent keyrings, use them
+AC_DEFUN(KRB5_AC_PERSISTENT_KEYRING,[
+  AC_CHECK_HEADERS([keyutils.h],
+    AC_CHECK_LIB(keyutils, keyctl_get_persistent,
+      [AC_DEFINE(HAVE_PERSISTENT_KEYRING, 1,
+                 [Define if persistent keyrings are supported])
       ]))
 ])dnl
 dnl

@@ -14,7 +14,7 @@
 
 \title{Kerberos Application Developer Guide}
 \date{ }
-\release{1.11.3}
+\release{1.12-alpha1}
 \author{MIT}
 \newcommand{\sphinxlogo}{}
 \renewcommand{\releasename}{Release}
@@ -342,6 +342,325 @@ resulting token may be imported even if the original memory credential
 cache no longer exists.
 
 
+\section{AEAD message wrapping}
+\label{appdev/gssapi:aead-message-wrapping}
+The following GSSAPI extensions (declared in
+\code{\textless{}gssapi/gssapi\_ext.h\textgreater{}}) can be used to wrap and unwrap messages
+with additional ``associated data'' which is integrity-checked but is
+not included in the output buffer:
+
+\begin{Verbatim}[commandchars=\\\{\}]
+OM\_uint32 gss\_wrap\_aead(OM\_uint32 *minor\_status,
+                        gss\_ctx\_id\_t context\_handle,
+                        int conf\_req\_flag, gss\_qop\_t qop\_req,
+                        gss\_buffer\_t input\_assoc\_buffer,
+                        gss\_buffer\_t input\_payload\_buffer,
+                        int *conf\_state,
+                        gss\_buffer\_t output\_message\_buffer);
+
+OM\_uint32 gss\_unwrap\_aead(OM\_uint32 *minor\_status,
+                          gss\_ctx\_id\_t context\_handle,
+                          gss\_buffer\_t input\_message\_buffer,
+                          gss\_buffer\_t input\_assoc\_buffer,
+                          gss\_buffer\_t output\_payload\_buffer,
+                          int *conf\_state,
+                          gss\_qop\_t *qop\_state);
+\end{Verbatim}
+
+Wrap tokens created with gss\_wrap\_aead will successfully unwrap only
+if the same \emph{input\_assoc\_buffer} contents are presented to
+gss\_unwrap\_aead.
+
+
+\section{IOV message wrapping}
+\label{appdev/gssapi:iov-message-wrapping}
+The following extensions (declared in \code{\textless{}gssapi/gssapi\_ext.h\textgreater{}}) can
+be used for in-place encryption, fine-grained control over wrap token
+layout, and for constructing wrap tokens compatible with Microsoft DCE
+RPC:
+
+\begin{Verbatim}[commandchars=\\\{\}]
+typedef struct gss\_iov\_buffer\_desc\_struct \PYGZob{}
+    OM\_uint32 type;
+    gss\_buffer\_desc buffer;
+\PYGZcb{} gss\_iov\_buffer\_desc, *gss\_iov\_buffer\_t;
+
+OM\_uint32 gss\_wrap\_iov(OM\_uint32 *minor\_status,
+                       gss\_ctx\_id\_t context\_handle,
+                       int conf\_req\_flag, gss\_qop\_t qop\_req,
+                       int *conf\_state,
+                       gss\_iov\_buffer\_desc *iov, int iov\_count);
+
+OM\_uint32 gss\_unwrap\_iov(OM\_uint32 *minor\_status,
+                         gss\_ctx\_id\_t context\_handle,
+                         int *conf\_state, gss\_qop\_t *qop\_state,
+                         gss\_iov\_buffer\_desc *iov, int iov\_count);
+
+OM\_uint32 gss\_wrap\_iov\_length(OM\_uint32 *minor\_status,
+                              gss\_ctx\_id\_t context\_handle,
+                              int conf\_req\_flag,
+                              gss\_qop\_t qop\_req, int *conf\_state,
+                              gss\_iov\_buffer\_desc *iov,
+                              int iov\_count);
+
+OM\_uint32 gss\_release\_iov\_buffer(OM\_uint32 *minor\_status,
+                                 gss\_iov\_buffer\_desc *iov,
+                                 int iov\_count);
+\end{Verbatim}
+
+The caller of gss\_wrap\_iov provides an array of gss\_iov\_buffer\_desc
+structures, each containing a type and a gss\_buffer\_desc structure.
+Valid types include:
+\begin{itemize}
+\item {} 
+\textbf{GSS\_C\_BUFFER\_TYPE\_DATA}: A data buffer to be included in the
+token, and to be encrypted or decrypted in-place if the token is
+confidentiality-protected.
+
+\item {} 
+\textbf{GSS\_C\_BUFFER\_TYPE\_HEADER}: The GSSAPI wrap token header and
+underlying cryptographic header.
+
+\item {} 
+\textbf{GSS\_C\_BUFFER\_TYPE\_TRAILER}: The cryptographic trailer, if one is
+required.
+
+\item {} 
+\textbf{GSS\_C\_BUFFER\_TYPE\_PADDING}: Padding to be combined with the data
+during encryption and decryption.  (The implementation may choose to
+place padding in the trailer buffer, in which case it will set the
+padding buffer length to 0.)
+
+\item {} 
+\textbf{GSS\_C\_BUFFER\_TYPE\_STREAM}: For unwrapping only, a buffer
+containing a complete wrap token in standard format to be unwrapped.
+
+\item {} 
+\textbf{GSS\_C\_BUFFER\_TYPE\_SIGN\_ONLY}: A buffer to be included in the
+token's integrity protection checksum, but not to be encrypted or
+included in the token itself.
+
+\end{itemize}
+
+For gss\_wrap\_iov, the IOV list should contain one HEADER buffer,
+followed by zero or more SIGN\_ONLY buffers, followed by one or more
+DATA buffers, followed by a TRAILER buffer.  The memory pointed to by
+the buffers is not required to be contiguous or in any particular
+order.  If \emph{conf\_req\_flag} is true, DATA buffers will be encrypted
+in-place, while SIGN\_ONLY buffers will not be modified.
+
+The type of an output buffer may be combined with
+\textbf{GSS\_C\_BUFFER\_FLAG\_ALLOCATE} to request that gss\_wrap\_iov allocate
+the buffer contents.  If gss\_wrap\_iov allocates a buffer, it sets the
+\textbf{GSS\_C\_BUFFER\_FLAG\_ALLOCATED} flag on the buffer type.
+gss\_release\_iov\_buffer can be used to release all allocated buffers
+within an iov list and unset their allocated flags.  Here is an
+example of how gss\_wrap\_iov can be used with allocation requested
+(\emph{ctx} is assumed to be a previously established gss\_ctx\_id\_t):
+
+\begin{Verbatim}[commandchars=\\\{\}]
+OM\_uint32 major, minor;
+gss\_iov\_buffer\_desc iov[4];
+char str[] = "message";
+
+iov[0].type = GSS\_IOV\_BUFFER\_TYPE\_HEADER \textbar{} GSS\_IOV\_BUFFER\_FLAG\_ALLOCATE;
+iov[1].type = GSS\_IOV\_BUFFER\_TYPE\_DATA;
+iov[1].buffer.value = str;
+iov[1].buffer.length = strlen(str);
+iov[2].type = GSS\_IOV\_BUFFER\_TYPE\_PADDING \textbar{} GSS\_IOV\_BUFFER\_FLAG\_ALLOCATE;
+iov[3].type = GSS\_IOV\_BUFFER\_TYPE\_TRAILER \textbar{} GSS\_IOV\_BUFFER\_FLAG\_ALLOCATE;
+
+major = gss\_wrap\_iov(\&minor, ctx, 1, GSS\_C\_QOP\_DEFAULT, NULL,
+                     iov, 4);
+if (GSS\_ERROR(major))
+    handle\_error(major, minor);
+
+/* Transmit or otherwise use resulting buffers. */
+
+(void)gss\_release\_iov\_buffer(\&minor, iov, 4);
+\end{Verbatim}
+
+If the caller does not choose to request buffer allocation by
+gss\_wrap\_iov, it should first call gss\_wrap\_iov\_length to query the
+lengths of the HEADER, PADDING, and TRAILER buffers.  DATA buffers
+must be provided in the iov list so that padding length can be
+computed correctly, but the output buffers need not be initialized.
+Here is an example of using gss\_wrap\_iov\_length and gss\_wrap\_iov:
+
+\begin{Verbatim}[commandchars=\\\{\}]
+OM\_uint32 major, minor;
+gss\_iov\_buffer\_desc iov[4];
+char str[1024] = "message", *ptr;
+
+iov[0].type = GSS\_IOV\_BUFFER\_TYPE\_HEADER;
+iov[1].type = GSS\_IOV\_BUFFER\_TYPE\_DATA;
+iov[1].buffer.value = str;
+iov[1].buffer.length = strlen(str);
+
+iov[2].type = GSS\_IOV\_BUFFER\_TYPE\_PADDING;
+iov[3].type = GSS\_IOV\_BUFFER\_TYPE\_TRAILER;
+
+major = gss\_wrap\_iov\_length(\&minor, ctx, 1, GSS\_C\_QOP\_DEFAULT,
+                            NULL, iov, 4);
+if (GSS\_ERROR(major))
+    handle\_error(major, minor);
+if (strlen(str) + iov[0].buffer.length + iov[2].buffer.length +
+    iov[3].buffer.length \textgreater{} sizeof(str))
+    handle\_out\_of\_space\_error();
+ptr = str + strlen(str);
+iov[0].buffer.value = ptr;
+ptr += iov[0].buffer.length;
+iov[2].buffer.value = ptr;
+ptr += iov[2].buffer.length;
+iov[3].buffer.value = ptr;
+
+major = gss\_wrap\_iov(\&minor, ctx, 1, GSS\_C\_QOP\_DEFAULT, NULL,
+                     iov, 4);
+if (GSS\_ERROR(major))
+    handle\_error(major, minor);
+\end{Verbatim}
+
+If the context was established using the \textbf{GSS\_C\_DCE\_STYLE} flag
+(described in \index{RFC!RFC 4757}\href{http://tools.ietf.org/html/rfc4757.html}{\textbf{RFC 4757}}), wrap tokens compatible with Microsoft DCE
+RPC can be constructed.  In this case, the IOV list must include a
+SIGN\_ONLY buffer, a DATA buffer, a second SIGN\_ONLY buffer, and a
+HEADER buffer in that order (the order of the buffer contents remains
+arbitrary).  The application must pad the DATA buffer to a multiple of
+16 bytes as no padding or trailer buffer is used.
+
+gss\_unwrap\_iov may be called with an IOV list just like one which
+would be provided to gss\_wrap\_iov.  DATA buffers will be decrypted
+in-place if they were encrypted, and SIGN\_ONLY buffers will not be
+modified.
+
+Alternatively, gss\_unwrap\_iov may be called with a single STREAM
+buffer, zero or more SIGN\_ONLY buffers, and a single DATA buffer.  The
+STREAM buffer is interpreted as a complete wrap token.  The STREAM
+buffer will be modified in-place to decrypt its contents.  The DATA
+buffer will be initialized to point to the decrypted data within the
+STREAM buffer, unless it has the \textbf{GSS\_C\_BUFFER\_FLAG\_ALLOCATE} flag
+set, in which case it will be initialized with a copy of the decrypted
+data.  Here is an example (\emph{token} and \emph{token\_len} are assumed to be a
+pre-existing pointer and length for a modifiable region of data):
+
+\begin{Verbatim}[commandchars=\\\{\}]
+OM\_uint32 major, minor;
+gss\_iov\_buffer\_desc iov[2];
+
+iov[0].type = GSS\_IOV\_BUFFER\_TYPE\_STREAM;
+iov[0].buffer.value = token;
+iov[0].buffer.length = token\_len;
+iov[1].type = GSS\_IOV\_BUFFER\_TYPE\_DATA;
+major = gss\_unwrap\_iov(\&minor, ctx, NULL, NULL, iov, 2);
+if (GSS\_ERROR(major))
+    handle\_error(major, minor);
+
+/* Decrypted data is in iov[1].buffer, pointing to a subregion of
+ * token. */
+\end{Verbatim}
+
+
+\section{IOV MIC tokens}
+\label{appdev/gssapi:iov-mic-tokens}
+The following extensions (declared in \code{\textless{}gssapi/gssapi\_ext.h\textgreater{}}) can
+be used in release 1.12 or later to construct and verify MIC tokens
+using an IOV list:
+
+\begin{Verbatim}[commandchars=\\\{\}]
+OM\_uint32 gss\_get\_mic\_iov(OM\_uint32 *minor\_status,
+                          gss\_ctx\_id\_t context\_handle,
+                          gss\_qop\_t qop\_req,
+                          gss\_iov\_buffer\_desc *iov,
+                          int iov\_count);
+
+OM\_uint32 gss\_get\_mic\_iov\_length(OM\_uint32 *minor\_status,
+                                 gss\_ctx\_id\_t context\_handle,
+                                 gss\_qop\_t qop\_req,
+                                 gss\_iov\_buffer\_desc *iov,
+                                 iov\_count);
+
+OM\_uint32 gss\_verify\_mic\_iov(OM\_uint32 *minor\_status,
+                             gss\_ctx\_id\_t context\_handle,
+                             gss\_qop\_t *qop\_state,
+                             gss\_iov\_buffer\_desc *iov,
+                             int iov\_count);
+\end{Verbatim}
+
+The caller of gss\_get\_mic\_iov provides an array of gss\_iov\_buffer\_desc
+structures, each containing a type and a gss\_buffer\_desc structure.
+Valid types include:
+\begin{itemize}
+\item {} 
+\textbf{GSS\_C\_BUFFER\_TYPE\_DATA} and \textbf{GSS\_C\_BUFFER\_TYPE\_SIGN\_ONLY}: The
+corresponding buffer for each of these types will be signed for the
+MIC token, in the order provided.
+
+\item {} 
+\textbf{GSS\_C\_BUFFER\_TYPE\_MIC\_TOKEN}: The GSSAPI MIC token.
+
+\end{itemize}
+
+The type of the MIC\_TOKEN buffer may be combined with
+\textbf{GSS\_C\_BUFFER\_FLAG\_ALLOCATE} to request that gss\_get\_mic\_iov
+allocate the buffer contents.  If gss\_get\_mic\_iov allocates the
+buffer, it sets the \textbf{GSS\_C\_BUFFER\_FLAG\_ALLOCATED} flag on the buffer
+type.  gss\_release\_iov\_buffer can be used to release all allocated
+buffers within an iov list and unset their allocated flags.  Here is
+an example of how gss\_get\_mic\_iov can be used with allocation
+requested (\emph{ctx} is assumed to be a previously established
+gss\_ctx\_id\_t):
+
+\begin{Verbatim}[commandchars=\\\{\}]
+OM\_uint32 major, minor;
+gss\_iov\_buffer\_desc iov[3];
+
+iov[0].type = GSS\_IOV\_BUFFER\_TYPE\_DATA;
+iov[0].buffer.value = "sign1";
+iov[0].buffer.length = 5;
+iov[1].type = GSS\_IOV\_BUFFER\_TYPE\_SIGN\_ONLY;
+iov[1].buffer.value = "sign2";
+iov[1].buffer.length = 5;
+iov[2].type = GSS\_IOV\_BUFFER\_TYPE\_MIC\_TOKEN \textbar{} GSS\_IOV\_BUFFER\_FLAG\_ALLOCATE;
+
+major = gss\_get\_mic\_iov(\&minor, ctx, GSS\_C\_QOP\_DEFAULT, iov, 3);
+if (GSS\_ERROR(major))
+    handle\_error(major, minor);
+
+/* Transmit or otherwise use iov[2].buffer. */
+
+(void)gss\_release\_iov\_buffer(\&minor, iov, 3);
+\end{Verbatim}
+
+If the caller does not choose to request buffer allocation by
+gss\_get\_mic\_iov, it should first call gss\_get\_mic\_iov\_length to query
+the length of the MIC\_TOKEN buffer.  Here is an example of using
+gss\_get\_mic\_iov\_length and gss\_get\_mic\_iov:
+
+\begin{Verbatim}[commandchars=\\\{\}]
+OM\_uint32 major, minor;
+gss\_iov\_buffer\_desc iov[2];
+char data[1024];
+
+iov[0].type = GSS\_IOV\_BUFFER\_TYPE\_MIC\_TOKEN;
+iov[1].type = GSS\_IOV\_BUFFER\_TYPE\_DATA;
+iov[1].buffer.value = "message";
+iov[1].buffer.length = 7;
+
+major = gss\_wrap\_iov\_length(\&minor, ctx, 1, GSS\_C\_QOP\_DEFAULT,
+                            NULL, iov, 2);
+if (GSS\_ERROR(major))
+    handle\_error(major, minor);
+if (iov[0].buffer.length \textgreater{} sizeof(data))
+    handle\_out\_of\_space\_error();
+iov[0].buffer.value = data;
+
+major = gss\_wrap\_iov(\&minor, ctx, 1, GSS\_C\_QOP\_DEFAULT, NULL,
+                     iov, 2);
+if (GSS\_ERROR(major))
+    handle\_error(major, minor);
+\end{Verbatim}
+
+
 \chapter{Differences between Heimdal and MIT Kerberos API}
 \label{appdev/h5l_mit_apidiff:differences-between-heimdal-and-mit-kerberos-api}\label{appdev/h5l_mit_apidiff::doc}
 \begin{tabulary}{\linewidth}{|l|l|}
@@ -621,6 +940,22 @@ challenge into a krb5\_responder\_otp\_challenge structure.  The
 {\hyperref[appdev/refs/api/krb5_responder_otp_set_answer:krb5_responder_otp_set_answer]{\code{krb5\_responder\_otp\_set\_answer()}}} function selects one of the
 token information elements from the challenge and supplies the value
 and pin for that token.
+
+
+\subsubsection{PKINIT password or PIN question}
+\label{appdev/init_creds:pkinit-password-or-pin-question}
+The \code{KRB5\_RESPONDER\_QUESTION\_PKINIT} (or \code{"pkinit"}) question
+type requests PINs for hardware devices and/or passwords for encrypted
+credentials which are stored on disk, potentially also supplying
+information about the state of the hardware devices.  The challenge and
+answer are JSON-encoded strings, but an application can use convenience
+functions to avoid doing any JSON processing itself.
+
+The {\hyperref[appdev/refs/api/krb5_responder_pkinit_get_challenge:krb5_responder_pkinit_get_challenge]{\code{krb5\_responder\_pkinit\_get\_challenge()}}} function decodes the
+challenges into a krb5\_responder\_pkinit\_challenge structure.  The
+{\hyperref[appdev/refs/api/krb5_responder_pkinit_set_answer:krb5_responder_pkinit_set_answer]{\code{krb5\_responder\_pkinit\_set\_answer()}}} function can be used to
+supply the PIN or password for a particular client credential, and can
+be called multiple times.
 
 
 \subsubsection{Example}
@@ -941,7 +1276,7 @@ This function closes a credential cache handle \emph{cache} without affecting th
 
 \begin{quote}\begin{description}
 \item[{param}] \leavevmode
-\textbf{{[}inout{]}} \textbf{context} - Library context
+\textbf{{[}in{]}} \textbf{context} - Library context
 
 \textbf{{[}out{]}} \textbf{ccache} - Pointer to credential cache name
 
@@ -1323,7 +1658,7 @@ This function processes the \emph{server\_string} returned in the \emph{result\_
 Use {\hyperref[appdev/refs/api/krb5_free_string:krb5_free_string]{\code{krb5\_free\_string()}}} to free \emph{message\_out} when it is no longer needed.
 
 \begin{notice}{note}{Note:}
-First introduced in 1.11
+New in 1.11
 \end{notice}
 
 
@@ -1545,7 +1880,7 @@ Use {\hyperref[appdev/refs/api/krb5_free_host_realm:krb5_free_host_realm]{\code{
 
 \textbf{{[}in{]}} \textbf{options} - Options
 
-\textbf{{[}inout{]}} \textbf{ccache} - Credential cache handle
+\textbf{{[}in{]}} \textbf{ccache} - Credential cache handle
 
 \textbf{{[}in{]}} \textbf{in\_creds} - Input credentials
 
@@ -1607,7 +1942,7 @@ Use {\hyperref[appdev/refs/api/krb5_free_creds:krb5_free_creds]{\code{krb5\_free
 
 \end{description}\end{quote}
 
-Fill in \emph{realmsp} with a pointer to a null-terminated list of realm names obtained through heuristics or insecure resolution methods which have lower priority than KDC referrals.
+Fill in \emph{realmsp} with a pointer to a null-terminated list of realm names obtained through heuristics or insecure resolution methods which have lowerpriority than KDC referrals.
 
 If \emph{host} is NULL, the local host's realms are determined.
 
@@ -1852,7 +2187,7 @@ Setting an expire callback with this API will cause {\hyperref[appdev/refs/api/k
 \end{notice}
 
 \begin{notice}{note}{Note:}
-First introduced in 1.9
+New in 1.9
 \end{notice}
 
 
@@ -1876,7 +2211,7 @@ First introduced in 1.9
 This function is similar to {\hyperref[appdev/refs/api/krb5_get_init_creds_opt_set_fast_ccache_name:krb5_get_init_creds_opt_set_fast_ccache_name]{\code{krb5\_get\_init\_creds\_opt\_set\_fast\_ccache\_name()}}} , but uses a credential cache handle instead of a name.
 
 \begin{notice}{note}{Note:}
-First introduced in 1.9
+New in 1.9
 \end{notice}
 
 
@@ -1971,7 +2306,7 @@ The following flag values are valid:
 If an input credential cache is set, then the krb5\_get\_init\_creds family of APIs will read settings from it. Setting an input ccache is desirable when the application wishes to perform authentication in the same way (using the same preauthentication mechanisms, and making the same non-security- sensitive choices) as the previous authentication attempt, which stored information in the passed-in ccache.
 
 \begin{notice}{note}{Note:}
-First introduced in 1.11
+New in 1.11
 \end{notice}
 
 
@@ -2089,7 +2424,7 @@ This function can be used to perform optimistic preauthentication when getting i
 \end{description}\end{quote}
 
 \begin{notice}{note}{Note:}
-First introduced in 1.11
+New in 1.11
 \end{notice}
 
 
@@ -2519,7 +2854,7 @@ Kerberos error codes
 Fill \emph{keytab\_out} with a handle to the default client key table.
 
 \begin{notice}{note}{Note:}
-First introduced in 1.11
+New in 1.11
 \end{notice}
 
 
@@ -2590,6 +2925,30 @@ Kerberos error codes
 \end{description}\end{quote}
 
 Fill \emph{name} with the name of the default key table for \emph{context} .
+
+
+\subsubsection{krb5\_kt\_dup -  Duplicate keytab handle.}
+\label{appdev/refs/api/krb5_kt_dup:krb5-kt-dup-duplicate-keytab-handle}\label{appdev/refs/api/krb5_kt_dup::doc}\index{krb5\_kt\_dup (C function)}
+
+\begin{fulllineitems}
+\phantomsection\label{appdev/refs/api/krb5_kt_dup:krb5_kt_dup}\pysiglinewithargsret{{\hyperref[appdev/refs/types/krb5_error_code:krb5_error_code]{krb5\_error\_code}} \bfcode{krb5\_kt\_dup}}{{\hyperref[appdev/refs/types/krb5_context:krb5_context]{krb5\_context}}\emph{ context}, {\hyperref[appdev/refs/types/krb5_keytab:krb5_keytab]{krb5\_keytab}}\emph{ in}, {\hyperref[appdev/refs/types/krb5_keytab:krb5_keytab]{krb5\_keytab}} *\emph{ out}}{}
+\end{fulllineitems}
+
+\begin{quote}\begin{description}
+\item[{param}] \leavevmode
+\textbf{{[}in{]}} \textbf{context} - Library context
+
+\textbf{{[}in{]}} \textbf{in} - Key table handle to be duplicated
+
+\textbf{{[}out{]}} \textbf{out} - Key table handle
+
+\end{description}\end{quote}
+
+Create a new handle referring to the same key table as \emph{in} . The new handle and \emph{in} can be closed independently.
+
+\begin{notice}{note}{Note:}
+New in 1.12
+\end{notice}
 
 
 \subsubsection{krb5\_kt\_get\_name -  Get a key table name.}
@@ -2948,7 +3307,7 @@ Valid flags are:
 
 \textbf{{[}in{]}} \textbf{num\_prompts} - Number of prompts in \emph{prompts}
 
-\textbf{{[}inout{]}} \textbf{prompts} - Array of output prompts and replies
+\textbf{{[}in{]}} \textbf{prompts} - Array of prompts and replies
 
 \end{description}\end{quote}
 \begin{quote}\begin{description}
@@ -3001,7 +3360,7 @@ TRUE   if the realm names are the same; FALSE otherwise
 \label{appdev/refs/api/krb5_responder_get_challenge:krb5-responder-get-challenge-retrieve-the-challenge-data-for-a-given-question-in-the-responder-context}\label{appdev/refs/api/krb5_responder_get_challenge::doc}\index{krb5\_responder\_get\_challenge (C function)}
 
 \begin{fulllineitems}
-\phantomsection\label{appdev/refs/api/krb5_responder_get_challenge:krb5_responder_get_challenge}\pysiglinewithargsret{const char * \bfcode{krb5\_responder\_get\_challenge}}{{\hyperref[appdev/refs/types/krb5_context:krb5_context]{krb5\_context}}\emph{ ctx}, krb5\_responder\_context\emph{ rctx}, const char *\emph{ question}}{}
+\phantomsection\label{appdev/refs/api/krb5_responder_get_challenge:krb5_responder_get_challenge}\pysiglinewithargsret{const char * \bfcode{krb5\_responder\_get\_challenge}}{{\hyperref[appdev/refs/types/krb5_context:krb5_context]{krb5\_context}}\emph{ ctx}, {\hyperref[appdev/refs/types/krb5_responder_context:krb5_responder_context]{krb5\_responder\_context}}\emph{ rctx}, const char *\emph{ question}}{}
 \end{fulllineitems}
 
 \begin{quote}\begin{description}
@@ -3014,8 +3373,10 @@ TRUE   if the realm names are the same; FALSE otherwise
 
 \end{description}\end{quote}
 
+Return a pointer to a C string containing the challenge for \emph{question} within \emph{rctx} , or NULL if the question is not present in \emph{rctx} . The structure of the question depends on the question name, but will always be printable UTF-8 text. The returned pointer is an alias, valid only as long as the lifetime of \emph{rctx} , and should not be modified or freed by the caller.
+
 \begin{notice}{note}{Note:}
-First introduced in 1.11
+New in 1.11
 \end{notice}
 
 
@@ -3023,7 +3384,7 @@ First introduced in 1.11
 \label{appdev/refs/api/krb5_responder_list_questions::doc}\label{appdev/refs/api/krb5_responder_list_questions:krb5-responder-list-questions-list-the-question-names-contained-in-the-responder-context}\index{krb5\_responder\_list\_questions (C function)}
 
 \begin{fulllineitems}
-\phantomsection\label{appdev/refs/api/krb5_responder_list_questions:krb5_responder_list_questions}\pysiglinewithargsret{const char *const * \bfcode{krb5\_responder\_list\_questions}}{{\hyperref[appdev/refs/types/krb5_context:krb5_context]{krb5\_context}}\emph{ ctx}, krb5\_responder\_context\emph{ rctx}}{}
+\phantomsection\label{appdev/refs/api/krb5_responder_list_questions:krb5_responder_list_questions}\pysiglinewithargsret{const char *const * \bfcode{krb5\_responder\_list\_questions}}{{\hyperref[appdev/refs/types/krb5_context:krb5_context]{krb5\_context}}\emph{ ctx}, {\hyperref[appdev/refs/types/krb5_responder_context:krb5_responder_context]{krb5\_responder\_context}}\emph{ rctx}}{}
 \end{fulllineitems}
 
 \begin{quote}\begin{description}
@@ -3034,8 +3395,10 @@ First introduced in 1.11
 
 \end{description}\end{quote}
 
+Return a pointer to a null-terminated list of question names which are present in \emph{rctx} . The pointer is an alias, valid only as long as the lifetime of \emph{rctx} , and should not be modified or freed by the caller. A question's challenge can be retrieved using {\hyperref[appdev/refs/api/krb5_responder_get_challenge:krb5_responder_get_challenge]{\code{krb5\_responder\_get\_challenge()}}} and answered using {\hyperref[appdev/refs/api/krb5_responder_set_answer:krb5_responder_set_answer]{\code{krb5\_responder\_set\_answer()}}} .
+
 \begin{notice}{note}{Note:}
-First introduced in 1.11
+New in 1.11
 \end{notice}
 
 
@@ -3043,7 +3406,7 @@ First introduced in 1.11
 \label{appdev/refs/api/krb5_responder_set_answer:krb5-responder-set-answer-answer-a-named-question-in-the-responder-context}\label{appdev/refs/api/krb5_responder_set_answer::doc}\index{krb5\_responder\_set\_answer (C function)}
 
 \begin{fulllineitems}
-\phantomsection\label{appdev/refs/api/krb5_responder_set_answer:krb5_responder_set_answer}\pysiglinewithargsret{{\hyperref[appdev/refs/types/krb5_error_code:krb5_error_code]{krb5\_error\_code}} \bfcode{krb5\_responder\_set\_answer}}{{\hyperref[appdev/refs/types/krb5_context:krb5_context]{krb5\_context}}\emph{ ctx}, krb5\_responder\_context\emph{ rctx}, const char *\emph{ question}, const char *\emph{ answer}}{}
+\phantomsection\label{appdev/refs/api/krb5_responder_set_answer:krb5_responder_set_answer}\pysiglinewithargsret{{\hyperref[appdev/refs/types/krb5_error_code:krb5_error_code]{krb5\_error\_code}} \bfcode{krb5\_responder\_set\_answer}}{{\hyperref[appdev/refs/types/krb5_context:krb5_context]{krb5\_context}}\emph{ ctx}, {\hyperref[appdev/refs/types/krb5_responder_context:krb5_responder_context]{krb5\_responder\_context}}\emph{ rctx}, const char *\emph{ question}, const char *\emph{ answer}}{}
 \end{fulllineitems}
 
 \begin{quote}\begin{description}
@@ -3057,9 +3420,19 @@ First introduced in 1.11
 \textbf{{[}in{]}} \textbf{answer} - The string to set (MUST be printable UTF-8)
 
 \end{description}\end{quote}
+\begin{quote}\begin{description}
+\item[{retval}] \leavevmode\begin{itemize}
+\item {} 
+EINVAL    question is not present within rctx
+
+\end{itemize}
+
+\end{description}\end{quote}
+
+This function supplies an answer to \emph{question} within \emph{rctx} . The appropriate form of the answer depends on the question name.
 
 \begin{notice}{note}{Note:}
-First introduced in 1.11
+New in 1.11
 \end{notice}
 
 
@@ -3067,7 +3440,7 @@ First introduced in 1.11
 \label{appdev/refs/api/krb5_responder_otp_get_challenge:krb5-responder-otp-get-challenge-decode-the-krb5-responder-question-otp-to-a-c-struct}\label{appdev/refs/api/krb5_responder_otp_get_challenge::doc}\index{krb5\_responder\_otp\_get\_challenge (C function)}
 
 \begin{fulllineitems}
-\phantomsection\label{appdev/refs/api/krb5_responder_otp_get_challenge:krb5_responder_otp_get_challenge}\pysiglinewithargsret{{\hyperref[appdev/refs/types/krb5_error_code:krb5_error_code]{krb5\_error\_code}} \bfcode{krb5\_responder\_otp\_get\_challenge}}{{\hyperref[appdev/refs/types/krb5_context:krb5_context]{krb5\_context}}\emph{ ctx}, krb5\_responder\_context\emph{ rctx}, {\hyperref[appdev/refs/types/krb5_responder_otp_challenge:krb5_responder_otp_challenge]{krb5\_responder\_otp\_challenge}} **\emph{ chl}}{}
+\phantomsection\label{appdev/refs/api/krb5_responder_otp_get_challenge:krb5_responder_otp_get_challenge}\pysiglinewithargsret{{\hyperref[appdev/refs/types/krb5_error_code:krb5_error_code]{krb5\_error\_code}} \bfcode{krb5\_responder\_otp\_get\_challenge}}{{\hyperref[appdev/refs/types/krb5_context:krb5_context]{krb5\_context}}\emph{ ctx}, {\hyperref[appdev/refs/types/krb5_responder_context:krb5_responder_context]{krb5\_responder\_context}}\emph{ rctx}, {\hyperref[appdev/refs/types/krb5_responder_otp_challenge:krb5_responder_otp_challenge]{krb5\_responder\_otp\_challenge}} **\emph{ chl}}{}
 \end{fulllineitems}
 
 \begin{quote}\begin{description}
@@ -3085,7 +3458,7 @@ A convenience function which parses the KRB5\_RESPONDER\_QUESTION\_OTP question 
 The returned value must be passed to {\hyperref[appdev/refs/api/krb5_responder_otp_challenge_free:krb5_responder_otp_challenge_free]{\code{krb5\_responder\_otp\_challenge\_free()}}} to be freed.
 
 \begin{notice}{note}{Note:}
-First introduced in 1.11
+New in 1.11
 \end{notice}
 
 
@@ -3093,7 +3466,7 @@ First introduced in 1.11
 \label{appdev/refs/api/krb5_responder_otp_set_answer:krb5-responder-otp-set-answer-answer-the-krb5-responder-question-otp-question}\label{appdev/refs/api/krb5_responder_otp_set_answer::doc}\index{krb5\_responder\_otp\_set\_answer (C function)}
 
 \begin{fulllineitems}
-\phantomsection\label{appdev/refs/api/krb5_responder_otp_set_answer:krb5_responder_otp_set_answer}\pysiglinewithargsret{{\hyperref[appdev/refs/types/krb5_error_code:krb5_error_code]{krb5\_error\_code}} \bfcode{krb5\_responder\_otp\_set\_answer}}{{\hyperref[appdev/refs/types/krb5_context:krb5_context]{krb5\_context}}\emph{ ctx}, krb5\_responder\_context\emph{ rctx}, size\_t\emph{ ti}, const char *\emph{ value}, const char *\emph{ pin}}{}
+\phantomsection\label{appdev/refs/api/krb5_responder_otp_set_answer:krb5_responder_otp_set_answer}\pysiglinewithargsret{{\hyperref[appdev/refs/types/krb5_error_code:krb5_error_code]{krb5\_error\_code}} \bfcode{krb5\_responder\_otp\_set\_answer}}{{\hyperref[appdev/refs/types/krb5_context:krb5_context]{krb5\_context}}\emph{ ctx}, {\hyperref[appdev/refs/types/krb5_responder_context:krb5_responder_context]{krb5\_responder\_context}}\emph{ rctx}, size\_t\emph{ ti}, const char *\emph{ value}, const char *\emph{ pin}}{}
 \end{fulllineitems}
 
 \begin{quote}\begin{description}
@@ -3111,7 +3484,7 @@ First introduced in 1.11
 \end{description}\end{quote}
 
 \begin{notice}{note}{Note:}
-First introduced in 1.11
+New in 1.11
 \end{notice}
 
 
@@ -3119,7 +3492,7 @@ First introduced in 1.11
 \label{appdev/refs/api/krb5_responder_otp_challenge_free:krb5-responder-otp-challenge-free-free-the-value-returned-by-krb5-responder-otp-get-challenge}\label{appdev/refs/api/krb5_responder_otp_challenge_free::doc}\index{krb5\_responder\_otp\_challenge\_free (C function)}
 
 \begin{fulllineitems}
-\phantomsection\label{appdev/refs/api/krb5_responder_otp_challenge_free:krb5_responder_otp_challenge_free}\pysiglinewithargsret{void \bfcode{krb5\_responder\_otp\_challenge\_free}}{{\hyperref[appdev/refs/types/krb5_context:krb5_context]{krb5\_context}}\emph{ ctx}, krb5\_responder\_context\emph{ rctx}, {\hyperref[appdev/refs/types/krb5_responder_otp_challenge:krb5_responder_otp_challenge]{krb5\_responder\_otp\_challenge}} *\emph{ chl}}{}
+\phantomsection\label{appdev/refs/api/krb5_responder_otp_challenge_free:krb5_responder_otp_challenge_free}\pysiglinewithargsret{void \bfcode{krb5\_responder\_otp\_challenge\_free}}{{\hyperref[appdev/refs/types/krb5_context:krb5_context]{krb5\_context}}\emph{ ctx}, {\hyperref[appdev/refs/types/krb5_responder_context:krb5_responder_context]{krb5\_responder\_context}}\emph{ rctx}, {\hyperref[appdev/refs/types/krb5_responder_otp_challenge:krb5_responder_otp_challenge]{krb5\_responder\_otp\_challenge}} *\emph{ chl}}{}
 \end{fulllineitems}
 
 \begin{quote}\begin{description}
@@ -3133,7 +3506,79 @@ First introduced in 1.11
 \end{description}\end{quote}
 
 \begin{notice}{note}{Note:}
-First introduced in 1.11
+New in 1.11
+\end{notice}
+
+
+\subsubsection{krb5\_responder\_pkinit\_get\_challenge -  Decode the KRB5\_RESPONDER\_QUESTION\_PKINIT to a C struct.}
+\label{appdev/refs/api/krb5_responder_pkinit_get_challenge:krb5-responder-pkinit-get-challenge-decode-the-krb5-responder-question-pkinit-to-a-c-struct}\label{appdev/refs/api/krb5_responder_pkinit_get_challenge::doc}\index{krb5\_responder\_pkinit\_get\_challenge (C function)}
+
+\begin{fulllineitems}
+\phantomsection\label{appdev/refs/api/krb5_responder_pkinit_get_challenge:krb5_responder_pkinit_get_challenge}\pysiglinewithargsret{{\hyperref[appdev/refs/types/krb5_error_code:krb5_error_code]{krb5\_error\_code}} \bfcode{krb5\_responder\_pkinit\_get\_challenge}}{{\hyperref[appdev/refs/types/krb5_context:krb5_context]{krb5\_context}}\emph{ ctx}, {\hyperref[appdev/refs/types/krb5_responder_context:krb5_responder_context]{krb5\_responder\_context}}\emph{ rctx}, {\hyperref[appdev/refs/types/krb5_responder_pkinit_challenge:krb5_responder_pkinit_challenge]{krb5\_responder\_pkinit\_challenge}} **\emph{ chl\_out}}{}
+\end{fulllineitems}
+
+\begin{quote}\begin{description}
+\item[{param}] \leavevmode
+\textbf{{[}in{]}} \textbf{ctx} - Library context
+
+\textbf{{[}in{]}} \textbf{rctx} - Responder context
+
+\textbf{{[}out{]}} \textbf{chl\_out} - Challenge structure
+
+\end{description}\end{quote}
+
+A convenience function which parses the KRB5\_RESPONDER\_QUESTION\_PKINIT question challenge data, making it available in native C. The main feature of this function is the ability to read the challenge without parsing the JSON.
+
+The returned value must be passed to {\hyperref[appdev/refs/api/krb5_responder_pkinit_challenge_free:krb5_responder_pkinit_challenge_free]{\code{krb5\_responder\_pkinit\_challenge\_free()}}} to be freed.
+
+\begin{notice}{note}{Note:}
+New in 1.12
+\end{notice}
+
+
+\subsubsection{krb5\_responder\_pkinit\_set\_answer -  Answer the KRB5\_RESPONDER\_QUESTION\_PKINIT question for one identity.}
+\label{appdev/refs/api/krb5_responder_pkinit_set_answer:krb5-responder-pkinit-set-answer-answer-the-krb5-responder-question-pkinit-question-for-one-identity}\label{appdev/refs/api/krb5_responder_pkinit_set_answer::doc}\index{krb5\_responder\_pkinit\_set\_answer (C function)}
+
+\begin{fulllineitems}
+\phantomsection\label{appdev/refs/api/krb5_responder_pkinit_set_answer:krb5_responder_pkinit_set_answer}\pysiglinewithargsret{{\hyperref[appdev/refs/types/krb5_error_code:krb5_error_code]{krb5\_error\_code}} \bfcode{krb5\_responder\_pkinit\_set\_answer}}{{\hyperref[appdev/refs/types/krb5_context:krb5_context]{krb5\_context}}\emph{ ctx}, {\hyperref[appdev/refs/types/krb5_responder_context:krb5_responder_context]{krb5\_responder\_context}}\emph{ rctx}, const char *\emph{ identity}, const char *\emph{ pin}}{}
+\end{fulllineitems}
+
+\begin{quote}\begin{description}
+\item[{param}] \leavevmode
+\textbf{{[}in{]}} \textbf{ctx} - Library context
+
+\textbf{{[}in{]}} \textbf{rctx} - Responder context
+
+\textbf{{[}in{]}} \textbf{identity} - The identity for which a PIN is being supplied
+
+\textbf{{[}in{]}} \textbf{pin} - The provided PIN, or NULL for none
+
+\end{description}\end{quote}
+
+\begin{notice}{note}{Note:}
+New in 1.12
+\end{notice}
+
+
+\subsubsection{krb5\_responder\_pkinit\_challenge\_free -  Free the value returned by krb5\_responder\_pkinit\_get\_challenge() .}
+\label{appdev/refs/api/krb5_responder_pkinit_challenge_free:krb5-responder-pkinit-challenge-free-free-the-value-returned-by-krb5-responder-pkinit-get-challenge}\label{appdev/refs/api/krb5_responder_pkinit_challenge_free::doc}\index{krb5\_responder\_pkinit\_challenge\_free (C function)}
+
+\begin{fulllineitems}
+\phantomsection\label{appdev/refs/api/krb5_responder_pkinit_challenge_free:krb5_responder_pkinit_challenge_free}\pysiglinewithargsret{void \bfcode{krb5\_responder\_pkinit\_challenge\_free}}{{\hyperref[appdev/refs/types/krb5_context:krb5_context]{krb5\_context}}\emph{ ctx}, {\hyperref[appdev/refs/types/krb5_responder_context:krb5_responder_context]{krb5\_responder\_context}}\emph{ rctx}, {\hyperref[appdev/refs/types/krb5_responder_pkinit_challenge:krb5_responder_pkinit_challenge]{krb5\_responder\_pkinit\_challenge}} *\emph{ chl}}{}
+\end{fulllineitems}
+
+\begin{quote}\begin{description}
+\item[{param}] \leavevmode
+\textbf{{[}in{]}} \textbf{ctx} - Library context
+
+\textbf{{[}in{]}} \textbf{rctx} - Responder context
+
+\textbf{{[}in{]}} \textbf{chl} - The challenge to free
+
+\end{description}\end{quote}
+
+\begin{notice}{note}{Note:}
+New in 1.12
 \end{notice}
 
 
@@ -3274,7 +3719,7 @@ If \emph{change\_password\_for} is set to NULL, the change is performed on the d
 
 \begin{quote}\begin{description}
 \item[{param}] \leavevmode
-\textbf{{[}inout{]}} \textbf{context} - Library context
+\textbf{{[}in{]}} \textbf{context} - Library context
 
 \textbf{{[}in{]}} \textbf{principal} - Principal name
 
@@ -3331,7 +3776,7 @@ This function overrides the information passed through the \emph{KRB5\_TRACE} en
 \end{notice}
 
 \begin{notice}{note}{Note:}
-First introduced in 1.9
+New in 1.9
 \end{notice}
 
 
@@ -3365,7 +3810,7 @@ This function overrides the information passed through the \emph{KRB5\_TRACE} en
 \end{notice}
 
 \begin{notice}{note}{Note:}
-First introduced in 1.9
+New in 1.9
 \end{notice}
 
 
@@ -4611,7 +5056,7 @@ This function releases the storage assigned to the contents of the local and rem
 \item[{param}] \leavevmode
 \textbf{{[}in{]}} \textbf{context} - Library context
 
-\textbf{{[}inout{]}} \textbf{auth\_context} - Authentication context
+\textbf{{[}in{]}} \textbf{auth\_context} - Authentication context
 
 \textbf{{[}in{]}} \textbf{flags} - Flags bit mask
 
@@ -4764,7 +5209,7 @@ This function sets the receiving subkey in \emph{ac} to a copy of \emph{keyblock
 This function sets the receiving subkey in \emph{ac} to \emph{key} , incrementing its reference count.
 
 \begin{notice}{note}{Note:}
-First introduced in 1.9
+New in 1.9
 \end{notice}
 
 
@@ -4824,7 +5269,7 @@ This function sets the send subkey in \emph{ac} to a copy of \emph{keyblock} .
 This function sets the send subkey in \emph{ac} to \emph{key} , incrementing its reference count.
 
 \begin{notice}{note}{Note:}
-First introduced in 1.9
+New in 1.9
 \end{notice}
 
 
@@ -4885,7 +5330,7 @@ KRB5\_CC\_NOTFOUND   None
 Find a cache within the collection whose default principal is \emph{client} . Use \emph{krb5\_cc\_close} to close \emph{ccache} when it is no longer needed.
 
 \begin{notice}{note}{Note:}
-First introduced in 1.10
+New in 1.10
 \end{notice}
 
 
@@ -4928,7 +5373,7 @@ First introduced in 1.10
 
 \textbf{{[}in{]}} \textbf{cache} - Credential cache handle
 
-\textbf{{[}inout{]}} \textbf{cursor} - Cursor
+\textbf{{[}in{]}} \textbf{cursor} - Cursor
 
 \end{description}\end{quote}
 \begin{quote}\begin{description}
@@ -5039,7 +5484,7 @@ For memory credential cache always returns a flag mask of 0.
 Use {\hyperref[appdev/refs/api/krb5_free_string:krb5_free_string]{\code{krb5\_free\_string()}}} to free \emph{fullname\_out} when it is no longer needed.
 
 \begin{notice}{note}{Note:}
-First introduced in 1.10
+New in 1.10
 \end{notice}
 
 
@@ -5136,7 +5581,7 @@ This function reinitializes \emph{dst} and populates it with the credentials and
 
 \textbf{{[}in{]}} \textbf{cache} - Credential cache handle
 
-\textbf{{[}inout{]}} \textbf{cursor} - Cursor
+\textbf{{[}in{]}} \textbf{cursor} - Cursor
 
 \textbf{{[}out{]}} \textbf{creds} - Next credential cache entry
 
@@ -5311,7 +5756,7 @@ If no configured mechanism can determine the appropriate cache or principal, KRB
 Any other error code indicates a fatal error in the processing of a cache selection mechanism.
 
 \begin{notice}{note}{Note:}
-First introduced in 1.10
+New in 1.10
 \end{notice}
 
 
@@ -5368,7 +5813,7 @@ Existing configuration under the same key is over-written.
 
 \begin{quote}\begin{description}
 \item[{param}] \leavevmode
-\textbf{{[}inout{]}} \textbf{context} - Library context
+\textbf{{[}in{]}} \textbf{context} - Library context
 
 \textbf{{[}in{]}} \textbf{name} - Default credential cache name
 
@@ -5405,7 +5850,7 @@ This function frees the old default credential cache name and then sets it to \e
 \item[{param}] \leavevmode
 \textbf{{[}in{]}} \textbf{context} - Library context
 
-\textbf{{[}inout{]}} \textbf{cache} - Credential cache handle
+\textbf{{[}in{]}} \textbf{cache} - Credential cache handle
 
 \textbf{{[}in{]}} \textbf{flags} - Flag bit mask
 
@@ -5467,7 +5912,7 @@ If \emph{cache} is modified between the time of the call to this function and th
 \item[{param}] \leavevmode
 \textbf{{[}in{]}} \textbf{context} - Library context
 
-\textbf{{[}inout{]}} \textbf{cache} - Credential cache handle
+\textbf{{[}in{]}} \textbf{cache} - Credential cache handle
 
 \textbf{{[}in{]}} \textbf{creds} - Credentials to be stored in cache
 
@@ -5517,7 +5962,7 @@ FALSE   if it does not or is not a valid credential cache type.
 \end{description}\end{quote}
 
 \begin{notice}{note}{Note:}
-First introduced in 1.10
+New in 1.10
 \end{notice}
 
 
@@ -5622,7 +6067,7 @@ This function unlocks the \emph{ccache} locked by {\hyperref[appdev/refs/api/krb
 \item[{param}] \leavevmode
 \textbf{{[}in{]}} \textbf{context} - Library context
 
-\textbf{{[}inout{]}} \textbf{cursor} - Cursor
+\textbf{{[}out{]}} \textbf{cursor} - Cursor
 
 \end{description}\end{quote}
 \begin{quote}\begin{description}
@@ -5658,7 +6103,7 @@ Use {\hyperref[appdev/refs/api/krb5_cccol_cursor_free:krb5_cccol_cursor_free]{\c
 \item[{param}] \leavevmode
 \textbf{{[}in{]}} \textbf{context} - Library context
 
-\textbf{{[}inout{]}} \textbf{cursor} - Cursor
+\textbf{{[}in{]}} \textbf{cursor} - Cursor
 
 \textbf{{[}out{]}} \textbf{ccache} - Credential cache handle
 
@@ -5712,7 +6157,7 @@ KRB5\_CC\_NOTFOUND   The collection contains no credentials
 \end{description}\end{quote}
 
 \begin{notice}{note}{Note:}
-First introduced in 1.11
+New in 1.11
 \end{notice}
 
 
@@ -5839,7 +6284,7 @@ KRB5KRB\_AP\_ERR\_SKEW    date is not within allowable clock skew
 This function checks if \emph{date} is close enough to the current time according to the configured allowable clock skew.
 
 \begin{notice}{note}{Note:}
-First introduced in 1.10
+New in 1.10
 \end{notice}
 
 
@@ -6199,7 +6644,7 @@ This function creates a new krb5\_ticket structure containing the contents of \e
 This function searches \emph{ticket\_authdata} and \emph{ap\_req\_authdata} for elements of type \emph{ad\_type} . Either input list may be NULL, in which case it will not be searched; otherwise, the input lists must be terminated by NULL entries. This function will search inside AD-IF-RELEVANT containers if found in either list. Use {\hyperref[appdev/refs/api/krb5_free_authdata:krb5_free_authdata]{\code{krb5\_free\_authdata()}}} to free \emph{results} when it is no longer needed.
 
 \begin{notice}{note}{Note:}
-First introduced in 1.10
+New in 1.10
 \end{notice}
 
 
@@ -6371,6 +6816,26 @@ This function frees the contents of \emph{val} , but not the structure itself.
 \end{description}\end{quote}
 
 
+\subsubsection{krb5\_free\_enctypes -  Free an array of encryption types.}
+\label{appdev/refs/api/krb5_free_enctypes::doc}\label{appdev/refs/api/krb5_free_enctypes:krb5-free-enctypes-free-an-array-of-encryption-types}\index{krb5\_free\_enctypes (C function)}
+
+\begin{fulllineitems}
+\phantomsection\label{appdev/refs/api/krb5_free_enctypes:krb5_free_enctypes}\pysiglinewithargsret{void \bfcode{krb5\_free\_enctypes}}{{\hyperref[appdev/refs/types/krb5_context:krb5_context]{krb5\_context}}\emph{ context}, {\hyperref[appdev/refs/types/krb5_enctype:krb5_enctype]{krb5\_enctype}} *\emph{ val}}{}
+\end{fulllineitems}
+
+\begin{quote}\begin{description}
+\item[{param}] \leavevmode
+\textbf{{[}in{]}} \textbf{context} - Library context
+
+\textbf{{[}in{]}} \textbf{val} - Array of enctypes to be freed
+
+\end{description}\end{quote}
+
+\begin{notice}{note}{Note:}
+New in 1.12
+\end{notice}
+
+
 \subsubsection{krb5\_free\_error -  Free an error allocated by krb5\_read\_error() or krb5\_sendauth() .}
 \label{appdev/refs/api/krb5_free_error::doc}\label{appdev/refs/api/krb5_free_error:krb5-free-error-free-an-error-allocated-by-krb5-read-error-or-krb5-sendauth}\index{krb5\_free\_error (C function)}
 
@@ -6499,7 +6964,7 @@ The pointer is not freed.
 \end{description}\end{quote}
 
 \begin{notice}{note}{Note:}
-First introduced in 1.10
+New in 1.10
 \end{notice}
 
 
@@ -6561,6 +7026,8 @@ This function frees the contents of \emph{val} and the structure itself.
 \end{description}\end{quote}
 
 This function returns the list of encryption types permitted for session keys within \emph{context} , as determined by configuration or by a previous call to {\hyperref[appdev/refs/api/krb5_set_default_tgs_enctypes:krb5_set_default_tgs_enctypes]{\code{krb5\_set\_default\_tgs\_enctypes()}}} .
+
+Use {\hyperref[appdev/refs/api/krb5_free_enctypes:krb5_free_enctypes]{\code{krb5\_free\_enctypes()}}} to free \emph{ktypes} when it is no longer needed.
 
 
 \subsubsection{krb5\_get\_server\_rcache -  Generate a replay cache object for server use and open it.}
@@ -7127,7 +7594,7 @@ KRB5\_KT\_NOTFOUND   Keytab does not contain entries
 \end{description}\end{quote}
 
 \begin{notice}{note}{Note:}
-First introduced in 1.11
+New in 1.11
 \end{notice}
 
 
@@ -7146,7 +7613,7 @@ First introduced in 1.11
 
 \textbf{{[}out{]}} \textbf{entry} - Returned key table entry
 
-\textbf{{[}inout{]}} \textbf{cursor} - Key table cursor
+\textbf{{[}in{]}} \textbf{cursor} - Key table cursor
 
 \end{description}\end{quote}
 \begin{quote}\begin{description}
@@ -7352,7 +7819,7 @@ The last array entry in \emph{inauthdat1} and \emph{inauthdat2} must be a NULL p
 \item[{param}] \leavevmode
 \textbf{{[}in{]}} \textbf{context} - Library context
 
-\textbf{{[}inout{]}} \textbf{auth\_context} - Authentication context
+\textbf{{[}in{]}} \textbf{auth\_context} - Authentication context
 
 \textbf{{[}in{]}} \textbf{pcreds} - Pointer to credentials
 
@@ -7424,7 +7891,7 @@ This function creates a \textbf{KRB\_ERROR} message in \emph{enc\_err} . Use {\h
 \item[{param}] \leavevmode
 \textbf{{[}in{]}} \textbf{context} - Library context
 
-\textbf{{[}inout{]}} \textbf{auth\_context} - Authentication context
+\textbf{{[}in{]}} \textbf{auth\_context} - Authentication context
 
 \textbf{{[}in{]}} \textbf{ppcreds} - Null-terminated array of credentials
 
@@ -7474,7 +7941,7 @@ If the {\hyperref[appdev/refs/macros/KRB5_AUTH_CONTEXT_RET_TIME:KRB5_AUTH_CONTEX
 \item[{param}] \leavevmode
 \textbf{{[}in{]}} \textbf{context} - Library context
 
-\textbf{{[}inout{]}} \textbf{auth\_context} - Authentication context
+\textbf{{[}in{]}} \textbf{auth\_context} - Authentication context
 
 \textbf{{[}in{]}} \textbf{userdata} - User data for \textbf{KRB-PRIV} message
 
@@ -7528,7 +7995,7 @@ The flags from \emph{auth\_context} specify whether sequence numbers or timestam
 \item[{param}] \leavevmode
 \textbf{{[}in{]}} \textbf{context} - Library context
 
-\textbf{{[}inout{]}} \textbf{auth\_context} - Authentication context
+\textbf{{[}in{]}} \textbf{auth\_context} - Authentication context
 
 \textbf{{[}out{]}} \textbf{outbuf} - \textbf{AP-REP} message
 
@@ -7560,7 +8027,7 @@ Use {\hyperref[appdev/refs/api/krb5_free_data_contents:krb5_free_data_contents]{
 \item[{param}] \leavevmode
 \textbf{{[}in{]}} \textbf{context} - Library context
 
-\textbf{{[}inout{]}} \textbf{auth\_context} - Authentication context
+\textbf{{[}in{]}} \textbf{auth\_context} - Authentication context
 
 \textbf{{[}out{]}} \textbf{outbuf} - \textbf{AP-REP} message
 
@@ -7687,7 +8154,7 @@ On successful return, the authenticator is stored in \emph{auth\_context} with t
 \item[{param}] \leavevmode
 \textbf{{[}in{]}} \textbf{context} - Library context
 
-\textbf{{[}inout{]}} \textbf{auth\_context} - Authentication context
+\textbf{{[}in{]}} \textbf{auth\_context} - Authentication context
 
 \textbf{{[}in{]}} \textbf{userdata} - User data in the message
 
@@ -7963,7 +8430,7 @@ Use {\hyperref[appdev/refs/api/krb5_pac_free:krb5_pac_free]{\code{krb5\_pac\_fre
 This function signs \emph{pac} using the keys \emph{server\_key} and \emph{privsvr\_key} and returns the signed encoding in \emph{data} . \emph{pac} is modified to include the server and KDC checksum buffers. Use {\hyperref[appdev/refs/api/krb5_free_data_contents:krb5_free_data_contents]{\code{krb5\_free\_data\_contents()}}} to free \emph{data} when it is no longer needed.
 
 \begin{notice}{note}{Note:}
-First introduced in 1.10
+New in 1.10
 \end{notice}
 
 
@@ -8044,7 +8511,7 @@ A checksum mismatch can occur if the PAC was copied from a cross-realm TGT by an
 \item[{param}] \leavevmode
 \textbf{{[}in{]}} \textbf{context} - Library context
 
-\textbf{{[}inout{]}} \textbf{auth\_context} - Authentication context
+\textbf{{[}in{]}} \textbf{auth\_context} - Authentication context
 
 \textbf{{[}in{]}} \textbf{pcreddata} - \textbf{KRB-CRED} message
 
@@ -8112,7 +8579,7 @@ This function processes \textbf{KRB-ERROR} message \emph{enc\_errbuf} and return
 \item[{param}] \leavevmode
 \textbf{{[}in{]}} \textbf{context} - Library context
 
-\textbf{{[}inout{]}} \textbf{auth\_context} - Authentication structure
+\textbf{{[}in{]}} \textbf{auth\_context} - Authentication structure
 
 \textbf{{[}in{]}} \textbf{inbuf} - \textbf{KRB-PRIV} message to be parsed
 
@@ -8162,7 +8629,7 @@ If the {\hyperref[appdev/refs/macros/KRB5_AUTH_CONTEXT_RET_TIME:KRB5_AUTH_CONTEX
 \item[{param}] \leavevmode
 \textbf{{[}in{]}} \textbf{context} - Library context
 
-\textbf{{[}inout{]}} \textbf{auth\_context} - Authentication context
+\textbf{{[}in{]}} \textbf{auth\_context} - Authentication context
 
 \textbf{{[}in{]}} \textbf{inbuf} - AP-REP message
 
@@ -8194,7 +8661,7 @@ Use {\hyperref[appdev/refs/api/krb5_free_ap_rep_enc_part:krb5_free_ap_rep_enc_pa
 \item[{param}] \leavevmode
 \textbf{{[}in{]}} \textbf{context} - Library context
 
-\textbf{{[}inout{]}} \textbf{auth\_context} - Authentication context
+\textbf{{[}in{]}} \textbf{auth\_context} - Authentication context
 
 \textbf{{[}in{]}} \textbf{inbuf} - AP-REP message
 
@@ -8287,7 +8754,7 @@ Use {\hyperref[appdev/refs/api/krb5_free_ticket:krb5_free_ticket]{\code{krb5\_fr
 \item[{param}] \leavevmode
 \textbf{{[}in{]}} \textbf{context} - Library context
 
-\textbf{{[}inout{]}} \textbf{auth\_context} - Authentication structure
+\textbf{{[}in{]}} \textbf{auth\_context} - Authentication context
 
 \textbf{{[}in{]}} \textbf{inbuf} - \textbf{KRB-SAFE} message to be parsed
 
@@ -8415,7 +8882,7 @@ Echoing is turned off when the password is read.
 
 \textbf{{[}in{]}} \textbf{kt} - Key table
 
-\textbf{{[}inout{]}} \textbf{ticket} - Ticket to be decrypted
+\textbf{{[}in{]}} \textbf{ticket} - Ticket to be decrypted
 
 \end{description}\end{quote}
 \begin{quote}\begin{description}
@@ -8439,7 +8906,7 @@ This function takes a \emph{ticket} as input and decrypts it using key data from
 
 \begin{quote}\begin{description}
 \item[{param}] \leavevmode
-\textbf{{[}inout{]}} \textbf{context} - Library context
+\textbf{{[}in{]}} \textbf{context} - Library context
 
 \textbf{{[}in{]}} \textbf{etypes} - Encryption type(s) to set
 
@@ -8646,7 +9113,7 @@ This function sets the time offset in \emph{context} to the difference between t
 \item[{param}] \leavevmode
 \textbf{{[}in{]}} \textbf{context} - Library context
 
-\textbf{{[}inout{]}} \textbf{timeret} - Timestamp to fill in
+\textbf{{[}out{]}} \textbf{timeret} - Timestamp to fill in
 
 \end{description}\end{quote}
 \begin{quote}\begin{description}
@@ -8741,7 +9208,7 @@ The string is returned in the locale's appropriate date and time representation.
 \end{description}\end{quote}
 
 \begin{notice}{note}{Note:}
-First introduced in 1.9
+New in 1.9
 \end{notice}
 
 
@@ -8771,7 +9238,7 @@ First introduced in 1.9
 This function synchronously obtains credentials using a context created by {\hyperref[appdev/refs/api/krb5_tkt_creds_init:krb5_tkt_creds_init]{\code{krb5\_tkt\_creds\_init()}}} . On successful return, the credentials can be retrieved with {\hyperref[appdev/refs/api/krb5_tkt_creds_get_creds:krb5_tkt_creds_get_creds]{\code{krb5\_tkt\_creds\_get\_creds()}}} .
 
 \begin{notice}{note}{Note:}
-First introduced in 1.9
+New in 1.9
 \end{notice}
 
 
@@ -8803,7 +9270,7 @@ First introduced in 1.9
 This function copies the acquired initial credentials from \emph{ctx} into \emph{creds} , after the successful completion of {\hyperref[appdev/refs/api/krb5_tkt_creds_get:krb5_tkt_creds_get]{\code{krb5\_tkt\_creds\_get()}}} or {\hyperref[appdev/refs/api/krb5_tkt_creds_step:krb5_tkt_creds_step]{\code{krb5\_tkt\_creds\_step()}}} . Use {\hyperref[appdev/refs/api/krb5_free_cred_contents:krb5_free_cred_contents]{\code{krb5\_free\_cred\_contents()}}} to free \emph{creds} when it is no longer needed.
 
 \begin{notice}{note}{Note:}
-First introduced in 1.9
+New in 1.9
 \end{notice}
 
 
@@ -8835,7 +9302,7 @@ First introduced in 1.9
 The TGS request context must have completed obtaining credentials via either {\hyperref[appdev/refs/api/krb5_tkt_creds_get:krb5_tkt_creds_get]{\code{krb5\_tkt\_creds\_get()}}} or {\hyperref[appdev/refs/api/krb5_tkt_creds_step:krb5_tkt_creds_step]{\code{krb5\_tkt\_creds\_step()}}} .
 
 \begin{notice}{note}{Note:}
-First introduced in 1.9
+New in 1.9
 \end{notice}
 
 
@@ -8875,7 +9342,7 @@ The resulting TGS acquisition context can be used asynchronously with {\hyperref
 Use {\hyperref[appdev/refs/api/krb5_tkt_creds_free:krb5_tkt_creds_free]{\code{krb5\_tkt\_creds\_free()}}} to free \emph{ctx} when it is no longer needed.
 
 \begin{notice}{note}{Note:}
-First introduced in 1.9
+New in 1.9
 \end{notice}
 
 
@@ -8917,7 +9384,7 @@ If more requests are needed, \emph{flags} will be set to {\hyperref[appdev/refs/
 If this function returns \textbf{KRB5KRB\_ERR\_RESPONSE\_TOO\_BIG} , the caller should transmit the next request using TCP rather than UDP. If this function returns any other error, the TGS exchange has failed.
 
 \begin{notice}{note}{Note:}
-First introduced in 1.9
+New in 1.9
 \end{notice}
 
 
@@ -8938,7 +9405,7 @@ First introduced in 1.9
 
 \textbf{{[}in{]}} \textbf{keytab} - Key table (NULL to use default keytab)
 
-\textbf{{[}inout{]}} \textbf{ccache} - Credential cache for fetched creds (or NULL)
+\textbf{{[}in{]}} \textbf{ccache} - Credential cache for fetched creds (or NULL)
 
 \textbf{{[}in{]}} \textbf{options} - Verification options (NULL for default options)
 
@@ -10254,7 +10721,7 @@ The result is returned in \emph{container} as a single-element list.
 If \emph{shortest} is FALSE, this function returns the enctype's canonical name (like''aes128-cts-hmac-sha1-96''). If \emph{shortest} is TRUE, it return the enctype's shortest alias (like''aes128-cts'').
 
 \begin{notice}{note}{Note:}
-First introduced in 1.9
+New in 1.9
 \end{notice}
 
 
@@ -10848,7 +11315,7 @@ This function is similar to {\hyperref[appdev/refs/api/krb5_c_verify_checksum_io
 \item[{param}] \leavevmode
 \textbf{{[}in{]}} \textbf{context} - Library context
 
-\textbf{{[}inout{]}} \textbf{auth\_context} - Authentication context
+\textbf{{[}inout{]}} \textbf{auth\_context} - Pre-existing or newly created auth context
 
 \textbf{{[}in{]}} \textbf{fd} - File descriptor
 
@@ -10872,7 +11339,7 @@ This function is similar to {\hyperref[appdev/refs/api/krb5_c_verify_checksum_io
 
 \end{description}\end{quote}
 
-This function performs the srever side of a sendauth/recvauth exchange by sending and receiving messages over \emph{fd} .
+This function performs the server side of a sendauth/recvauth exchange by sending and receiving messages over \emph{fd} .
 
 Use {\hyperref[appdev/refs/api/krb5_free_ticket:krb5_free_ticket]{\code{krb5\_free\_ticket()}}} to free \emph{ticket} when it is no longer needed.
 
@@ -10896,7 +11363,7 @@ Use {\hyperref[appdev/refs/api/krb5_free_ticket:krb5_free_ticket]{\code{krb5\_fr
 \item[{param}] \leavevmode
 \textbf{{[}in{]}} \textbf{context} - Library context
 
-\textbf{{[}inout{]}} \textbf{auth\_context} - Authentication context
+\textbf{{[}inout{]}} \textbf{auth\_context} - Pre-existing or newly created auth context
 
 \textbf{{[}in{]}} \textbf{fd} - File descriptor
 
@@ -10934,7 +11401,7 @@ This function is similar to {\hyperref[appdev/refs/api/krb5_recvauth:krb5_recvau
 \item[{param}] \leavevmode
 \textbf{{[}in{]}} \textbf{context} - Library context
 
-\textbf{{[}inout{]}} \textbf{auth\_context} - Authentication context
+\textbf{{[}inout{]}} \textbf{auth\_context} - Pre-existing or newly created auth context
 
 \textbf{{[}in{]}} \textbf{fd} - File descriptor that describes network socket
 
@@ -13936,6 +14403,24 @@ typedef struct \_krb5\_pwd\_data  krb5\_pwd\_data
 
 
 
+\subsubsection{krb5\_responder\_context}
+\label{appdev/refs/types/krb5_responder_context:krb5-responder-context-struct}\label{appdev/refs/types/krb5_responder_context::doc}\label{appdev/refs/types/krb5_responder_context:krb5-responder-context}\index{krb5\_responder\_context (C type)}
+
+\begin{fulllineitems}
+\phantomsection\label{appdev/refs/types/krb5_responder_context:krb5_responder_context}\pysigline{\bfcode{krb5\_responder\_context}}
+\end{fulllineitems}
+
+
+A container for a set of preauthentication questions and answers.
+
+A responder context is supplied by the krb5 authentication system to a {\hyperref[appdev/refs/types/krb5_responder_fn:krb5_responder_fn]{\code{krb5\_responder\_fn}}} callback. It contains a list of questions and can receive answers. Questions contained in a responder context can be listed using {\hyperref[appdev/refs/api/krb5_responder_list_questions:krb5_responder_list_questions]{\code{krb5\_responder\_list\_questions()}}} , retrieved using {\hyperref[appdev/refs/api/krb5_responder_get_challenge:krb5_responder_get_challenge]{\code{krb5\_responder\_get\_challenge()}}} , or answered using {\hyperref[appdev/refs/api/krb5_responder_set_answer:krb5_responder_set_answer]{\code{krb5\_responder\_set\_answer()}}} . The form of a question's challenge and answer depend on the question name.
+
+
+\paragraph{Declaration}
+\label{appdev/refs/types/krb5_responder_context:declaration}
+typedef struct krb5\_responder\_context\_st* krb5\_responder\_context
+
+
 \subsubsection{krb5\_responder\_fn}
 \label{appdev/refs/types/krb5_responder_fn:krb5-responder-fn-struct}\label{appdev/refs/types/krb5_responder_fn::doc}\label{appdev/refs/types/krb5_responder_fn:krb5-responder-fn}\index{krb5\_responder\_fn (C type)}
 
@@ -14042,6 +14527,58 @@ typedef struct \_krb5\_responder\_otp\_tokeninfo  krb5\_responder\_otp\_tokeninf
 
 
 
+\subsubsection{krb5\_responder\_pkinit\_challenge}
+\label{appdev/refs/types/krb5_responder_pkinit_challenge:krb5-responder-pkinit-challenge-struct}\label{appdev/refs/types/krb5_responder_pkinit_challenge::doc}\label{appdev/refs/types/krb5_responder_pkinit_challenge:krb5-responder-pkinit-challenge}\index{krb5\_responder\_pkinit\_challenge (C type)}
+
+\begin{fulllineitems}
+\phantomsection\label{appdev/refs/types/krb5_responder_pkinit_challenge:krb5_responder_pkinit_challenge}\pysigline{\bfcode{krb5\_responder\_pkinit\_challenge}}
+\end{fulllineitems}
+
+
+
+\paragraph{Declaration}
+\label{appdev/refs/types/krb5_responder_pkinit_challenge:declaration}
+typedef struct \_krb5\_responder\_pkinit\_challenge  krb5\_responder\_pkinit\_challenge
+
+
+\paragraph{Members}
+\label{appdev/refs/types/krb5_responder_pkinit_challenge:members}\index{krb5\_responder\_pkinit\_challenge.identities (C member)}
+
+\begin{fulllineitems}
+\phantomsection\label{appdev/refs/types/krb5_responder_pkinit_challenge:krb5_responder_pkinit_challenge.identities}\pysigline{{\hyperref[appdev/refs/types/krb5_responder_pkinit_identity:krb5_responder_pkinit_identity]{krb5\_responder\_pkinit\_identity}}  **        \bfcode{krb5\_responder\_pkinit\_challenge.identities}}
+\end{fulllineitems}
+
+
+
+\subsubsection{krb5\_responder\_pkinit\_identity}
+\label{appdev/refs/types/krb5_responder_pkinit_identity:krb5-responder-pkinit-identity}\label{appdev/refs/types/krb5_responder_pkinit_identity::doc}\label{appdev/refs/types/krb5_responder_pkinit_identity:krb5-responder-pkinit-identity-struct}\index{krb5\_responder\_pkinit\_identity (C type)}
+
+\begin{fulllineitems}
+\phantomsection\label{appdev/refs/types/krb5_responder_pkinit_identity:krb5_responder_pkinit_identity}\pysigline{\bfcode{krb5\_responder\_pkinit\_identity}}
+\end{fulllineitems}
+
+
+
+\paragraph{Declaration}
+\label{appdev/refs/types/krb5_responder_pkinit_identity:declaration}
+typedef struct \_krb5\_responder\_pkinit\_identity  krb5\_responder\_pkinit\_identity
+
+
+\paragraph{Members}
+\label{appdev/refs/types/krb5_responder_pkinit_identity:members}\index{krb5\_responder\_pkinit\_identity.identity (C member)}
+
+\begin{fulllineitems}
+\phantomsection\label{appdev/refs/types/krb5_responder_pkinit_identity:krb5_responder_pkinit_identity.identity}\pysigline{char *    \bfcode{krb5\_responder\_pkinit\_identity.identity}}
+\end{fulllineitems}
+
+\index{krb5\_responder\_pkinit\_identity.token\_flags (C member)}
+
+\begin{fulllineitems}
+\phantomsection\label{appdev/refs/types/krb5_responder_pkinit_identity:krb5_responder_pkinit_identity.token_flags}\pysigline{{\hyperref[appdev/refs/types/krb5_int32:krb5_int32]{krb5\_int32}}        \bfcode{krb5\_responder\_pkinit\_identity.token\_flags}}
+\end{fulllineitems}
+
+
+
 \subsubsection{krb5\_response}
 \label{appdev/refs/types/krb5_response::doc}\label{appdev/refs/types/krb5_response:krb5-response}\label{appdev/refs/types/krb5_response:krb5-response-struct}\index{krb5\_response (C type)}
 
@@ -14099,7 +14636,7 @@ typedef struct \_krb5\_response  krb5\_response
 
 Replay data.
 
-Sequence number and timestamp information output by \code{krb5\_rd\_priv()} and \code{krb5\_rd\_safe()} .
+Sequence number and timestamp information output by {\hyperref[appdev/refs/api/krb5_rd_priv:krb5_rd_priv]{\code{krb5\_rd\_priv()}}} and {\hyperref[appdev/refs/api/krb5_rd_safe:krb5_rd_safe]{\code{krb5\_rd\_safe()}}} .
 
 
 \paragraph{Declaration}
@@ -15074,6 +15611,8 @@ Generate a subsession key from the current session key obtained from the credent
 \end{fulllineitems}
 
 
+RFC 6803.
+
 \begin{tabulary}{\linewidth}{|L|L|}
 \hline
 
@@ -15092,6 +15631,8 @@ Generate a subsession key from the current session key obtained from the credent
 \phantomsection\label{appdev/refs/macros/CKSUMTYPE_CMAC_CAMELLIA256:CKSUMTYPE_CMAC_CAMELLIA256}\pysigline{\bfcode{CKSUMTYPE\_CMAC\_CAMELLIA256}}
 \end{fulllineitems}
 
+
+RFC 6803.
 
 \begin{tabulary}{\linewidth}{|L|L|}
 \hline
@@ -15428,6 +15969,8 @@ RFC 3962.
 \end{fulllineitems}
 
 
+RFC 6803.
+
 \begin{tabulary}{\linewidth}{|L|L|}
 \hline
 
@@ -15446,6 +15989,8 @@ RFC 3962.
 \phantomsection\label{appdev/refs/macros/ENCTYPE_CAMELLIA256_CTS_CMAC:ENCTYPE_CAMELLIA256_CTS_CMAC}\pysigline{\bfcode{ENCTYPE\_CAMELLIA256\_CTS\_CMAC}}
 \end{fulllineitems}
 
+
+RFC 6803.
 
 \begin{tabulary}{\linewidth}{|L|L|}
 \hline
@@ -16870,6 +17415,8 @@ Cred forwarding message.
 
 Cybersafe.
 
+RFC 4120
+
 \begin{tabulary}{\linewidth}{|L|L|}
 \hline
 
@@ -16909,6 +17456,8 @@ Transited encoding types.
 \phantomsection\label{appdev/refs/macros/KRB5_ENCPADATA_REQ_ENC_PA_REP:KRB5_ENCPADATA_REQ_ENC_PA_REP}\pysigline{\bfcode{KRB5\_ENCPADATA\_REQ\_ENC\_PA\_REP}}
 \end{fulllineitems}
 
+
+RFC 6806.
 
 \begin{tabulary}{\linewidth}{|L|L|}
 \hline
@@ -19111,6 +19660,8 @@ User principal name and DNS info.
 
 Cygnus.
 
+RFC 4120, 3961
+
 \begin{tabulary}{\linewidth}{|L|L|}
 \hline
 
@@ -19141,6 +19692,27 @@ Cygnus.
 
 
 
+\subsubsection{KRB5\_PADATA\_AS\_CHECKSUM}
+\label{appdev/refs/macros/KRB5_PADATA_AS_CHECKSUM:krb5-padata-as-checksum}\label{appdev/refs/macros/KRB5_PADATA_AS_CHECKSUM:krb5-padata-as-checksum-data}\label{appdev/refs/macros/KRB5_PADATA_AS_CHECKSUM::doc}\index{KRB5\_PADATA\_AS\_CHECKSUM (built-in variable)}
+
+\begin{fulllineitems}
+\phantomsection\label{appdev/refs/macros/KRB5_PADATA_AS_CHECKSUM:KRB5_PADATA_AS_CHECKSUM}\pysigline{\bfcode{KRB5\_PADATA\_AS\_CHECKSUM}}
+\end{fulllineitems}
+
+
+AS checksum.
+
+\begin{tabulary}{\linewidth}{|L|L|}
+\hline
+
+\code{KRB5\_PADATA\_AS\_CHECKSUM}
+ & 
+\code{132}
+\\\hline
+\end{tabulary}
+
+
+
 \subsubsection{KRB5\_PADATA\_ENCRYPTED\_CHALLENGE}
 \label{appdev/refs/macros/KRB5_PADATA_ENCRYPTED_CHALLENGE:krb5-padata-encrypted-challenge-data}\label{appdev/refs/macros/KRB5_PADATA_ENCRYPTED_CHALLENGE:krb5-padata-encrypted-challenge}\label{appdev/refs/macros/KRB5_PADATA_ENCRYPTED_CHALLENGE::doc}\index{KRB5\_PADATA\_ENCRYPTED\_CHALLENGE (built-in variable)}
 
@@ -19148,6 +19720,8 @@ Cygnus.
 \phantomsection\label{appdev/refs/macros/KRB5_PADATA_ENCRYPTED_CHALLENGE:KRB5_PADATA_ENCRYPTED_CHALLENGE}\pysigline{\bfcode{KRB5\_PADATA\_ENCRYPTED\_CHALLENGE}}
 \end{fulllineitems}
 
+
+RFC 6113.
 
 \begin{tabulary}{\linewidth}{|L|L|}
 \hline
@@ -19170,6 +19744,8 @@ Cygnus.
 
 SecurId passcode.
 
+RFC 4120
+
 \begin{tabulary}{\linewidth}{|L|L|}
 \hline
 
@@ -19188,6 +19764,8 @@ SecurId passcode.
 \phantomsection\label{appdev/refs/macros/KRB5_PADATA_ENC_TIMESTAMP:KRB5_PADATA_ENC_TIMESTAMP}\pysigline{\bfcode{KRB5\_PADATA\_ENC\_TIMESTAMP}}
 \end{fulllineitems}
 
+
+RFC 4120.
 
 \begin{tabulary}{\linewidth}{|L|L|}
 \hline
@@ -19208,7 +19786,9 @@ SecurId passcode.
 \end{fulllineitems}
 
 
-timestamp encrypted in key
+timestamp encrypted in key.
+
+RFC 4120
 
 \begin{tabulary}{\linewidth}{|L|L|}
 \hline
@@ -19231,6 +19811,8 @@ timestamp encrypted in key
 
 Etype info for preauth.
 
+RFC 4120
+
 \begin{tabulary}{\linewidth}{|L|L|}
 \hline
 
@@ -19249,6 +19831,8 @@ Etype info for preauth.
 \phantomsection\label{appdev/refs/macros/KRB5_PADATA_ETYPE_INFO2:KRB5_PADATA_ETYPE_INFO2}\pysigline{\bfcode{KRB5\_PADATA\_ETYPE\_INFO2}}
 \end{fulllineitems}
 
+
+RFC 4120.
 
 \begin{tabulary}{\linewidth}{|L|L|}
 \hline
@@ -19290,6 +19874,8 @@ username protocol transition request
 \end{fulllineitems}
 
 
+RFC 6113.
+
 \begin{tabulary}{\linewidth}{|L|L|}
 \hline
 
@@ -19308,6 +19894,8 @@ username protocol transition request
 \phantomsection\label{appdev/refs/macros/KRB5_PADATA_FX_ERROR:KRB5_PADATA_FX_ERROR}\pysigline{\bfcode{KRB5\_PADATA\_FX\_ERROR}}
 \end{fulllineitems}
 
+
+RFC 6113.
 
 \begin{tabulary}{\linewidth}{|L|L|}
 \hline
@@ -19328,6 +19916,8 @@ username protocol transition request
 \end{fulllineitems}
 
 
+RFC 6113.
+
 \begin{tabulary}{\linewidth}{|L|L|}
 \hline
 
@@ -19346,6 +19936,10 @@ username protocol transition request
 \phantomsection\label{appdev/refs/macros/KRB5_PADATA_GET_FROM_TYPED_DATA:KRB5_PADATA_GET_FROM_TYPED_DATA}\pysigline{\bfcode{KRB5\_PADATA\_GET\_FROM\_TYPED\_DATA}}
 \end{fulllineitems}
 
+
+Embedded in typed data.
+
+RFC 4120
 
 \begin{tabulary}{\linewidth}{|L|L|}
 \hline
@@ -19387,6 +19981,8 @@ username protocol transition request
 
 OSF DCE.
 
+RFC 4120
+
 \begin{tabulary}{\linewidth}{|L|L|}
 \hline
 
@@ -19406,7 +20002,7 @@ OSF DCE.
 \end{fulllineitems}
 
 
-See RFC 6560 section 4.1.
+RFC 6560 section 4.1.
 
 \begin{tabulary}{\linewidth}{|L|L|}
 \hline
@@ -19427,7 +20023,7 @@ See RFC 6560 section 4.1.
 \end{fulllineitems}
 
 
-See RFC 6560 section 4.3.
+RFC 6560 section 4.3.
 
 \begin{tabulary}{\linewidth}{|L|L|}
 \hline
@@ -19448,7 +20044,7 @@ See RFC 6560 section 4.3.
 \end{fulllineitems}
 
 
-See RFC 6560 section 4.2.
+RFC 6560 section 4.2.
 
 \begin{tabulary}{\linewidth}{|L|L|}
 \hline
@@ -19490,6 +20086,8 @@ include Windows PAC
 \end{fulllineitems}
 
 
+RFC 6112.
+
 \begin{tabulary}{\linewidth}{|L|L|}
 \hline
 
@@ -19510,6 +20108,8 @@ include Windows PAC
 
 
 PKINIT.
+
+RFC 4556
 
 \begin{tabulary}{\linewidth}{|L|L|}
 \hline
@@ -19553,6 +20153,8 @@ PKINIT.
 
 PKINIT.
 
+RFC 4556
+
 \begin{tabulary}{\linewidth}{|L|L|}
 \hline
 
@@ -19592,6 +20194,8 @@ PKINIT.
 \phantomsection\label{appdev/refs/macros/KRB5_PADATA_PW_SALT:KRB5_PADATA_PW_SALT}\pysigline{\bfcode{KRB5\_PADATA\_PW\_SALT}}
 \end{fulllineitems}
 
+
+RFC 4120.
 
 \begin{tabulary}{\linewidth}{|L|L|}
 \hline
@@ -19654,7 +20258,7 @@ certificate protocol transition request
 \end{fulllineitems}
 
 
-draft challenge system
+SAM/OTP.
 
 \begin{tabulary}{\linewidth}{|L|L|}
 \hline
@@ -19696,6 +20300,10 @@ draft challenge system, updated
 \end{fulllineitems}
 
 
+SAM/OTP.
+
+RFC 4120
+
 \begin{tabulary}{\linewidth}{|L|L|}
 \hline
 
@@ -19715,7 +20323,7 @@ draft challenge system, updated
 \end{fulllineitems}
 
 
-draft challenge system response
+SAM/OTP.
 
 \begin{tabulary}{\linewidth}{|L|L|}
 \hline
@@ -19759,6 +20367,8 @@ draft challenge system, updated
 
 Sesame project.
 
+RFC 4120
+
 \begin{tabulary}{\linewidth}{|L|L|}
 \hline
 
@@ -19779,6 +20389,8 @@ Sesame project.
 
 
 Windows 2000 referrals.
+
+RFC 6820
 
 \begin{tabulary}{\linewidth}{|L|L|}
 \hline
@@ -19817,6 +20429,8 @@ Windows 2000 referrals.
 \phantomsection\label{appdev/refs/macros/KRB5_PADATA_USE_SPECIFIED_KVNO:KRB5_PADATA_USE_SPECIFIED_KVNO}\pysigline{\bfcode{KRB5\_PADATA\_USE\_SPECIFIED\_KVNO}}
 \end{fulllineitems}
 
+
+RFC 4120.
 
 \begin{tabulary}{\linewidth}{|L|L|}
 \hline
@@ -20264,6 +20878,110 @@ Constant for realm referrals.
 
 
 
+\subsubsection{KRB5\_RESPONDER\_PKINIT\_FLAGS\_TOKEN\_USER\_PIN\_COUNT\_LOW}
+\label{appdev/refs/macros/KRB5_RESPONDER_PKINIT_FLAGS_TOKEN_USER_PIN_COUNT_LOW:krb5-responder-pkinit-flags-token-user-pin-count-low-data}\label{appdev/refs/macros/KRB5_RESPONDER_PKINIT_FLAGS_TOKEN_USER_PIN_COUNT_LOW::doc}\label{appdev/refs/macros/KRB5_RESPONDER_PKINIT_FLAGS_TOKEN_USER_PIN_COUNT_LOW:krb5-responder-pkinit-flags-token-user-pin-count-low}\index{KRB5\_RESPONDER\_PKINIT\_FLAGS\_TOKEN\_USER\_PIN\_COUNT\_LOW (built-in variable)}
+
+\begin{fulllineitems}
+\phantomsection\label{appdev/refs/macros/KRB5_RESPONDER_PKINIT_FLAGS_TOKEN_USER_PIN_COUNT_LOW:KRB5_RESPONDER_PKINIT_FLAGS_TOKEN_USER_PIN_COUNT_LOW}\pysigline{\bfcode{KRB5\_RESPONDER\_PKINIT\_FLAGS\_TOKEN\_USER\_PIN\_COUNT\_LOW}}
+\end{fulllineitems}
+
+
+This flag indicates that an incorrect PIN was supplied at least once since the last time the correct PIN was supplied.
+
+\begin{tabulary}{\linewidth}{|L|L|}
+\hline
+
+\code{KRB5\_RESPONDER\_PKINIT\_FLAGS\_TOKEN\_USER\_PIN\_COUNT\_LOW}
+ & 
+\code{(1 \textless{}\textless{} 0)}
+\\\hline
+\end{tabulary}
+
+
+
+\subsubsection{KRB5\_RESPONDER\_PKINIT\_FLAGS\_TOKEN\_USER\_PIN\_FINAL\_TRY}
+\label{appdev/refs/macros/KRB5_RESPONDER_PKINIT_FLAGS_TOKEN_USER_PIN_FINAL_TRY:krb5-responder-pkinit-flags-token-user-pin-final-try}\label{appdev/refs/macros/KRB5_RESPONDER_PKINIT_FLAGS_TOKEN_USER_PIN_FINAL_TRY::doc}\label{appdev/refs/macros/KRB5_RESPONDER_PKINIT_FLAGS_TOKEN_USER_PIN_FINAL_TRY:krb5-responder-pkinit-flags-token-user-pin-final-try-data}\index{KRB5\_RESPONDER\_PKINIT\_FLAGS\_TOKEN\_USER\_PIN\_FINAL\_TRY (built-in variable)}
+
+\begin{fulllineitems}
+\phantomsection\label{appdev/refs/macros/KRB5_RESPONDER_PKINIT_FLAGS_TOKEN_USER_PIN_FINAL_TRY:KRB5_RESPONDER_PKINIT_FLAGS_TOKEN_USER_PIN_FINAL_TRY}\pysigline{\bfcode{KRB5\_RESPONDER\_PKINIT\_FLAGS\_TOKEN\_USER\_PIN\_FINAL\_TRY}}
+\end{fulllineitems}
+
+
+This flag indicates that supplying an incorrect PIN will cause the token to lock itself.
+
+\begin{tabulary}{\linewidth}{|L|L|}
+\hline
+
+\code{KRB5\_RESPONDER\_PKINIT\_FLAGS\_TOKEN\_USER\_PIN\_FINAL\_TRY}
+ & 
+\code{(1 \textless{}\textless{} 1)}
+\\\hline
+\end{tabulary}
+
+
+
+\subsubsection{KRB5\_RESPONDER\_PKINIT\_FLAGS\_TOKEN\_USER\_PIN\_LOCKED}
+\label{appdev/refs/macros/KRB5_RESPONDER_PKINIT_FLAGS_TOKEN_USER_PIN_LOCKED::doc}\label{appdev/refs/macros/KRB5_RESPONDER_PKINIT_FLAGS_TOKEN_USER_PIN_LOCKED:krb5-responder-pkinit-flags-token-user-pin-locked}\label{appdev/refs/macros/KRB5_RESPONDER_PKINIT_FLAGS_TOKEN_USER_PIN_LOCKED:krb5-responder-pkinit-flags-token-user-pin-locked-data}\index{KRB5\_RESPONDER\_PKINIT\_FLAGS\_TOKEN\_USER\_PIN\_LOCKED (built-in variable)}
+
+\begin{fulllineitems}
+\phantomsection\label{appdev/refs/macros/KRB5_RESPONDER_PKINIT_FLAGS_TOKEN_USER_PIN_LOCKED:KRB5_RESPONDER_PKINIT_FLAGS_TOKEN_USER_PIN_LOCKED}\pysigline{\bfcode{KRB5\_RESPONDER\_PKINIT\_FLAGS\_TOKEN\_USER\_PIN\_LOCKED}}
+\end{fulllineitems}
+
+
+This flag indicates that the user PIN is locked, and you can't log in to the token with it.
+
+\begin{tabulary}{\linewidth}{|L|L|}
+\hline
+
+\code{KRB5\_RESPONDER\_PKINIT\_FLAGS\_TOKEN\_USER\_PIN\_LOCKED}
+ & 
+\code{(1 \textless{}\textless{} 2)}
+\\\hline
+\end{tabulary}
+
+
+
+\subsubsection{KRB5\_RESPONDER\_QUESTION\_PKINIT}
+\label{appdev/refs/macros/KRB5_RESPONDER_QUESTION_PKINIT:krb5-responder-question-pkinit}\label{appdev/refs/macros/KRB5_RESPONDER_QUESTION_PKINIT:krb5-responder-question-pkinit-data}\label{appdev/refs/macros/KRB5_RESPONDER_QUESTION_PKINIT::doc}\index{KRB5\_RESPONDER\_QUESTION\_PKINIT (built-in variable)}
+
+\begin{fulllineitems}
+\phantomsection\label{appdev/refs/macros/KRB5_RESPONDER_QUESTION_PKINIT:KRB5_RESPONDER_QUESTION_PKINIT}\pysigline{\bfcode{KRB5\_RESPONDER\_QUESTION\_PKINIT}}
+\end{fulllineitems}
+
+
+PKINIT responder question.
+
+The PKINIT responder question is asked when the client needs a password that's being used to protect key information, and is formatted as a JSON object. A specific identity's flags value, if not zero, is the bitwise-OR of one or more of the KRB5\_RESPONDER\_PKINIT\_FLAGS\_TOKEN\_* flags defined below, and possibly other flags to be added later. Any resemblance to similarly-named CKF\_* values in the PKCS\#11 API should not be depended on.
+
+\emph{\{}
+
+\emph{identity \textless{}string\textgreater{} : flags \textless{}number\textgreater{},}
+
+\emph{...}
+
+\emph{\}}
+
+The answer to the question MUST be JSON formatted:
+
+\emph{\{}
+
+\emph{identity \textless{}string\textgreater{} : password \textless{}string\textgreater{},}
+
+\emph{...}
+
+\emph{\}}
+
+\begin{tabulary}{\linewidth}{|L|L|}
+\hline
+
+\code{KRB5\_RESPONDER\_QUESTION\_PKINIT}
+ & 
+\code{"pkinit"}
+\\\hline
+\end{tabulary}
+
+
+
 \subsubsection{KRB5\_RESPONDER\_OTP\_FLAGS\_COLLECT\_PIN}
 \label{appdev/refs/macros/KRB5_RESPONDER_OTP_FLAGS_COLLECT_PIN:krb5-responder-otp-flags-collect-pin-data}\label{appdev/refs/macros/KRB5_RESPONDER_OTP_FLAGS_COLLECT_PIN::doc}\label{appdev/refs/macros/KRB5_RESPONDER_OTP_FLAGS_COLLECT_PIN:krb5-responder-otp-flags-collect-pin}\index{KRB5\_RESPONDER\_OTP\_FLAGS\_COLLECT\_PIN (built-in variable)}
 
@@ -20421,8 +21139,50 @@ These format constants identify the format of the token value.
 
 OTP responder question.
 
-The OTP responder question is asked when the KDC indicates that an OTP value is required in order to complete the authentication. The JSON format of the challenge is: \{ ``service'': \textless{}string (optional)\textgreater{}, ``tokenInfo'': {[} \{ ``flags'': \textless{}number\textgreater{}, ``vendor'': \textless{}string (optional)\textgreater{}, ``challenge'': \textless{}string (optional)\textgreater{}, ``length'': \textless{}number (optional)\textgreater{}, ``format'': \textless{}number (optional)\textgreater{}, ``tokenID'': \textless{}string (optional)\textgreater{}, ``algID'': \textless{}string (optional)\textgreater{}, \}, ... {]} \}
-The answer to the question MUST be JSON formatted: \{ ``tokeninfo'': \textless{}number\textgreater{}, ``value'': \textless{}string (optional)\textgreater{}, ``pin'': \textless{}string (optional)\textgreater{}, \}
+The OTP responder question is asked when the KDC indicates that an OTP value is required in order to complete the authentication. The JSON format of the challenge is:
+
+\emph{\{}
+
+\emph{``service'': \textless{}string (optional)\textgreater{},}
+
+\emph{``tokenInfo'': {[}}
+
+\emph{\{}
+
+\emph{``flags'': \textless{}number\textgreater{},}
+
+\emph{``vendor'': \textless{}string (optional)\textgreater{},}
+
+\emph{``challenge'': \textless{}string (optional)\textgreater{},}
+
+\emph{``length'': \textless{}number (optional)\textgreater{},}
+
+\emph{``format'': \textless{}number (optional)\textgreater{},}
+
+\emph{``tokenID'': \textless{}string (optional)\textgreater{},}
+
+\emph{``algID'': \textless{}string (optional)\textgreater{},}
+
+\emph{\},}
+
+\emph{...}
+
+\emph{{]}}
+
+\emph{\}}
+
+The answer to the question MUST be JSON formatted:
+
+\emph{\{}
+
+\emph{``tokeninfo'': \textless{}number\textgreater{},}
+
+\emph{``value'': \textless{}string (optional)\textgreater{},}
+
+\emph{``pin'': \textless{}string (optional)\textgreater{},}
+
+\emph{\}}
+
 For more detail, please see RFC 6560.
 
 \begin{tabulary}{\linewidth}{|L|L|}

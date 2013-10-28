@@ -58,11 +58,7 @@ kg_impersonate_name(OM_uint32 *minor_status,
     if (impersonator_cred->req_enctypes != NULL)
         in_creds.keyblock.enctype = impersonator_cred->req_enctypes[0];
 
-    code = k5_mutex_lock(&user->lock);
-    if (code != 0) {
-        *minor_status = code;
-        return GSS_S_FAILURE;
-    }
+    k5_mutex_lock(&user->lock);
 
     if (user->ad_context != NULL) {
         code = krb5_authdata_export_authdata(context,
@@ -193,7 +189,7 @@ make_proxy_cred(krb5_context context, krb5_gss_cred_id_t cred,
 
     data = string2data(str);
     code = krb5_cc_set_config(context, cred->ccache, NULL,
-                              KRB5_CONF_PROXY_IMPERSONATOR, &data);
+                              KRB5_CC_CONF_PROXY_IMPERSONATOR, &data);
     krb5_free_unparsed_name(context, str);
     if (code)
         return code;

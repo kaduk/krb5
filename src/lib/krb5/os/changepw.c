@@ -34,7 +34,6 @@
 #include "fake-addrinfo.h"
 #include "k5-int.h"
 #include "os-proto.h"
-#include "cm.h"
 #include "../krb/auth_con.h"
 #include "../krb/int-proto.h"
 
@@ -100,23 +99,21 @@ locate_kpasswd(krb5_context context, const krb5_data *realm,
 
 
 static void
-kpasswd_sendto_msg_cleanup (void* callback_context, krb5_data* message)
+kpasswd_sendto_msg_cleanup(void *data, krb5_data *message)
 {
-    struct sendto_callback_context *ctx = callback_context;
+    struct sendto_callback_context *ctx = data;
 
     krb5_free_data_contents(ctx->context, message);
 }
 
 
 static int
-kpasswd_sendto_msg_callback(struct conn_state *conn,
-                            void *callback_context,
-                            krb5_data *message)
+kpasswd_sendto_msg_callback(SOCKET fd, void *data, krb5_data *message)
 {
     krb5_error_code                     code = 0;
     struct sockaddr_storage             local_addr;
     krb5_address                        local_kaddr;
-    struct sendto_callback_context      *ctx = callback_context;
+    struct sendto_callback_context      *ctx = data;
     GETSOCKNAME_ARG3_TYPE               addrlen;
     krb5_data                           output;
 
@@ -127,7 +124,7 @@ kpasswd_sendto_msg_callback(struct conn_state *conn,
      */
     addrlen = sizeof(local_addr);
 
-    if (getsockname(conn->fd, ss2sa(&local_addr), &addrlen) < 0) {
+    if (getsockname(fd, ss2sa(&local_addr), &addrlen) < 0) {
         code = SOCKET_ERRNO;
         goto cleanup;
     }
@@ -156,16 +153,11 @@ kpasswd_sendto_msg_callback(struct conn_state *conn,
         local_kaddr.magic = addrs[0]->magic;
         local_kaddr.addrtype = addrs[0]->addrtype;
         local_kaddr.length = addrs[0]->length;
-        local_kaddr.contents = malloc(addrs[0]->length);
-        if (local_kaddr.contents == NULL && addrs[0]->length != 0) {
-            code = ENOMEM;
-            krb5_free_addresses(ctx->context, addrs);
-            goto cleanup;
-        }
-        if (addrs[0]->length)
-            memcpy(local_kaddr.contents, addrs[0]->contents, addrs[0]->length);
-
+        local_kaddr.contents = k5memdup(addrs[0]->contents, addrs[0]->length,
+                                        &code);
         krb5_free_addresses(ctx->context, addrs);
+        if (local_kaddr.contents == NULL)
+            goto cleanup;
     }
 
 
@@ -257,15 +249,14 @@ change_set_password(krb5_context context,
 
     do {
         int socktype = (use_tcp ? SOCK_STREAM : SOCK_DGRAM);
-        if ((code = locate_kpasswd(callback_ctx.context,
-                                   krb5_princ_realm(callback_ctx.context,
-                                                    creds->server),
-                                   &sl, socktype)))
+        code = locate_kpasswd(callback_ctx.context, &creds->server->realm, &sl,
+                              socktype);
+        if (code)
             break;
 
         addrlen = sizeof(remote_addr);
 
-        callback_info.context = (void*) &callback_ctx;
+        callback_info.data = &callback_ctx;
         callback_info.pfn_callback = kpasswd_sendto_msg_callback;
         callback_info.pfn_cleanup = kpasswd_sendto_msg_cleanup;
         krb5_free_data_contents(callback_ctx.context, &chpw_rep);
@@ -409,8 +400,8 @@ krb5_set_password_using_ccache(krb5_context context,
     code = krb5_cc_get_principal (context, ccache, &creds.client);
     if (!code) {
         code = krb5_build_principal(context, &creds.server,
-                                    krb5_princ_realm(context, change_password_for)->length,
-                                    krb5_princ_realm(context, change_password_for)->data,
+                                    change_password_for->realm.length,
+                                    change_password_for->realm.data,
                                     "kadmin", "changepw", NULL);
         if (!code) {
             code = krb5_get_credentials(context, 0, ccache, &creds, &credsp);

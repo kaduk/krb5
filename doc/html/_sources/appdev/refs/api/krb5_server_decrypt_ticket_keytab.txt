@@ -14,7 +14,7 @@ krb5_server_decrypt_ticket_keytab -  Decrypt a ticket using the specified key ta
 
 	          **[in]** **kt** - Key table
 
-	          **[inout]** **ticket** - Ticket to be decrypted
+	          **[in]** **ticket** - Ticket to be decrypted
 
 
 ..

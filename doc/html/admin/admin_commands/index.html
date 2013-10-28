@@ -17,7 +17,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../',
-        VERSION:     '1.11.3',
+        VERSION:     '1.12-alpha1',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -35,53 +35,71 @@
   </head>
   <body>
     <div class="header-wrapper">
-        <div class="header" style="padding-bottom: 0px;">
+        <div class="header">
             
             
-                <h1><a href="../../index.html"
-                style="color: #5d1509; font-size: 120%;
-                padding-top: 10px;">MIT Kerberos Documentation</a></h1>
+            <h1><a href="../../index.html">MIT Kerberos Documentation</a></h1>
             
             <div class="rel">
-                    <a href="../../index.html"
-                    title="Full Table of Contents"
-                    accesskey="C">Contents</a>
-                     |
-                    <a href="../enctypes.html"
-                    title="Encryption types"
-                    accesskey="P">previous</a>
-                     |
-                    <a href="kadmin_local.html"
-                    title="kadmin"
-                    accesskey="N">next</a>
-                     |
-                    <a href="../../genindex.html"
-                    title="General Index"
-                    accesskey="I">index</a>
-                     |
-                    <a href="../../search.html"
-                    title="Enter search criteria"
-                    accesskey="S">Search</a>
-                     |
-                <a href="mailto:krb5-bugs@mit.edu?subject=Documentation__Administration  programs">feedback</a>
+                
+        <a href="../../index.html" title="Full Table of Contents"
+            accesskey="C">Contents</a> |
+        <a href="../enctypes.html" title="Encryption types"
+            accesskey="P">previous</a> |
+        <a href="kadmin_local.html" title="kadmin"
+            accesskey="N">next</a> |
+        <a href="../../genindex.html" title="General Index"
+            accesskey="I">index</a> |
+        <a href="../../search.html" title="Enter search criteria"
+            accesskey="S">Search</a> |
+    <a href="mailto:krb5-bugs@mit.edu?subject=Documentation__Administration  programs">feedback</a>
             </div>
         </div>
     </div>
 
     <div class="content-wrapper">
-        <div class="content">
-                <div class="sidebar"
-                    style="float: right; background: #F9F9F9">
-                    <h2>On this page </h2>
-                    <ul>
+      <div class="content">
+        <div class="document">
+            
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="administration-programs">
+<h1>Administration  programs<a class="headerlink" href="#administration-programs" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="kadmin_local.html">kadmin</a></li>
+<li class="toctree-l1"><a class="reference internal" href="kadmind.html">kadmind</a></li>
+<li class="toctree-l1"><a class="reference internal" href="kdb5_util.html">kdb5_util</a></li>
+<li class="toctree-l1"><a class="reference internal" href="kdb5_ldap_util.html">kdb5_ldap_util</a></li>
+<li class="toctree-l1"><a class="reference internal" href="krb5kdc.html">krb5kdc</a></li>
+<li class="toctree-l1"><a class="reference internal" href="kprop.html">kprop</a></li>
+<li class="toctree-l1"><a class="reference internal" href="kpropd.html">kpropd</a></li>
+<li class="toctree-l1"><a class="reference internal" href="kproplog.html">kproplog</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ktutil.html">ktutil</a></li>
+<li class="toctree-l1"><a class="reference internal" href="k5srvutil.html">k5srvutil</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sserver.html">sserver</a></li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+        </div>
+        <div class="sidebar">
+    <h2>On this page</h2>
+    <ul>
 <li><a class="reference internal" href="#">Administration  programs</a><ul>
 </ul>
 </li>
 </ul>
 
-                    <br/>
-                    <h2>Table of contents</h2>
-                    <ul class="current">
+    <br/>
+    <h2>Table of contents</h2>
+    <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../../user/index.html">For users</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../index.html">For administrators</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="../install.html">Installation guide</a></li>
@@ -94,6 +112,7 @@
 <li class="toctree-l2"><a class="reference internal" href="../host_config.html">Host configuration</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../backup_host.html">Backups of secure hosts</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../pkinit.html">PKINIT configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../otp.html">OTP Preauthentication</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../princ_dns.html">Principal names and DNS</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../enctypes.html">Encryption types</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="">Administration  programs</a><ul>
@@ -123,84 +142,45 @@
 <li class="toctree-l1"><a class="reference internal" href="../../basic/index.html">Kerberos V5 concepts</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../mitK5features.html">MIT Kerberos features</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../build_this.html">How to build this documentation from the source</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../about.html">The Kerberos Documentation Set</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../about.html">Contributing to the MIT Kerberos Documentation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../resources.html">Resources</a></li>
 </ul>
 
-                    <br/>
-                    <h4><a href="../../index.html">Full Table of Contents
-                    </a></h4>
-                    <h4>Search</h4>
-                    <form class="search" action="../../search.html" method="get">
-                        <input type="text" name="q" size="18" />
-                        <input type="submit" value="Go" />
-                        <input type="hidden" name="check_keywords" value="yes" />
-                        <input type="hidden" name="area" value="default" />
-                    </form>
-                </div>
-            <div class="document">
-            
-      <div class="documentwrapper">
-        <div class="bodywrapper">
-          <div class="body">
-            
-  <div class="section" id="administration-programs">
-<h1>Administration  programs<a class="headerlink" href="#administration-programs" title="Permalink to this headline">¶</a></h1>
-<div class="toctree-wrapper compound">
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="kadmin_local.html">kadmin</a></li>
-<li class="toctree-l1"><a class="reference internal" href="kadmind.html">kadmind</a></li>
-<li class="toctree-l1"><a class="reference internal" href="kdb5_util.html">kdb5_util</a></li>
-<li class="toctree-l1"><a class="reference internal" href="kdb5_ldap_util.html">kdb5_ldap_util</a></li>
-<li class="toctree-l1"><a class="reference internal" href="krb5kdc.html">krb5kdc</a></li>
-<li class="toctree-l1"><a class="reference internal" href="kprop.html">kprop</a></li>
-<li class="toctree-l1"><a class="reference internal" href="kpropd.html">kpropd</a></li>
-<li class="toctree-l1"><a class="reference internal" href="kproplog.html">kproplog</a></li>
-<li class="toctree-l1"><a class="reference internal" href="ktutil.html">ktutil</a></li>
-<li class="toctree-l1"><a class="reference internal" href="k5srvutil.html">k5srvutil</a></li>
-<li class="toctree-l1"><a class="reference internal" href="sserver.html">sserver</a></li>
-</ul>
-</div>
-</div>
-
-
-          </div>
+    <br/>
+    <h4><a href="../../index.html">Full Table of Contents</a></h4>
+    <h4>Search</h4>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
         </div>
+        <div class="clearer"></div>
       </div>
-            </div>
-            <div class="clearer" ></div>
-        </div>
     </div>
- 
-    <div class="footer-wrapper" >
+
+    <div class="footer-wrapper">
         <div class="footer" >
-            <div class="right" ><i>Release: 1.11.3</i><br />
+            <div class="right" ><i>Release: 1.12-alpha1</i><br />
                 &copy; <a href="../../copyright.html">Copyright</a> 1985-2013, MIT.
             </div>
-            <div class="left" >
-                    <a href="../../index.html"
-                    title="Full Table of Contents"
-                    >Contents</a>
-                     |
-                    <a href="../enctypes.html"
-                    title="Encryption types"
-                    >previous</a>
-                     |
-                    <a href="kadmin_local.html"
-                    title="kadmin"
-                    >next</a>
-                     |
-                    <a href="../../genindex.html"
-                    title="General Index"
-                    >index</a>
-                     |
-                    <a href="../../search.html"
-                    title="Enter search criteria"
-                    >Search</a>
-                     |
-                    <a href="mailto:krb5-bugs@mit.edu?subject=Documentation__Administration  programs">feedback</a>
+            <div class="left">
+                
+        <a href="../../index.html" title="Full Table of Contents"
+            >Contents</a> |
+        <a href="../enctypes.html" title="Encryption types"
+            >previous</a> |
+        <a href="kadmin_local.html" title="kadmin"
+            >next</a> |
+        <a href="../../genindex.html" title="General Index"
+            >index</a> |
+        <a href="../../search.html" title="Enter search criteria"
+            >Search</a> |
+    <a href="mailto:krb5-bugs@mit.edu?subject=Documentation__Administration  programs">feedback</a>
             </div>
         </div>
     </div>
+
   </body>
 </html>

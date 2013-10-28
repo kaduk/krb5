@@ -18,7 +18,7 @@ krb5_verify_init_creds -  Verify initial credentials against a keytab.
 
 	          **[in]** **keytab** - Key table (NULL to use default keytab)
 
-	          **[inout]** **ccache** - Credential cache for fetched creds (or NULL)
+	          **[in]** **ccache** - Credential cache for fetched creds (or NULL)
 
 	          **[in]** **options** - Verification options (NULL for default options)
 

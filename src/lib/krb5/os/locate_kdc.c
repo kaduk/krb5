@@ -38,20 +38,9 @@
 #include <resolv.h>
 #include <netdb.h>
 #endif /* WSHELPER */
-#ifndef T_SRV
-#define T_SRV 33
-#endif /* T_SRV */
+#include "dnsglue.h"
 
-/* for old Unixes and friends ... */
-#ifndef MAXHOSTNAMELEN
-#define MAXHOSTNAMELEN 64
-#endif
-
-#if KRB5_DNS_LOOKUP_KDC
 #define DEFAULT_LOOKUP_KDC 1
-#else
-#define DEFAULT_LOOKUP_KDC 0
-#endif
 #if KRB5_DNS_LOOKUP_REALM
 #define DEFAULT_LOOKUP_REALM 1
 #else
@@ -121,13 +110,6 @@ Tprintf(const char *fmt, ...)
 #endif
 }
 
-#if 0
-extern void krb5int_debug_fprint(const char *, ...);
-#define dprint krb5int_debug_fprint
-#else
-static inline void dprint(const char *fmt, ...) { }
-#endif
-
 /* Make room for a new server entry in list and return a pointer to the new
  * entry.  (Do not increment list->nservers.) */
 static struct server_entry *
@@ -192,7 +174,7 @@ locate_srv_conf_1(krb5_context context, const krb5_data *realm,
     const char  *realm_srv_names[4];
     char **hostlist, *host, *port, *cp;
     krb5_error_code code;
-    int i, count;
+    int i;
 
     Tprintf ("looking in krb5.conf for realm %s entry %s; ports %d,%d\n",
              realm->data, name, ntohs (udpport), ntohs (sec_udpport));
@@ -216,19 +198,8 @@ locate_srv_conf_1(krb5_context context, const krb5_data *realm,
         Tprintf ("config file lookup failed: %s\n",
                  error_message(code));
         if (code == PROF_NO_SECTION || code == PROF_NO_RELATION)
-            code = KRB5_REALM_UNKNOWN;
+            code = 0;
         return code;
-    }
-
-    count = 0;
-    while (hostlist && hostlist[count])
-        count++;
-    Tprintf ("found %d entries under 'kdc'\n", count);
-
-    if (count == 0) {
-        profile_free_list(hostlist);
-        serverlist->nservers = 0;
-        return 0;
     }
 
     for (i=0; hostlist[i]; i++) {
@@ -411,13 +382,11 @@ module_locate_server(krb5_context ctx, const krb5_data *realm,
         krb5int_free_plugin_dir_data(ptrs);
         return ENOMEM;
     }
-    realmz = malloc(realm->length + 1);
+    realmz = k5memdup0(realm->data, realm->length, &code);
     if (realmz == NULL) {
         krb5int_free_plugin_dir_data(ptrs);
-        return ENOMEM;
+        return code;
     }
-    memcpy(realmz, realm->data, realm->length);
-    realmz[realm->length] = '\0';
     for (i = 0; ptrs[i]; i++) {
         void *blob;
 
@@ -501,8 +470,8 @@ prof_locate_server(krb5_context context, const krb5_data *realm,
         break;
     case locate_service_krb524:
         profname = KRB5_CONF_KRB524_SERVER;
-        serv = getservbyname(KRB524_SERVICE, "udp");
-        dflport1 = serv ? serv->s_port : htons (KRB524_PORT);
+        serv = getservbyname("krb524", "udp");
+        dflport1 = serv ? serv->s_port : htons(4444);
         break;
     case locate_service_kpasswd:
         profname = KRB5_CONF_KPASSWD_SERVER;
@@ -527,7 +496,7 @@ dns_locate_server(krb5_context context, const krb5_data *realm,
     krb5_error_code code;
 
     if (!use_dns)
-        return KRB5_PLUGIN_NO_HANDLE;
+        return 0;
 
     switch (svc) {
     case locate_service_kdc:
@@ -546,7 +515,7 @@ dns_locate_server(krb5_context context, const krb5_data *realm,
         dnsname = "_kpasswd";
         break;
     default:
-        return KRB5_PLUGIN_NO_HANDLE;
+        return 0;
     }
 
     code = 0;
@@ -596,12 +565,8 @@ k5_locate_server(krb5_context context, const krb5_data *realm,
         code = prof_locate_server(context, realm, &al, svc, socktype);
 
 #ifdef KRB5_DNS_LOOKUP
-        if (code) {             /* Try DNS for all profile errors?  */
-            krb5_error_code code2;
-            code2 = dns_locate_server(context, realm, &al, svc, socktype);
-            if (code2 != KRB5_PLUGIN_NO_HANDLE)
-                code = code2;
-        }
+        if (code == 0 && al.nservers == 0)
+            code = dns_locate_server(context, realm, &al, svc, socktype);
 #endif /* KRB5_DNS_LOOKUP */
 
         /* We could put more heuristics here, like looking up a hostname
@@ -619,10 +584,10 @@ k5_locate_server(krb5_context context, const krb5_data *realm,
     }
     if (al.nservers == 0) {       /* No good servers */
         k5_free_serverlist(&al);
-        krb5_set_error_message(context, KRB5_REALM_CANT_RESOLVE,
-                               _("Cannot resolve servers for KDC in realm "
-                                 "\"%.*s\""), realm->length, realm->data);
-        return KRB5_REALM_CANT_RESOLVE;
+        krb5_set_error_message(context, KRB5_REALM_UNKNOWN,
+                               _("Cannot find KDC for realm \"%.*s\""),
+                               realm->length, realm->data);
+        return KRB5_REALM_UNKNOWN;
     }
     *serverlist = al;
     return 0;

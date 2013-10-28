@@ -1207,7 +1207,7 @@ krb5_is_permitted_tgs_enctype(krb5_context context, krb5_const_principal princ, 
         if (*ptr == etype)
             ret = 1;
 
-    krb5_free_ktypes (context, list);
+    krb5_free_enctypes(context, list);
 
     return(ret);
 }
@@ -1502,7 +1502,7 @@ GetMSTGT(krb5_context context, HANDLE LogonHandle, ULONG PackageId, KERB_EXTERNA
 
 cleanup:
     if ( etype_list )
-        krb5_free_ktypes(context, etype_list);
+        krb5_free_enctypes(context, etype_list);
 
     if ( pTicketRequest )
         LocalFree(pTicketRequest);
@@ -2488,7 +2488,8 @@ krb5_lcc_retrieve(krb5_context context, krb5_ccache id, krb5_flags whichfields,
     memset(&fetchcreds, 0, sizeof(krb5_creds));
 
     /* first try to find out if we have an existing ticket which meets the requirements */
-    kret = krb5_cc_retrieve_cred_default (context, id, whichfields, mcreds, creds);
+    kret = k5_cc_retrieve_cred_default(context, id, whichfields, mcreds,
+                                       creds);
     /* This sometimes returns a zero-length ticket; work around it. */
     if ( !kret && creds->ticket.length > 0 )
         return KRB5_OK;
@@ -2506,7 +2507,8 @@ krb5_lcc_retrieve(krb5_context context, krb5_ccache id, krb5_flags whichfields,
     }
 
     /* try again to find out if we have an existing ticket which meets the requirements */
-    kret = krb5_cc_retrieve_cred_default (context, id, whichfields, mcreds, creds);
+    kret = k5_cc_retrieve_cred_default(context, id, whichfields, mcreds,
+                                       creds);
     /* This sometimes returns a zero-length ticket; work around it. */
     if ( !kret && creds->ticket.length > 0 )
         goto cleanup;
@@ -2570,7 +2572,7 @@ krb5_lcc_retrieve(krb5_context context, krb5_ccache id, krb5_flags whichfields,
 
 
     /* check to see if this ticket matches the request using logic from
-     * krb5_cc_retrieve_cred_default()
+     * k5_cc_retrieve_cred_default()
      */
     if ( krb5int_cc_creds_match_request(context, whichfields, mcreds, &fetchcreds) ) {
         *creds = fetchcreds;

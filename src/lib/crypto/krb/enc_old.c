@@ -130,17 +130,9 @@ krb5int_old_decrypt(const struct krb5_keytypes *ktp, krb5_key key,
     krb5_crypto_iov *header, *trailer;
     krb5_data checksum, crcivec = empty_data();
     char *saved_checksum = NULL;
-    size_t i;
-    unsigned int cipherlen = 0;
 
     /* Check that the input data is correctly padded. */
-    for (i = 0; i < num_data; i++) {
-        const krb5_crypto_iov *iov = &data[i];
-
-        if (ENCRYPT_IOV(iov))
-            cipherlen += iov->data.length;
-    }
-    if (cipherlen % enc->block_size != 0)
+    if (iov_total_length(data, num_data, FALSE) % enc->block_size != 0)
         return KRB5_BAD_MSIZE;
 
     header = krb5int_c_locate_iov(data, num_data, KRB5_CRYPTO_TYPE_HEADER);
@@ -166,10 +158,9 @@ krb5int_old_decrypt(const struct krb5_keytypes *ktp, krb5_key key,
 
     /* Save the checksum, then zero it out in the plaintext. */
     checksum = make_data(header->data.data + enc->block_size, hash->hashsize);
-    saved_checksum = k5alloc(hash->hashsize, &ret);
+    saved_checksum = k5memdup(checksum.data, checksum.length, &ret);
     if (saved_checksum == NULL)
         goto cleanup;
-    memcpy(saved_checksum, checksum.data, checksum.length);
     memset(checksum.data, 0, checksum.length);
 
     /*
@@ -178,7 +169,7 @@ krb5int_old_decrypt(const struct krb5_keytypes *ktp, krb5_key key,
      * the saved checksum.
      */
     ret = hash->hash(data, num_data, &checksum);
-    if (memcmp(checksum.data, saved_checksum, checksum.length) != 0) {
+    if (k5_bcmp(checksum.data, saved_checksum, checksum.length) != 0) {
         ret = KRB5KRB_AP_ERR_BAD_INTEGRITY;
         goto cleanup;
     }

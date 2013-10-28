@@ -17,7 +17,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '1.11.3',
+        VERSION:     '1.12-alpha1',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -35,99 +35,31 @@
   </head>
   <body>
     <div class="header-wrapper">
-        <div class="header" style="padding-bottom: 0px;">
+        <div class="header">
             
             
-                <h1><a href="../index.html"
-                style="color: #5d1509; font-size: 120%;
-                padding-top: 10px;">MIT Kerberos Documentation</a></h1>
+            <h1><a href="../index.html">MIT Kerberos Documentation</a></h1>
             
             <div class="rel">
-                    <a href="../index.html"
-                    title="Full Table of Contents"
-                    accesskey="C">Contents</a>
-                     |
-                    <a href="h5l_mit_apidiff.html"
-                    title="Differences between Heimdal and MIT Kerberos API"
-                    accesskey="P">previous</a>
-                     |
-                    <a href="princ_handle.html"
-                    title="Principal manipulation and parsing"
-                    accesskey="N">next</a>
-                     |
-                    <a href="../genindex.html"
-                    title="General Index"
-                    accesskey="I">index</a>
-                     |
-                    <a href="../search.html"
-                    title="Enter search criteria"
-                    accesskey="S">Search</a>
-                     |
-                <a href="mailto:krb5-bugs@mit.edu?subject=Documentation__Initial credentials">feedback</a>
+                
+        <a href="../index.html" title="Full Table of Contents"
+            accesskey="C">Contents</a> |
+        <a href="h5l_mit_apidiff.html" title="Differences between Heimdal and MIT Kerberos API"
+            accesskey="P">previous</a> |
+        <a href="princ_handle.html" title="Principal manipulation and parsing"
+            accesskey="N">next</a> |
+        <a href="../genindex.html" title="General Index"
+            accesskey="I">index</a> |
+        <a href="../search.html" title="Enter search criteria"
+            accesskey="S">Search</a> |
+    <a href="mailto:krb5-bugs@mit.edu?subject=Documentation__Initial credentials">feedback</a>
             </div>
         </div>
     </div>
 
     <div class="content-wrapper">
-        <div class="content">
-                <div class="sidebar"
-                    style="float: right; background: #F9F9F9">
-                    <h2>On this page </h2>
-                    <ul>
-<li><a class="reference internal" href="#">Initial credentials</a><ul>
-<li><a class="reference internal" href="#options-for-get-init-creds">Options for get_init_creds</a></li>
-<li><a class="reference internal" href="#getting-anonymous-credentials">Getting anonymous credentials</a></li>
-<li><a class="reference internal" href="#user-interaction">User interaction</a><ul>
-<li><a class="reference internal" href="#prompter-callback">Prompter callback</a></li>
-<li><a class="reference internal" href="#responder-callback">Responder callback</a><ul>
-<li><a class="reference internal" href="#password-question">Password question</a></li>
-<li><a class="reference internal" href="#one-time-password-question">One-time password question</a></li>
-<li><a class="reference internal" href="#example">Example</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li><a class="reference internal" href="#verifying-initial-credentials">Verifying initial credentials</a></li>
-</ul>
-</li>
-</ul>
-
-                    <br/>
-                    <h2>Table of contents</h2>
-                    <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="../user/index.html">For users</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../admin/index.html">For administrators</a></li>
-<li class="toctree-l1 current"><a class="reference internal" href="index.html">For application developers</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="gssapi.html">Developing with GSSAPI</a></li>
-<li class="toctree-l2"><a class="reference internal" href="h5l_mit_apidiff.html">Differences between Heimdal and MIT Kerberos API</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="">Initial credentials</a><ul class="simple">
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="princ_handle.html">Principal manipulation and parsing</a></li>
-<li class="toctree-l2"><a class="reference internal" href="refs/index.html">Complete reference - API and datatypes</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../plugindev/index.html">For plugin module developers</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../build/index.html">Building Kerberos V5</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../basic/index.html">Kerberos V5 concepts</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../mitK5features.html">MIT Kerberos features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../build_this.html">How to build this documentation from the source</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../about.html">The Kerberos Documentation Set</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../resources.html">Resources</a></li>
-</ul>
-
-                    <br/>
-                    <h4><a href="../index.html">Full Table of Contents
-                    </a></h4>
-                    <h4>Search</h4>
-                    <form class="search" action="../search.html" method="get">
-                        <input type="text" name="q" size="18" />
-                        <input type="submit" value="Go" />
-                        <input type="hidden" name="check_keywords" value="yes" />
-                        <input type="hidden" name="area" value="default" />
-                    </form>
-                </div>
-            <div class="document">
+      <div class="content">
+        <div class="document">
             
       <div class="documentwrapper">
         <div class="bodywrapper">
@@ -323,6 +255,20 @@ challenge into a krb5_responder_otp_challenge structure.  The
 token information elements from the challenge and supplies the value
 and pin for that token.</p>
 </div>
+<div class="section" id="pkinit-password-or-pin-question">
+<h4>PKINIT password or PIN question<a class="headerlink" href="#pkinit-password-or-pin-question" title="Permalink to this headline">¶</a></h4>
+<p>The <tt class="xref c c-macro docutils literal"><span class="pre">KRB5_RESPONDER_QUESTION_PKINIT</span></tt> (or <tt class="docutils literal"><span class="pre">&quot;pkinit&quot;</span></tt>) question
+type requests PINs for hardware devices and/or passwords for encrypted
+credentials which are stored on disk, potentially also supplying
+information about the state of the hardware devices.  The challenge and
+answer are JSON-encoded strings, but an application can use convenience
+functions to avoid doing any JSON processing itself.</p>
+<p>The <a class="reference internal" href="refs/api/krb5_responder_pkinit_get_challenge.html#krb5_responder_pkinit_get_challenge" title="krb5_responder_pkinit_get_challenge"><tt class="xref c c-func docutils literal"><span class="pre">krb5_responder_pkinit_get_challenge()</span></tt></a> function decodes the
+challenges into a krb5_responder_pkinit_challenge structure.  The
+<a class="reference internal" href="refs/api/krb5_responder_pkinit_set_answer.html#krb5_responder_pkinit_set_answer" title="krb5_responder_pkinit_set_answer"><tt class="xref c c-func docutils literal"><span class="pre">krb5_responder_pkinit_set_answer()</span></tt></a> function can be used to
+supply the PIN or password for a particular client credential, and can
+be called multiple times.</p>
+</div>
 <div class="section" id="example">
 <h4>Example<a class="headerlink" href="#example" title="Permalink to this headline">¶</a></h4>
 <p>Here is an example of using a responder callback:</p>
@@ -416,40 +362,88 @@ that the users would access reside on networked servers.</p>
           </div>
         </div>
       </div>
-            </div>
-            <div class="clearer" ></div>
         </div>
+        <div class="sidebar">
+    <h2>On this page</h2>
+    <ul>
+<li><a class="reference internal" href="#">Initial credentials</a><ul>
+<li><a class="reference internal" href="#options-for-get-init-creds">Options for get_init_creds</a></li>
+<li><a class="reference internal" href="#getting-anonymous-credentials">Getting anonymous credentials</a></li>
+<li><a class="reference internal" href="#user-interaction">User interaction</a><ul>
+<li><a class="reference internal" href="#prompter-callback">Prompter callback</a></li>
+<li><a class="reference internal" href="#responder-callback">Responder callback</a><ul>
+<li><a class="reference internal" href="#password-question">Password question</a></li>
+<li><a class="reference internal" href="#one-time-password-question">One-time password question</a></li>
+<li><a class="reference internal" href="#pkinit-password-or-pin-question">PKINIT password or PIN question</a></li>
+<li><a class="reference internal" href="#example">Example</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#verifying-initial-credentials">Verifying initial credentials</a></li>
+</ul>
+</li>
+</ul>
+
+    <br/>
+    <h2>Table of contents</h2>
+    <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../user/index.html">For users</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../admin/index.html">For administrators</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">For application developers</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="gssapi.html">Developing with GSSAPI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="h5l_mit_apidiff.html">Differences between Heimdal and MIT Kerberos API</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="">Initial credentials</a><ul class="simple">
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="princ_handle.html">Principal manipulation and parsing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="refs/index.html">Complete reference - API and datatypes</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../plugindev/index.html">For plugin module developers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../build/index.html">Building Kerberos V5</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../basic/index.html">Kerberos V5 concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../mitK5features.html">MIT Kerberos features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../build_this.html">How to build this documentation from the source</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../about.html">Contributing to the MIT Kerberos Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../resources.html">Resources</a></li>
+</ul>
+
+    <br/>
+    <h4><a href="../index.html">Full Table of Contents</a></h4>
+    <h4>Search</h4>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+        </div>
+        <div class="clearer"></div>
+      </div>
     </div>
- 
-    <div class="footer-wrapper" >
+
+    <div class="footer-wrapper">
         <div class="footer" >
-            <div class="right" ><i>Release: 1.11.3</i><br />
+            <div class="right" ><i>Release: 1.12-alpha1</i><br />
                 &copy; <a href="../copyright.html">Copyright</a> 1985-2013, MIT.
             </div>
-            <div class="left" >
-                    <a href="../index.html"
-                    title="Full Table of Contents"
-                    >Contents</a>
-                     |
-                    <a href="h5l_mit_apidiff.html"
-                    title="Differences between Heimdal and MIT Kerberos API"
-                    >previous</a>
-                     |
-                    <a href="princ_handle.html"
-                    title="Principal manipulation and parsing"
-                    >next</a>
-                     |
-                    <a href="../genindex.html"
-                    title="General Index"
-                    >index</a>
-                     |
-                    <a href="../search.html"
-                    title="Enter search criteria"
-                    >Search</a>
-                     |
-                    <a href="mailto:krb5-bugs@mit.edu?subject=Documentation__Initial credentials">feedback</a>
+            <div class="left">
+                
+        <a href="../index.html" title="Full Table of Contents"
+            >Contents</a> |
+        <a href="h5l_mit_apidiff.html" title="Differences between Heimdal and MIT Kerberos API"
+            >previous</a> |
+        <a href="princ_handle.html" title="Principal manipulation and parsing"
+            >next</a> |
+        <a href="../genindex.html" title="General Index"
+            >index</a> |
+        <a href="../search.html" title="Enter search criteria"
+            >Search</a> |
+    <a href="mailto:krb5-bugs@mit.edu?subject=Documentation__Initial credentials">feedback</a>
             </div>
         </div>
     </div>
+
   </body>
 </html>

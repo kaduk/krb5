@@ -1,4 +1,4 @@
-.TH "KRB5KDC" "8" " " "1.11.3" "MIT Kerberos"
+.TH "KRB5KDC" "8" " " "1.12" "MIT Kerberos"
 .SH NAME
 krb5kdc \- Kerberos V5 KDC
 .
@@ -123,6 +123,12 @@ this option may expose the password to other users on the
 system via the process list; to avoid this, instead stash the
 password using the \fBstashsrvpw\fP command of
 \fIkdb5_ldap_util(8)\fP.
+.TP
+.B \fB\-x debug=\fP\fIlevel\fP
+sets the OpenLDAP client library debug level.  \fIlevel\fP is an
+integer to be interpreted by the library.  Debugging messages
+are printed to standard error, so this option must be used
+with the \fB\-n\fP option to be useful.  New in release 1.12.
 .UNINDENT
 .UNINDENT
 .UNINDENT

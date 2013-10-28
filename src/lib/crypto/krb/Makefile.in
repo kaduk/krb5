@@ -1,17 +1,10 @@
 mydir=lib$(S)crypto$(S)krb
 BUILDTOP=$(REL)..$(S)..$(S)..
-LOCALINCLUDES = -I$(srcdir) -I$(srcdir)/../$(CRYPTO_IMPL)
-RUN_SETUP = @KRB5_RUN_ENV@
-PROG_LIBPATH=-L$(TOPLIBD)
-PROG_RPATH=$(KRB5_LIBDIR)
-DEFS=
+LOCALINCLUDES = -I$(srcdir)/../$(CRYPTO_IMPL)
 
 ##DOS##BUILDTOP = ..\..\..
 ##DOS##PREFIXDIR = krb
 ##DOS##OBJFILE = ..\$(OUTPRE)krb.lst
-
-PROG_LIBPATH=-L$(TOPLIBD)
-PROG_RPATH=$(KRB5_LIBDIR)
 
 STLIBOBJS=\
 	aead.o		 	\
@@ -215,7 +208,7 @@ check-unix:: t_fortuna
 	fi
 
 t_fortuna: t_fortuna.o $(SUPPORT_DEPLIB) $(CRYPTO_DEPLIB)
-	$(CC_LINK) -o t_fortuna t_fortuna.o $(K5CRYPTO_LIB) $(SUPPORT_LIB)
+	$(CC_LINK) -o $@ t_fortuna.o $(K5CRYPTO_LIB) $(SUPPORT_LIB) $(LIBS)
 
 clean-unix:: clean-libobjs
 	$(RM) t_fortuna.o t_fortuna t_fortuna.output

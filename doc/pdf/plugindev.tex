@@ -14,7 +14,7 @@
 
 \title{Kerberos Plugin Module Developer Guide}
 \date{ }
-\release{1.11.3}
+\release{1.12-alpha1}
 \author{MIT}
 \newcommand{\sphinxlogo}{}
 \renewcommand{\releasename}{Release}
@@ -231,7 +231,8 @@ preauthentication, and is described in \index{RFC!RFC 4120}\href{http://tools.ie
 The clpreauth interface allows the addition of client support for
 preauthentication mechanisms beyond those included in the core MIT
 krb5 code base.  For a detailed description of the clpreauth
-interface, see the header file \code{\textless{}krb5/preauth\_plugin.h\textgreater{}}.
+interface, see the header file \code{\textless{}krb5/clpreauth\_plugin.h\textgreater{}} (or
+\code{\textless{}krb5/preauth\_plugin.h\textgreater{}} before release 1.12).
 
 A clpreauth module is generally responsible for:
 \begin{itemize}
@@ -289,7 +290,8 @@ preauthentication mechanism computes one.
 The kdcpreauth interface allows the addition of KDC support for
 preauthentication mechanisms beyond those included in the core MIT
 krb5 code base.  For a detailed description of the kdcpreauth
-interface, see the header file \code{\textless{}krb5/preauth\_plugin.h\textgreater{}}.
+interface, see the header file \code{\textless{}krb5/kdcpreauth\_plugin.h\textgreater{}} (or
+\code{\textless{}krb5/preauth\_plugin.h\textgreater{}} before release 1.12).
 
 A kdcpreauth module is generally responsible for:
 \begin{itemize}
@@ -352,7 +354,7 @@ callback to get an event context for use with the \href{https://fedorahosted.org
 
 
 \section{Credential cache selection interface (ccselect)}
-\label{plugindev/ccselect:credential-cache-selection-interface-ccselect}\label{plugindev/ccselect::doc}
+\label{plugindev/ccselect:credential-cache-selection-interface-ccselect}\label{plugindev/ccselect::doc}\label{plugindev/ccselect:ccselect-plugin}
 The ccselect interface allows modules to control how credential caches
 are chosen when a GSSAPI client contacts a service.  For a detailed
 description of the ccselect interface, see the header file
@@ -376,7 +378,7 @@ module communicates its priority as a result of the \textbf{init} method.
 
 
 \section{Password quality interface (pwqual)}
-\label{plugindev/pwqual::doc}\label{plugindev/pwqual:password-quality-interface-pwqual}
+\label{plugindev/pwqual::doc}\label{plugindev/pwqual:password-quality-interface-pwqual}\label{plugindev/pwqual:pwqual-plugin}
 The pwqual interface allows modules to control what passwords are
 allowed when a user changes passwords.  For a detailed description of
 the pwqual interface, see the header file \code{\textless{}krb5/pwqual\_plugin.h\textgreater{}}.
@@ -400,7 +402,7 @@ it.
 
 
 \section{KADM5 hook interface (kadm5\_hook)}
-\label{plugindev/kadm5_hook:kadm5-hook-interface-kadm5-hook}\label{plugindev/kadm5_hook::doc}
+\label{plugindev/kadm5_hook:kadm5-hook-interface-kadm5-hook}\label{plugindev/kadm5_hook::doc}\label{plugindev/kadm5_hook:kadm5-hook-plugin}
 The kadm5\_hook interface allows modules to perform actions when
 changes are made to the Kerberos database through \emph{kadmin(1)}.
 For a detailed description of the kadm5\_hook interface, see the header
@@ -422,6 +424,86 @@ object.
 Because the kadm5\_hook interface is tied closely to the kadmin
 interface (which is explicitly unstable), it may not remain as stable
 across versions as other public pluggable interfaces.
+
+
+\section{Host-to-realm interface (hostrealm)}
+\label{plugindev/hostrealm:hostrealm-plugin}\label{plugindev/hostrealm::doc}\label{plugindev/hostrealm:host-to-realm-interface-hostrealm}
+The host-to-realm interface was first introduced in release 1.12.  It
+allows modules to control the local mapping of hostnames to realm
+names as well as the default realm.  For a detailed description of the
+hostrealm interface, see the header file
+\code{\textless{}krb5/hostrealm\_plugin.h\textgreater{}}.
+
+Although the mapping methods in the hostrealm interface return a list
+of one or more realms, only the first realm in the list is currently
+used by callers.  Callers may begin using later responses in the
+future.
+
+Any mapping method may return KRB5\_PLUGIN\_NO\_HANDLE to defer
+processing to a later module.
+
+A module can create and destroy per-library-context state objects
+using the \textbf{init} and \textbf{fini} methods.  If the module does not need
+any state, it does not need to implement these methods.
+
+The optional \textbf{host\_realm} method allows a module to determine
+authoritative realm mappings for a hostname.  The first authoritative
+mapping is used in preference to KDC referrals when getting service
+credentials.
+
+The optional \textbf{fallback\_realm} method allows a module to determine
+fallback mappings for a hostname.  The first fallback mapping is tried
+if there is no authoritative mapping for a realm, and KDC referrals
+failed to produce a succesful result.
+
+The optional \textbf{default\_realm} method allows a module to determine the
+local default realm.
+
+If a module implements any of the above methods, it must also
+implement \textbf{free\_list} to ensure that memory is allocated and
+deallocated consistently.
+
+
+\section{Local authorization interface (localauth)}
+\label{plugindev/localauth:local-authorization-interface-localauth}\label{plugindev/localauth:localauth-plugin}\label{plugindev/localauth::doc}
+The localauth interface was first introduced in release 1.12.  It
+allows modules to control the relationship between Kerberos principals
+and local system accounts.  When an application calls
+\code{krb5\_kuserok()} or \code{krb5\_aname\_to\_localname()}, localauth
+modules are consulted to determine the result.  For a detailed
+description of the localauth interface, see the header file
+\code{\textless{}krb5/localauth\_plugin.h\textgreater{}}.
+
+A module can create and destroy per-library-context state objects
+using the \textbf{init} and \textbf{fini} methods.  If the module does not need
+any state, it does not need to implement these methods.
+
+The optional \textbf{userok} method allows a module to control the behavior
+of \code{krb5\_kuserok()}.  The module receives the authenticated name
+and the local account name as inputs, and can return either 0 to
+authorize access, KRB5\_PLUGIN\_NO\_HANDLE to defer the decision to other
+modules, or another error (canonically EPERM) to authoritatively deny
+access.  Access is granted if at least one module grants access and no
+module authoritatively denies access.
+
+The optional \textbf{an2ln} method can work in two different ways.  If the
+module sets an array of uppercase type names in \textbf{an2ln\_types}, then
+the module's \textbf{an2ln} method will only be invoked by
+\code{krb5\_aname\_to\_localname()} if an \textbf{auth\_to\_local} value in
+\emph{krb5.conf(5)} refers to one of the module's types.  In this
+case, the \emph{type} and \emph{residual} arguments will give the type name and
+residual string of the \textbf{auth\_to\_local} value.
+
+If the module does not set \textbf{an2ln\_types} but does implement
+\textbf{an2ln}, the module's \textbf{an2ln} method will be invoked for all
+\code{krb5\_aname\_to\_localname()} operations unless an earlier module
+determines a mapping, with \emph{type} and \emph{residual} set to NULL.  The
+module can return KRB5\_LNAME\_NO\_TRANS to defer mapping to later
+modules.
+
+If a module implements \textbf{an2ln}, it must also implement
+\textbf{free\_string} to ensure that memory is allocated and deallocated
+consistently.
 
 
 \section{Server location interface (locate)}
@@ -454,7 +536,7 @@ object.
 
 
 \section{Configuration interface (profile)}
-\label{plugindev/profile::doc}\label{plugindev/profile:configuration-interface-profile}
+\label{plugindev/profile:configuration-interface-profile}\label{plugindev/profile::doc}\label{plugindev/profile:profile-plugin}
 The profile interface allows a module to control how krb5
 configuration information is obtained by the Kerberos library and
 applications.  For a detailed description of the profile interface,

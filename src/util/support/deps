@@ -1,4 +1,4 @@
-# 
+#
 # Generated makefile dependencies follow.
 #
 threads.so threads.po $(OUTPRE)threads.$(OBJEXT): $(BUILDTOP)/include/autoconf.h \
@@ -11,6 +11,10 @@ init-addrinfo.so init-addrinfo.po $(OUTPRE)init-addrinfo.$(OBJEXT): \
   $(top_srcdir)/include/k5-platform.h $(top_srcdir)/include/k5-thread.h \
   $(top_srcdir)/include/port-sockets.h $(top_srcdir)/include/socket-utils.h \
   cache-addrinfo.h init-addrinfo.c
+plugins.so plugins.po $(OUTPRE)plugins.$(OBJEXT): $(BUILDTOP)/include/autoconf.h \
+  $(top_srcdir)/include/k5-err.h $(top_srcdir)/include/k5-platform.h \
+  $(top_srcdir)/include/k5-plugin.h $(top_srcdir)/include/k5-thread.h \
+  plugins.c
 errors.so errors.po $(OUTPRE)errors.$(OBJEXT): $(BUILDTOP)/include/autoconf.h \
   $(top_srcdir)/include/k5-err.h $(top_srcdir)/include/k5-platform.h \
   $(top_srcdir)/include/k5-thread.h errors.c supp-int.h
@@ -70,3 +74,6 @@ base64.so base64.po $(OUTPRE)base64.$(OBJEXT): $(BUILDTOP)/include/autoconf.h \
 json.so json.po $(OUTPRE)json.$(OBJEXT): $(top_srcdir)/include/k5-base64.h \
   $(top_srcdir)/include/k5-buf.h $(top_srcdir)/include/k5-json.h \
   json.c
+bcmp.so bcmp.po $(OUTPRE)bcmp.$(OBJEXT): $(BUILDTOP)/include/autoconf.h \
+  $(top_srcdir)/include/k5-platform.h $(top_srcdir)/include/k5-thread.h \
+  bcmp.c

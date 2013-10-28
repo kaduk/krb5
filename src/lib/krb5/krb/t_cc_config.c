@@ -36,6 +36,7 @@
  */
 
 #include <k5-int.h>
+#include "int-proto.h"
 #include <getopt.h>
 
 static void
@@ -70,8 +71,8 @@ unset_config(krb5_context context, krb5_ccache ccache,
     memset(&mcreds, 0, sizeof(mcreds));
     memset(&creds, 0, sizeof(creds));
     bail_on_err(context, "Error while deriving configuration principal names",
-                krb5int_build_conf_principals(context, ccache, server, key,
-                                              &mcreds));
+                k5_build_conf_principals(context, ccache, server, key,
+                                         &mcreds));
     bail_on_err(context, "Error resolving first in-memory ccache",
                 krb5_cc_resolve(context, "MEMORY:tmp1", &tmp1));
     bail_on_err(context, "Error initializing first in-memory ccache",
@@ -117,7 +118,7 @@ main(int argc, char **argv)
     int c;
     unsigned int i;
 
-    bail_on_err(context, "Error initializing Kerberos library",
+    bail_on_err(NULL, "Error initializing Kerberos library",
                 krb5_init_context(&context));
     bail_on_err(context, "Error getting location of default ccache",
                 krb5_cc_default(context, &ccache));

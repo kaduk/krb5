@@ -20,7 +20,7 @@ krb5_prompter_posix -  Prompt user for password.
 
 	          **[in]** **num_prompts** - Number of prompts in *prompts*
 
-	          **[inout]** **prompts** - Array of output prompts and replies
+	          **[in]** **prompts** - Array of prompts and replies
 
 
 ..

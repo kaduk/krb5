@@ -10,7 +10,7 @@ krb5_cc_set_default_name -  Set the default credential cache name.
 
 :param:
 
-	          **[inout]** **context** - Library context
+	          **[in]** **context** - Library context
 
 	          **[in]** **name** - Default credential cache name
 

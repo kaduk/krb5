@@ -48,6 +48,6 @@ This function synchronously obtains credentials using a context created by :c:fu
 
 .. note::
 
-	 First introduced in 1.9
+	 New in 1.9
  
 

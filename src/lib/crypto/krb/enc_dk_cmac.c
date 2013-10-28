@@ -89,7 +89,6 @@ krb5int_dk_cmac_encrypt(const struct krb5_keytypes *ktp, krb5_key key,
     const struct krb5_enc_provider *enc = ktp->enc;
     krb5_error_code ret;
     krb5_crypto_iov *header, *trailer, *padding;
-    krb5_data cksum = empty_data();
     krb5_key ke = NULL, ki = NULL;
 
     /* E(Confounder | Plaintext | Pad) | Checksum */
@@ -129,7 +128,6 @@ krb5int_dk_cmac_encrypt(const struct krb5_keytypes *ktp, krb5_key key,
 cleanup:
     krb5_k_free_key(NULL, ke);
     krb5_k_free_key(NULL, ki);
-    zapfree(cksum.data, cksum.length);
     return ret;
 }
 
@@ -141,7 +139,7 @@ krb5int_dk_cmac_decrypt(const struct krb5_keytypes *ktp, krb5_key key,
     const struct krb5_enc_provider *enc = ktp->enc;
     krb5_error_code ret;
     krb5_crypto_iov *header, *trailer;
-    krb5_data cksum;
+    krb5_data cksum = empty_data();
     krb5_key ke = NULL, ki = NULL;
 
     /* E(Confounder | Plaintext | Pad) | Checksum */
@@ -171,7 +169,7 @@ krb5int_dk_cmac_decrypt(const struct krb5_keytypes *ktp, krb5_key key,
     ret = krb5int_cmac_checksum(enc, ki, data, num_data, &cksum);
     if (ret != 0)
         goto cleanup;
-    if (!data_eq(cksum, trailer->data))
+    if (k5_bcmp(cksum.data, trailer->data.data, enc->block_size) != 0)
         ret = KRB5KRB_AP_ERR_BAD_INTEGRITY;
 
 cleanup:

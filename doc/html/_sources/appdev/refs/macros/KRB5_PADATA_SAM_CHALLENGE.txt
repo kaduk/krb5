@@ -9,7 +9,7 @@ KRB5_PADATA_SAM_CHALLENGE
 .. data:: KRB5_PADATA_SAM_CHALLENGE
 ..
 
-draft challenge system
+SAM/OTP.
 
 
 

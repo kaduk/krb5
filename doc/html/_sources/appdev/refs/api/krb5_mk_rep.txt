@@ -12,7 +12,7 @@ krb5_mk_rep -  Format and encrypt a KRB_AP_REP message.
 
 	          **[in]** **context** - Library context
 
-	          **[inout]** **auth_context** - Authentication context
+	          **[in]** **auth_context** - Authentication context
 
 	          **[out]** **outbuf** - **AP-REP** message
 

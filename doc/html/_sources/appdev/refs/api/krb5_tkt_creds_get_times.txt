@@ -50,6 +50,6 @@ The TGS request context must have completed obtaining credentials via either :c:
 
 .. note::
 
-	 First introduced in 1.9
+	 New in 1.9
  
 

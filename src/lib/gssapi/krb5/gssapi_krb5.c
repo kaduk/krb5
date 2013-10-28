@@ -405,7 +405,6 @@ krb5_gss_inquire_cred_by_oid(OM_uint32 *minor_status,
                              gss_buffer_set_t *data_set)
 {
     OM_uint32 major_status = GSS_S_FAILURE;
-    krb5_gss_cred_id_t cred;
 #if 0
     size_t i;
 #endif
@@ -430,8 +429,6 @@ krb5_gss_inquire_cred_by_oid(OM_uint32 *minor_status,
     major_status = krb5_gss_validate_cred(minor_status, cred_handle);
     if (GSS_ERROR(major_status))
         return major_status;
-
-    cred = (krb5_gss_cred_id_t) cred_handle;
 
 #if 0
     for (i = 0; i < sizeof(krb5_gss_inquire_cred_by_oid_ops)/
@@ -800,15 +797,12 @@ krb5_gss_authorize_localname(OM_uint32 *minor,
         return GSS_S_FAILURE;
     }
 
-    user = k5alloc(local_user->length + 1, &code);
+    user = k5memdup0(local_user->value, local_user->length, &code);
     if (user == NULL) {
         *minor = code;
         krb5_free_context(context);
         return GSS_S_FAILURE;
     }
-
-    memcpy(user, local_user->value, local_user->length);
-    user[local_user->length] = '\0';
 
     user_ok = krb5_kuserok(context, kname->princ, user);
 
@@ -902,6 +896,12 @@ static struct gss_config krb5_mechanism = {
     krb5_gss_acquire_cred_with_password,
     krb5_gss_export_cred,
     krb5_gss_import_cred,
+    NULL,               /* import_sec_context_by_mech */
+    NULL,               /* import_name_by_mech */
+    NULL,               /* import_cred_by_mech */
+    krb5_gss_get_mic_iov,
+    krb5_gss_verify_mic_iov,
+    krb5_gss_get_mic_iov_length,
 };
 
 #ifdef _GSS_STATIC_LINK

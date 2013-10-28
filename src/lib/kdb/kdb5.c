@@ -72,7 +72,7 @@ free_mkey_list(krb5_context context, krb5_keylist_node *mkey_list)
     for (cur = mkey_list; cur != NULL; cur = next) {
         next = cur->next;
         krb5_free_keyblock_contents(context, &cur->keyblock);
-        krb5_xfree(cur);
+        free(cur);
     }
 }
 
@@ -89,7 +89,8 @@ kdb_lock_list()
     err = CALL_INIT_FUNCTION (kdb_init_lock_list);
     if (err)
         return err;
-    return k5_mutex_lock(&db_lock);
+    k5_mutex_lock(&db_lock);
+    return 0;
 }
 
 void
@@ -99,10 +100,20 @@ kdb_fini_lock_list()
         k5_mutex_destroy(&db_lock);
 }
 
-static int
+static void
 kdb_unlock_list()
 {
-    return k5_mutex_unlock(&db_lock);
+    k5_mutex_unlock(&db_lock);
+}
+
+/* Return true if the ulog is mapped in the master role. */
+static inline krb5_boolean
+logging(krb5_context context)
+{
+    kdb_log_context *log_ctx = context->kdblog_context;
+
+    return log_ctx != NULL && log_ctx->iproprole == IPROP_MASTER &&
+        log_ctx->ulog != NULL;
 }
 
 /*
@@ -135,7 +146,7 @@ krb5_dbe_free_key_list(krb5_context context, krb5_keylist_node *val)
         prev = temp;
         temp = temp->next;
         krb5_free_keyblock_contents(context, &(prev->keyblock));
-        krb5_xfree(prev);
+        free(prev);
     }
 }
 
@@ -147,7 +158,7 @@ krb5_dbe_free_actkvno_list(krb5_context context, krb5_actkvno_node *val)
     while (temp != NULL) {
         prev = temp;
         temp = temp->next;
-        krb5_xfree(prev);
+        free(prev);
     }
 }
 
@@ -160,7 +171,7 @@ krb5_dbe_free_mkey_aux_list(krb5_context context, krb5_mkey_aux_node *val)
         prev = temp;
         temp = temp->next;
         krb5_dbe_free_key_data_contents(context, &prev->latest_mkey);
-        krb5_xfree(prev);
+        free(prev);
     }
 }
 
@@ -306,7 +317,7 @@ kdb_load_library(krb5_context kcontext, char *lib_name, db_library *libptr)
     if (strcmp(lib_name, "db2") == 0)
         vftabl_addr = &krb5_db2_kdb_function_table;
 #ifdef ENABLE_LDAP
-    if (strcmp(lib_name, "ldap") == 0)
+    if (strcmp(lib_name, "kldap") == 0)
         vftabl_addr = &krb5_ldap_kdb_function_table;
 #endif
     if (!vftabl_addr) {
@@ -874,10 +885,7 @@ krb5_db_put_principal(krb5_context kcontext, krb5_db_entry *entry)
     char  **db_args = NULL;
     kdb_incr_update_t *upd = NULL;
     char *princ_name = NULL;
-    kdb_log_context *log_ctx;
     int ulog_locked = 0;
-
-    log_ctx = kcontext->kdblog_context;
 
     status = get_vftabl(kcontext, &v);
     if (status)
@@ -889,42 +897,38 @@ krb5_db_put_principal(krb5_context kcontext, krb5_db_entry *entry)
                                           &entry->n_tl_data,
                                           &db_args);
     if (status)
-        goto clean_n_exit;
+        goto cleanup;
 
-    if (log_ctx && (log_ctx->iproprole == IPROP_MASTER)) {
+    if (logging(kcontext)) {
         upd = k5alloc(sizeof(*upd), &status);
         if (upd == NULL)
-            goto clean_n_exit;
+            goto cleanup;
         if ((status = ulog_conv_2logentry(kcontext, entry, upd)))
-            goto clean_n_exit;
-    }
+            goto cleanup;
 
-    status = ulog_lock(kcontext, KRB5_LOCKMODE_EXCLUSIVE);
-    if (status != 0)
-        goto err_lock;
-    ulog_locked = 1;
+        status = ulog_lock(kcontext, KRB5_LOCKMODE_EXCLUSIVE);
+        if (status != 0)
+            goto cleanup;
+        ulog_locked = 1;
 
-    if (upd != NULL) {
         status = krb5_unparse_name(kcontext, entry->princ, &princ_name);
         if (status != 0)
-            goto err_lock;
+            goto cleanup;
 
         upd->kdb_princ_name.utf8str_t_val = princ_name;
         upd->kdb_princ_name.utf8str_t_len = strlen(princ_name);
 
         if ((status = ulog_add_update(kcontext, upd)) != 0)
-            goto err_lock;
+            goto cleanup;
     }
 
     status = v->put_principal(kcontext, entry, db_args);
-    if (status == 0 && upd != NULL)
+    if (status == 0 && ulog_locked)
         (void) ulog_finish_update(kcontext, upd);
 
-err_lock:
+cleanup:
     if (ulog_locked)
         ulog_lock(kcontext, KRB5_LOCKMODE_UNLOCK);
-
-clean_n_exit:
     free_db_args(kcontext, db_args);
     ulog_free_entries(upd, 1);
     return status;
@@ -952,56 +956,42 @@ krb5_db_delete_principal(krb5_context kcontext, krb5_principal search_for)
     kdb_vftabl *v;
     kdb_incr_update_t upd;
     char *princ_name = NULL;
-    kdb_log_context *log_ctx;
-
-    log_ctx = kcontext->kdblog_context;
+    int ulog_locked = 0;
 
     status = get_vftabl(kcontext, &v);
     if (status)
         return status;
-    status = ulog_lock(kcontext, KRB5_LOCKMODE_EXCLUSIVE);
-    if (status)
-        return status;
+    if (v->delete_principal == NULL)
+        return KRB5_PLUGIN_OP_NOTSUPP;
 
-    /*
-     * We'll be sharing the same locks as db for logging
-     */
-    if (log_ctx && (log_ctx->iproprole == IPROP_MASTER)) {
-        if ((status = krb5_unparse_name(kcontext, search_for, &princ_name))) {
-            ulog_lock(kcontext, KRB5_LOCKMODE_UNLOCK);
+    if (logging(kcontext)) {
+        status = ulog_lock(kcontext, KRB5_LOCKMODE_EXCLUSIVE);
+        if (status)
             return status;
-        }
+        ulog_locked = 1;
+
+        status = krb5_unparse_name(kcontext, search_for, &princ_name);
+        if (status)
+            goto cleanup;
 
         (void) memset(&upd, 0, sizeof (kdb_incr_update_t));
 
         upd.kdb_princ_name.utf8str_t_val = princ_name;
         upd.kdb_princ_name.utf8str_t_len = strlen(princ_name);
 
-        if ((status = ulog_delete_update(kcontext, &upd)) != 0) {
-            ulog_lock(kcontext, KRB5_LOCKMODE_UNLOCK);
-            free(princ_name);
-            return status;
-        }
-
-        free(princ_name);
-    }
-
-    if (v->delete_principal == NULL) {
-        ulog_lock(kcontext, KRB5_LOCKMODE_UNLOCK);
-        return KRB5_PLUGIN_OP_NOTSUPP;
+        status = ulog_delete_update(kcontext, &upd);
+        if (status)
+            goto cleanup;
     }
 
     status = v->delete_principal(kcontext, search_for);
+    if (status == 0 && ulog_locked)
+        (void) ulog_finish_update(kcontext, &upd);
 
-    /*
-     * We need to commit our update upon success
-     */
-    if (!status)
-        if (log_ctx && (log_ctx->iproprole == IPROP_MASTER))
-            (void) ulog_finish_update(kcontext, &upd);
-
-    ulog_lock(kcontext, KRB5_LOCKMODE_UNLOCK);
-
+cleanup:
+    if (ulog_locked)
+        ulog_lock(kcontext, KRB5_LOCKMODE_UNLOCK);
+    free(princ_name);
     return status;
 }
 
@@ -1178,16 +1168,13 @@ krb5_db_fetch_mkey(krb5_context context, krb5_principal mname,
         if (retval)
             goto clean_n_exit;
 
-        key->contents = malloc(tmp_key.length);
-        if (key->contents == NULL) {
-            retval = ENOMEM;
+        key->contents = k5memdup(tmp_key.contents, tmp_key.length, &retval);
+        if (key->contents == NULL)
             goto clean_n_exit;
-        }
 
         key->magic = tmp_key.magic;
         key->enctype = tmp_key.enctype;
         key->length = tmp_key.length;
-        memcpy(key->contents, tmp_key.contents, tmp_key.length);
     }
 
 clean_n_exit:
@@ -2115,37 +2102,37 @@ krb5_dbe_set_string(krb5_context context, krb5_db_entry *entry,
     code = begin_attrs(context, entry, &pos, &end);
     if (code)
         return code;
-    krb5int_buf_init_dynamic(&buf);
+    k5_buf_init_dynamic(&buf);
     while (next_attr(&pos, end, &mapkey, &mapval)) {
         if (strcmp(mapkey, key) == 0) {
             if (value != NULL) {
-                krb5int_buf_add_len(&buf, mapkey, strlen(mapkey) + 1);
-                krb5int_buf_add_len(&buf, value, strlen(value) + 1);
+                k5_buf_add_len(&buf, mapkey, strlen(mapkey) + 1);
+                k5_buf_add_len(&buf, value, strlen(value) + 1);
             }
             found = TRUE;
         } else {
-            krb5int_buf_add_len(&buf, mapkey, strlen(mapkey) + 1);
-            krb5int_buf_add_len(&buf, mapval, strlen(mapval) + 1);
+            k5_buf_add_len(&buf, mapkey, strlen(mapkey) + 1);
+            k5_buf_add_len(&buf, mapval, strlen(mapval) + 1);
         }
     }
 
     /* If key wasn't found in the map, add a new entry for it. */
     if (!found && value != NULL) {
-        krb5int_buf_add_len(&buf, key, strlen(key) + 1);
-        krb5int_buf_add_len(&buf, value, strlen(value) + 1);
+        k5_buf_add_len(&buf, key, strlen(key) + 1);
+        k5_buf_add_len(&buf, value, strlen(value) + 1);
     }
 
-    len = krb5int_buf_len(&buf);
+    len = k5_buf_len(&buf);
     if (len == -1)
         return ENOMEM;
     if (len > 65535)
         return KRB5_KDB_STRINGS_TOOLONG;
     tl_data.tl_data_type = KRB5_TL_STRING_ATTRS;
-    tl_data.tl_data_contents = (krb5_octet *)krb5int_buf_data(&buf);
+    tl_data.tl_data_contents = (krb5_octet *)k5_buf_data(&buf);
     tl_data.tl_data_length = len;
 
     code = krb5_dbe_update_tl_data(context, entry, &tl_data);
-    krb5int_free_buf(&buf);
+    k5_free_buf(&buf);
     return code;
 }
 
@@ -2321,13 +2308,29 @@ krb5_db_create_policy(krb5_context kcontext, osa_policy_ent_t policy)
 {
     krb5_error_code status = 0;
     kdb_vftabl *v;
+    int ulog_locked = 0;
 
     status = get_vftabl(kcontext, &v);
     if (status)
         return status;
     if (v->create_policy == NULL)
         return KRB5_PLUGIN_OP_NOTSUPP;
-    return v->create_policy(kcontext, policy);
+
+    if (logging(kcontext)) {
+        status = ulog_lock(kcontext, KRB5_LOCKMODE_EXCLUSIVE);
+        if (status != 0)
+            return status;
+        ulog_locked = 1;
+    }
+
+    status = v->create_policy(kcontext, policy);
+    /* iprop does not support policy mods; force full resync. */
+    if (!status && ulog_locked)
+        ulog_init_header(kcontext);
+
+    if (ulog_locked)
+        ulog_lock(kcontext, KRB5_LOCKMODE_UNLOCK);
+    return status;
 }
 
 krb5_error_code
@@ -2349,13 +2352,29 @@ krb5_db_put_policy(krb5_context kcontext, osa_policy_ent_t policy)
 {
     krb5_error_code status = 0;
     kdb_vftabl *v;
+    int ulog_locked = 0;
 
     status = get_vftabl(kcontext, &v);
     if (status)
         return status;
     if (v->put_policy == NULL)
         return KRB5_PLUGIN_OP_NOTSUPP;
-    return v->put_policy(kcontext, policy);
+
+    if (logging(kcontext)) {
+        status = ulog_lock(kcontext, KRB5_LOCKMODE_EXCLUSIVE);
+        if (status)
+            return status;
+        ulog_locked = 1;
+    }
+
+    status = v->put_policy(kcontext, policy);
+    /* iprop does not support policy mods; force full resync. */
+    if (!status && ulog_locked)
+        ulog_init_header(kcontext);
+
+    if (ulog_locked)
+        ulog_lock(kcontext, KRB5_LOCKMODE_UNLOCK);
+    return status;
 }
 
 krb5_error_code
@@ -2378,13 +2397,29 @@ krb5_db_delete_policy(krb5_context kcontext, char *policy)
 {
     krb5_error_code status = 0;
     kdb_vftabl *v;
+    int ulog_locked = 0;
 
     status = get_vftabl(kcontext, &v);
     if (status)
         return status;
     if (v->delete_policy == NULL)
         return KRB5_PLUGIN_OP_NOTSUPP;
-    return v->delete_policy(kcontext, policy);
+
+    if (logging(kcontext)) {
+        status = ulog_lock(kcontext, KRB5_LOCKMODE_EXCLUSIVE);
+        if (status)
+            return status;
+        ulog_locked = 1;
+    }
+
+    status = v->delete_policy(kcontext, policy);
+    /* iprop does not support policy mods; force full resync. */
+    if (!status && ulog_locked)
+        ulog_init_header(kcontext);
+
+    if (ulog_locked)
+        ulog_lock(kcontext, KRB5_LOCKMODE_UNLOCK);
+    return status;
 }
 
 void

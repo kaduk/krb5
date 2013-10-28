@@ -120,7 +120,6 @@ KRB5_NEED_PROTO([#include <string.h>
 /* Solaris 8 declares swab in stdlib.h.  */
 #include <stdlib.h>
 ],swab,1)
-KRB5_NEED_PROTO([#include <ctype.h>],isblank,1)
 
 AC_PROG_AWK
 KRB5_AC_INET6
@@ -132,9 +131,33 @@ CHECK_SIGNALS
 AC_ARG_WITH([vague-errors],
 AC_HELP_STRING([--with-vague-errors],[Do not @<:@do@:>@ send helpful errors to client]), , withval=no)
 if test "$withval" = yes; then
-	AC_MSG_RESULT(Supplying vague error messages to KDC clients)
+	AC_MSG_NOTICE(Supplying vague error messages to KDC clients)
 	AC_DEFINE(KRBCONF_VAGUE_ERRORS,1,[Define if the KDC should return only vague error codes to clients])
 fi
+
+# Check which (if any) audit plugin to build
+audit_plugin=""
+AC_ARG_ENABLE([audit-plugin],
+AC_HELP_STRING([--enable-audit-plugin=IMPL],
+               [use audit plugin @<:@ do not use audit @:>@]), , enableval=no)
+if test "$enableval" != no; then
+    case "$enableval" in
+    simple)
+        # if audit_log_user_message is found, we assume
+        # that audit_open and audit_close are also defined.
+        AC_CHECK_LIB(audit, audit_log_user_message,
+                     [AUDIT_IMPL_LIBS=-laudit
+                     K5_GEN_MAKEFILE(plugins/audit/simple)
+                     audit_plugin=plugins/audit/simple ],
+                     AC_MSG_ERROR([libaudit not found or undefined symbol audit_log_user_message]))
+        ;;
+    *)
+        AC_MSG_ERROR([Unknown audit plugin implementation $enableval.])
+        ;;
+    esac
+fi
+AC_SUBST(AUDIT_IMPL_LIBS)
+AC_SUBST(audit_plugin)
 
 # WITH_CRYPTO_IMPL
 
@@ -142,7 +165,7 @@ CRYPTO_IMPL="builtin"
 AC_ARG_WITH([crypto-impl],
 AC_HELP_STRING([--with-crypto-impl=IMPL], [use specified crypto implementation @<:@builtin@:>@]),
 [CRYPTO_IMPL=$withval
-AC_MSG_RESULT("k5crypto will use \'$withval\'")
+AC_MSG_NOTICE(k5crypto will use '$withval')
 ], withval=builtin)
 case "$withval" in
 builtin)
@@ -183,7 +206,7 @@ else
 AC_ARG_WITH([prng-alg],
 AC_HELP_STRING([--with-prng-alg=ALG], [use specified PRNG algorithm. Ignored for nss. @<:@fortuna@:>@]),
 [PRNG_ALG=$withval
-AC_MSG_RESULT("k5crypto will use \'$withval\'")
+AC_MSG_NOTICE(k5crypto will use '$withval')
 ], PRNG_ALG=fortuna)
 fi
 AC_CONFIG_COMMANDS(PRNG_ALG, , PRNG_ALG=$PRNG_ALG)
@@ -198,7 +221,7 @@ PKINIT_CRYPTO_IMPL="$CRYPTO_IMPL"
 AC_ARG_WITH([pkinit-crypto-impl],
 AC_HELP_STRING([--with-pkinit-crypto-impl=IMPL], [use specified pkinit crypto implementation @<:@openssl@:>@]),
 [PKINIT_CRYPTO_IMPL=$withval
-AC_MSG_RESULT("pkinit will use \'$withval\'")
+AC_MSG_NOTICE(pkinit will use '$withval')
 ], withval=$PKINIT_CRYPTO_IMPL)
 case "$withval" in
 builtin|openssl)
@@ -234,13 +257,46 @@ AC_SUBST(PKINIT_CRYPTO_IMPL)
 AC_SUBST(PKINIT_CRYPTO_IMPL_CFLAGS)
 AC_SUBST(PKINIT_CRYPTO_IMPL_LIBS)
 
+AC_ARG_ENABLE([aesni],
+AC_HELP_STRING([--disable-aesni],[Do not build with AES-NI support]), ,
+enable_aesni=check)
+if test "$CRYPTO_IMPL" = builtin -a "x$enable_aesni" != xno; then
+    case "$host" in
+    i686-*)
+	aesni_flags="-f elf32"
+	aesni_obj=iaesx86.o
+	;;
+    x86_64-*)
+	# All Unix-like platforms need -D__linux__ for iaesx64.s to
+	# handle the System V x86-64 calling convention.
+	aesni_flags="-D__linux__ -f elf64"
+	aesni_obj=iaesx64.o
+	;;
+    esac
+    if test "x$aesni_obj" != x; then
+	AC_CHECK_PROG(YASM,yasm,yasm)
+	AC_CHECK_HEADERS(cpuid.h)
+	if test x"$YASM" != x -a "x$ac_cv_header_cpuid_h" = xyes; then
+	    AESNI_OBJ=$aesni_obj
+	    AESNI_FLAGS=$aesni_flags
+	    AC_DEFINE(AESNI,1,[Define if AES-NI support is enabled])
+	    AC_MSG_NOTICE([Building with AES-NI support])
+	fi
+    fi
+    if test "x$enable_aesni" = xyes -a "x$AESNI_OBJ" = x; then
+	AC_MSG_ERROR([AES-NI support requested but cannot be built])
+    fi
+fi
+AC_SUBST(AESNI_OBJ)
+AC_SUBST(AESNI_FLAGS)
+
 # --with-kdc-kdb-update makes the KDC update the database with last request
 # information and failure information.
 
 AC_ARG_WITH([kdc-kdb-update],
 AC_HELP_STRING([--with-kdc-kdb-update],[Update the database @<:@don't update@:>@]), , withval=no)
 if test "$withval" = yes; then
-	AC_MSG_RESULT(Updating KDC database with each request)
+	AC_MSG_NOTICE(Updating KDC database with each request)
 	AC_DEFINE(KRBCONF_KDC_MODIFIES_KDB,1,[Define if KDC should update database with each request])
 fi
 
@@ -263,7 +319,7 @@ AC_CONFIG_HEADERS(include/autoconf.h, [echo timestamp > include/autoconf.stamp])
 AC_PROG_LEX
 AC_C_CONST
 AC_HEADER_DIRENT
-AC_CHECK_FUNCS(strdup setvbuf seteuid setresuid setreuid setegid setresgid setregid setsid flock fchmod chmod strftime strptime geteuid setenv unsetenv getenv gmtime_r localtime_r bswap16 bswap64 mkstemp getusershell access getcwd srand48 srand srandom stat strchr strerror strerror_r timegm isblank)
+AC_CHECK_FUNCS(strdup setvbuf seteuid setresuid setreuid setegid setresgid setregid setsid flock fchmod chmod strftime strptime geteuid setenv unsetenv getenv gmtime_r localtime_r bswap16 bswap64 mkstemp getusershell access getcwd srand48 srand srandom stat strchr strerror strerror_r timegm)
 
 AC_CHECK_FUNC(mkstemp,
 [MKSTEMP_ST_OBJ=
@@ -985,16 +1041,7 @@ extern void endrpcent();],
 AC_MSG_RESULT($k5_cv_type_endrpcent)
 AC_DEFINE_UNQUOTED(ENDRPCENT_TYPE, $k5_cv_type_endrpcent, [Define as return type of endrpcent])
 K5_GEN_FILE(include/gssrpc/types.h:include/gssrpc/types.hin)
-changequote(<<, >>)
-case "$krb5_cv_host" in
-*-*-solaris2.[012345]*)
-	PASS=tcp
-	;;
-*)
-	PASS="tcp udp"
-	;;
-esac
-changequote([, ])
+PASS=tcp
 AC_SUBST(PASS)
 
 # for pkinit
@@ -1290,7 +1337,16 @@ AC_DEFINE_UNQUOTED(DEFKTNAME, ["$DEFKTNAME"], [Define to default keytab name])
 AC_DEFINE_UNQUOTED(DEFCKTNAME, ["$DEFCKTNAME"],
                    [Define to default client keytab name])
 
-AC_CONFIG_FILES(krb5-config, [chmod +x krb5-config])
+AC_CONFIG_FILES([build-tools/krb5-config], [chmod +x build-tools/krb5-config])
+AC_CONFIG_FILES([build-tools/kadm-server.pc
+	build-tools/kadm-client.pc
+	build-tools/kdb.pc
+	build-tools/krb5.pc
+	build-tools/krb5-gssapi.pc
+	build-tools/mit-krb5.pc
+	build-tools/mit-krb5-gssapi.pc
+	build-tools/gssrpc.pc
+])
 V5_AC_OUTPUT_MAKEFILE(.
 
 	util util/support util/profile util/profile/testmod util/send-pr
@@ -1318,15 +1374,20 @@ dnl	lib/krb5/ccache/ccapi
 	lib/rpc lib/rpc/unit-test
 
 	lib/kadm5 lib/kadm5/clnt lib/kadm5/srv lib/kadm5/unit-test
-
+	lib/krad
 	lib/apputils
 
 dnl	ccapi ccapi/lib ccapi/lib/unix ccapi/server ccapi/server/unix ccapi/test
 
-	kdc slave config-files man doc include
+	kdc slave config-files build-tools man doc include
 
+	plugins/hostrealm/test
 	plugins/locate/python
+	plugins/localauth/test
 	plugins/kadm5_hook/test
+	plugins/pwqual/test
+	plugins/audit
+	plugins/audit/test
 	plugins/kdb/db2
 	plugins/kdb/db2/libdb2
 	plugins/kdb/db2/libdb2/hash
@@ -1337,6 +1398,7 @@ dnl	ccapi ccapi/lib ccapi/lib/unix ccapi/server ccapi/server/unix ccapi/test
 	plugins/kdb/db2/libdb2/test
 	plugins/kdb/hdb
 	plugins/preauth/cksum_body
+	plugins/preauth/otp
 	plugins/preauth/securid_sam2
 	plugins/preauth/wpse
 	plugins/authdata/greet

@@ -47,6 +47,6 @@ This function is similar to :c:func:`krb5_get_init_creds_opt_set_fast_ccache_nam
 
 .. note::
 
-	 First introduced in 1.9
+	 New in 1.9
  
 

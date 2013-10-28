@@ -171,12 +171,8 @@ DEFS = @DEFS@
 CC = @CC@
 CXX = @CXX@
 LD = $(PURE) @LD@
-DEPLIBS = @DEPLIBS@
 KRB_INCLUDES = -I$(BUILDTOP)/include -I$(top_srcdir)/include
 LDFLAGS = @LDFLAGS@
-LD_UNRESOLVED_PREFIX = @LD_UNRESOLVED_PREFIX@
-LD_SHLIBDIR_PREFIX = @LD_SHLIBDIR_PREFIX@
-LDARGS = @LDARGS@
 LIBS = @LIBS@
 
 INSTALL=@INSTALL@
@@ -193,7 +189,6 @@ INSTALL_PREFIX=$(prefix)
 INSTALL_EXEC_PREFIX=@exec_prefix@
 exec_prefix=@exec_prefix@
 datarootdir=@datarootdir@
-SHLIB_TAIL_COMP=@SHLIB_TAIL_COMP@
 
 datadir = @datadir@
 EXAMPLEDIR = $(datadir)/examples/krb5
@@ -202,6 +197,7 @@ KRB5MANROOT = @mandir@
 ADMIN_BINDIR = @sbindir@
 SERVER_BINDIR = @sbindir@
 CLIENT_BINDIR =@bindir@
+PKGCONFIG_DIR = @libdir@/pkgconfig
 ADMIN_MANDIR = $(KRB5MANROOT)/man8
 SERVER_MANDIR = $(KRB5MANROOT)/man8
 CLIENT_MANDIR = $(KRB5MANROOT)/man1
@@ -211,7 +207,6 @@ SERVER_CATDIR = $(KRB5MANROOT)/cat8
 CLIENT_CATDIR = $(KRB5MANROOT)/cat1
 FILE_CATDIR = $(KRB5MANROOT)/cat5
 KRB5_LIBDIR = @libdir@
-KRB5_SHLIBDIR = @libdir@$(SHLIB_TAIL_COMP)
 KRB5_INCDIR = @includedir@
 MODULE_DIR = @libdir@/krb5/plugins
 KRB5_DB_MODULE_DIR = $(MODULE_DIR)/kdb
@@ -232,10 +227,6 @@ KRB5_INCSUBDIRS = \
 #
 TESTDIR		= $(BUILDTOP)/kadmin/testing
 STESTDIR	= $(top_srcdir)/kadmin/testing
-COMPARE_DUMP	= $(TESTDIR)/scripts/compare_dump.pl
-INITDB		= $(STESTDIR)/scripts/init_db
-MAKE_KEYTAB	= $(TESTDIR)/scripts/make-host-keytab.pl
-LOCAL_MAKE_KEYTAB= $(TESTDIR)/scripts/make-host-keytab.pl
 ENV_SETUP	= $(TESTDIR)/scripts/env-setup.sh
 CLNTTCL		= $(TESTDIR)/util/kadm5_clnt_tcl
 SRVTCL		= $(TESTDIR)/util/kadm5_srv_tcl
@@ -264,14 +255,8 @@ transform = @program_transform_name@
 RM = rm -f
 CP = cp
 MV = mv -f
-LN = ln
-CHMOD=chmod
 RANLIB = @RANLIB@
-ARCHIVE = @ARCHIVE@
-ARADD = @ARADD@
 AWK = @AWK@
-LEX = @LEX@
-LEXLIB = @LEXLIB@
 YACC = @YACC@
 PERL = @PERL@
 PYTHON = @PYTHON@
@@ -281,34 +266,39 @@ AUTOHEADER = autoheader
 AUTOHEADERFLAGS =
 MOVEIFCHANGED = $(top_srcdir)/config/move-if-changed
 
-SHEXT = @SHEXT@
-STEXT=@STEXT@
-VEXT=@VEXT@
-
 TOPLIBD = $(BUILDTOP)/lib
 
 OBJEXT = o
-LIBEXT = a
 EXEEXT =
 
 #
 # variables for libraries, for use in linking programs
 # -- this may want to get broken out into a separate frag later
 #
-#
-# Note: the following variables must be set in any Makefile.in that
-# uses KRB5_BUILD_PROGRAM
-#
-# PROG_LIBPATH	list of dirs, in -Ldir form, to search for libraries at link
-# PROG_RPATH	list of dirs, in dir1:dir2 form, for rpath purposes
-#
 # invocation is like:
 # prog: foo.o bar.o $(KRB5_BASE_DEPLIBS)
 # 	$(CC_LINK) -o $@ foo.o bar.o $(KRB5_BASE_LIBS)
 
-
 CC_LINK=@CC_LINK@
 CXX_LINK=@CXX_LINK@
+
+# Makefile.in files which build programs can override the list of
+# directories to look for dependent libraries in (in the form -Ldir1
+# -Ldir2 ...) and also the list of rpath directories to search (in the
+# form dir1:dir2:...).
+PROG_LIBPATH=-L$(TOPLIBD)
+PROG_RPATH=$(KRB5_LIBDIR)
+
+# Library Makefile.in files can override this list of directories to
+# look for dependent libraries in (in the form -Ldir1 -Ldir2 ...) and
+# also the list of rpath directories to search (in the form
+# dir1:dir2:...)
+SHLIB_DIRS=-L$(TOPLIBD)
+SHLIB_RDIRS=$(KRB5_LIBDIR)
+
+# Multi-directory library Makefile.in files should override this list
+# of object files with the full list.
+STOBJLISTS=OBJS.ST
 
 # prefix (with no spaces after) for rpath flag to cc
 RPATH_FLAG=@RPATH_FLAG@
@@ -413,16 +403,13 @@ KADM_COMM_LIBS	= $(GSSRPC_LIBS)
 KADMSRV_LIBS	= -lkadm5srv_mit $(HESIOD_LIBS) $(KDB5_LIBS) $(KADM_COMM_LIBS)
 KADMCLNT_LIBS	= -lkadm5clnt_mit $(KADM_COMM_LIBS)
 
-# libutil for NetBSD, et al. for openpty(), etc.
-UTIL_LIB	= @UTIL_LIB@
-
 # Misc stuff for linking server programs (and maybe some others,
 # eventually) but which we don't want to install.
 APPUTILS_LIB	= -lapputils
 
 # So test programs can find their libraries without "make install", etc.
-KRB5_RUN_ENV=@KRB5_RUN_ENV@
-KRB5_RUN_VARS=@KRB5_RUN_VARS@
+RUN_SETUP=@KRB5_RUN_ENV@
+RUN_VARS=@KRB5_RUN_VARS@
 
 #
 # variables for --with-tcl=
@@ -505,8 +492,8 @@ MAKE_COMMANDS-k5= $(BUILDTOP)/util/ss/mk_cmds
 LN_S=@LN_S@
 AR=@AR@
 
-# Set to "lib$(LIBBASE)$(STEXT) lib$(LIBBASE)$(SHEXT) lib$(LIBBASE)$(PFEXT)" or
-# some subset thereof by configure; determines which types of libs get
+# Set to "lib$(LIBBASE)$(STLIBEXT) lib$(LIBBASE)$(SHLIBEXT)" or some
+# subset thereof by configure; determines which types of libs get
 # built.
 LIBLIST=@LIBLIST@
 
@@ -581,9 +568,6 @@ OBJLISTS=@OBJLISTS@
 # the suffix substitution will break on some platforms!
 SHLIBOBJS=$(STLIBOBJS:.o=@SHOBJEXT@)
 PFLIBOBJS=$(STLIBOBJS:.o=@PFOBJEXT@)
-
-# "$(CC) -G", "$(LD) -Bshareable", etc.
-LDCOMBINE=@LDCOMBINE@
 
 #
 # rules to make various types of object files

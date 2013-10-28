@@ -51,6 +51,6 @@ Fill *keytab_out* with a handle to the default client key table.
 
 .. note::
 
-	 First introduced in 1.11
+	 New in 1.11
  
 

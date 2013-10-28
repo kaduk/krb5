@@ -11,7 +11,7 @@ krb5_replay_data
 
 Replay data.
 
-Sequence number and timestamp information output by :c:type:`krb5_rd_priv()` and :c:type:`krb5_rd_safe()` .
+Sequence number and timestamp information output by :c:func:`krb5_rd_priv()` and :c:func:`krb5_rd_safe()` .
 
 Declaration
 ------------

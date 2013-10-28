@@ -12,7 +12,7 @@ krb5_mk_safe -  Format a KRB-SAFE message.
 
 	          **[in]** **context** - Library context
 
-	          **[inout]** **auth_context** - Authentication context
+	          **[in]** **auth_context** - Authentication context
 
 	          **[in]** **userdata** - User data in the message
 

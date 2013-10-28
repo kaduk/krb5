@@ -25,7 +25,7 @@ Members
 
 .. c:member:: krb5_cryptotype	krb5_crypto_iov.flags
 
-                                             :c:type:`KRB5_CRYPTO_TYPE` type of the iov
+                                             :c:data:`KRB5_CRYPTO_TYPE` type of the iov
                                              
 
 .. c:member:: krb5_data	krb5_crypto_iov.data

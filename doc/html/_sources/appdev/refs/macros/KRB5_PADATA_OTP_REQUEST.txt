@@ -9,7 +9,7 @@ KRB5_PADATA_OTP_REQUEST
 .. data:: KRB5_PADATA_OTP_REQUEST
 ..
 
-See RFC 6560 section 4.2.
+RFC 6560 section 4.2.
 
 
 

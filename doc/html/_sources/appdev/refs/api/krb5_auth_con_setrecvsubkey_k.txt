@@ -50,6 +50,6 @@ This function sets the receiving subkey in *ac* to *key* , incrementing its refe
 
 .. note::
 
-	 First introduced in 1.9
+	 New in 1.9
  
 

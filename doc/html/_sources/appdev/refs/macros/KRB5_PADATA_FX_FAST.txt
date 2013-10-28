@@ -9,6 +9,7 @@ KRB5_PADATA_FX_FAST
 .. data:: KRB5_PADATA_FX_FAST
 ..
 
+RFC 6113.
 
 
 

@@ -1,4 +1,4 @@
-.TH "KADMIN" "1" " " "1.11.3" "MIT Kerberos"
+.TH "KADMIN" "1" " " "1.12" "MIT Kerberos"
 .SH NAME
 kadmin \- Kerberos V5 database administration program
 .
@@ -173,6 +173,11 @@ this option may expose the password to other users on the
 system via the process list; to avoid this, instead stash the
 password using the \fBstashsrvpw\fP command of
 \fIkdb5_ldap_util(8)\fP.
+.TP
+.B \fB\-x debug=\fP\fIlevel\fP
+sets the OpenLDAP client library debug level.  \fIlevel\fP is an
+integer to be interpreted by the library.  Debugging messages
+are printed to standard error.  New in release 1.12.
 .UNINDENT
 .UNINDENT
 .SH COMMANDS
@@ -292,8 +297,21 @@ flag.
 \fB+password_changing_service\fP marks this principal as a password
 change service principal.
 .TP
+.B {\-|+}\fBok_to_auth_as_delegate\fP
+\fB+ok_to_auth_as_delegate\fP allows this principal to acquire
+forwardable tickets to itself from arbitrary users, for use with
+constrained delegation.
+.TP
+.B {\-|+}\fBno_auth_data_required\fP
+\fB+no_auth_data_required\fP prevents PAC or AD\-SIGNEDPATH data from
+being added to service tickets for the principal.
+.TP
 .B \fB\-randkey\fP
 Sets the key of the principal to a random value.
+.TP
+.B \fB\-nokey\fP
+Causes the principal to be created with no key.  New in release
+1.12.
 .TP
 .B \fB\-pw\fP \fIpassword\fP
 Sets the password of the principal to the specified string and
@@ -464,13 +482,15 @@ kadmin:
 .SS purgekeys
 .INDENT 0.0
 .INDENT 3.5
-\fBpurgekeys\fP [\fB\-keepkvno\fP \fIoldest_kvno_to_keep\fP] \fIprincipal\fP
+\fBpurgekeys\fP [\fB\-all\fP|\fB\-keepkvno\fP \fIoldest_kvno_to_keep\fP] \fIprincipal\fP
 .UNINDENT
 .UNINDENT
 .sp
 Purges previously retained old keys (e.g., from \fBchange_password
 \-keepold\fP) from \fIprincipal\fP.  If \fB\-keepkvno\fP is specified, then
-only purges keys with kvnos lower than \fIoldest_kvno_to_keep\fP.
+only purges keys with kvnos lower than \fIoldest_kvno_to_keep\fP.  If
+\fB\-all\fP is specified, then all keys are purged.  The \fB\-all\fP option
+is new in release 1.12.
 .sp
 This command requires the \fBmodify\fP privilege.
 .SS get_principal

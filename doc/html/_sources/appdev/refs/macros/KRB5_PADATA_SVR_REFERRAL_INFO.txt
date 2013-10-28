@@ -11,7 +11,7 @@ KRB5_PADATA_SVR_REFERRAL_INFO
 
 Windows 2000 referrals.
 
-
+RFC 6820
 
 ==================================== ======================
 ``KRB5_PADATA_SVR_REFERRAL_INFO``       ``20``

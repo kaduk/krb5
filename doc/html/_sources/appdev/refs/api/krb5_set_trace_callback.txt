@@ -58,6 +58,6 @@ Specify a callback for trace events occurring in krb5 operations performed withi
 
 .. note::
 
-	 First introduced in 1.9
+	 New in 1.9
  
 

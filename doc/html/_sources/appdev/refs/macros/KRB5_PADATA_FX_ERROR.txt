@@ -9,6 +9,7 @@ KRB5_PADATA_FX_ERROR
 .. data:: KRB5_PADATA_FX_ERROR
 ..
 
+RFC 6113.
 
 
 

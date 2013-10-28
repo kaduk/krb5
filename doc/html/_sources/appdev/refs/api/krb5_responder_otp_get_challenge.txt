@@ -51,6 +51,6 @@ The returned value must be passed to :c:func:`krb5_responder_otp_challenge_free(
 
 .. note::
 
-	 First introduced in 1.11
+	 New in 1.11
  
 

@@ -150,15 +150,14 @@ static void display_status_1(m, code, type)
     OM_uint32 code;
     int type;
 {
-    OM_uint32 maj_stat, min_stat;
+    OM_uint32 min_stat;
     gss_buffer_desc msg;
     OM_uint32 msg_ctx;
 
     msg_ctx = 0;
     while (1) {
-        maj_stat = gss_display_status(&min_stat, code,
-                                      type, GSS_C_NULL_OID,
-                                      &msg_ctx, &msg);
+        (void) gss_display_status(&min_stat, code, type, GSS_C_NULL_OID,
+                                  &msg_ctx, &msg);
         fprintf(stderr, _("GSS-API error %s: %s\n"), m, (char *)msg.value);
         (void) gss_release_buffer(&min_stat, &msg);
 
@@ -188,14 +187,15 @@ write_pid_file(const char *pid_file)
 {
     FILE *file;
     unsigned long pid;
+    int st1, st2;
 
     file = fopen(pid_file, "w");
     if (file == NULL)
         return errno;
     pid = (unsigned long) getpid();
-    if (fprintf(file, "%ld\n", pid) < 0 || fclose(file) == EOF)
-        return errno;
-    return 0;
+    st1 = (fprintf(file, "%ld\n", pid) < 0) ? errno : 0;
+    st2 = (fclose(file) == EOF) ? errno : 0;
+    return st1 ? st1 : st2;
 }
 
 /* XXX yuck.  the signal handlers need this */
@@ -222,7 +222,7 @@ int main(int argc, char *argv[])
     kadm5_config_params params;
     char **db_args      = NULL;
     int    db_args_size = 0;
-    char *errmsg;
+    const char *errmsg;
     int i;
     int strong_random = 1;
     const char *pid_file = NULL;

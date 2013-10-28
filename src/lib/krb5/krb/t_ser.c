@@ -95,7 +95,7 @@ ser_data(int verbose, char *msg, krb5_pointer ctx, krb5_magic dtype)
     kret = krb5_externalize_data(ser_ctx, ctx, &outrep, &outlen);
     if (!kret) {
         if (verbose) {
-            printf("%s: externalized in %d bytes\n", msg, outlen);
+            printf("%s: externalized in %d bytes\n", msg, (int)outlen);
             print_erep(outrep, outlen);
         }
 
@@ -110,7 +110,7 @@ ser_data(int verbose, char *msg, krb5_pointer ctx, krb5_magic dtype)
         if (!kret) {
             if (ilen)
                 printf("%s: %d bytes left over after internalize\n",
-                       msg, ilen);
+                       msg, (int)ilen);
             /* Now attempt to re-externalize it */
             kret = krb5_externalize_data(ser_ctx, nctx, &outrep2, &outlen2);
             if (!kret) {
@@ -135,13 +135,6 @@ ser_data(int verbose, char *msg, krb5_pointer ctx, krb5_magic dtype)
                 krb5_free_context((krb5_context) nctx);
                 break;
             case KV5M_AUTH_CONTEXT:
-                if (nctx) {
-                    krb5_auth_context   actx;
-
-                    actx = (krb5_auth_context) nctx;
-                    if (actx->i_vector)
-                        free(actx->i_vector);
-                }
                 krb5_auth_con_free(ser_ctx, (krb5_auth_context) nctx);
                 break;
             case KV5M_CCACHE:
@@ -303,10 +296,6 @@ ser_acontext_test(krb5_context kcontext, int verbose)
                 !(kret = ser_data(verbose, "> Auth context with new vector",
                                   (krb5_pointer) actx,
                                   KV5M_AUTH_CONTEXT)) &&
-                (free(actx->i_vector), actx->i_vector) &&
-                !(kret = krb5_auth_con_setivector(kcontext, actx,
-                                                  (krb5_pointer) print_erep)
-                ) &&
                 !(kret = ser_data(verbose, "> Auth context with set vector",
                                   (krb5_pointer) actx,
                                   KV5M_AUTH_CONTEXT))) {

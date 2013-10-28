@@ -12,7 +12,7 @@ krb5_mk_priv -  Format a KRB-PRIV message.
 
 	          **[in]** **context** - Library context
 
-	          **[inout]** **auth_context** - Authentication context
+	          **[in]** **auth_context** - Authentication context
 
 	          **[in]** **userdata** - User data for **KRB-PRIV** message
 

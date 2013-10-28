@@ -57,6 +57,6 @@ Use :c:func:`krb5_free_string()` to free *message_out* when it is no longer need
 
 .. note::
 
-	 First introduced in 1.11
+	 New in 1.11
  
 

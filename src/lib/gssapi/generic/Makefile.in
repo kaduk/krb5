@@ -1,7 +1,6 @@
 mydir=lib$(S)gssapi$(S)generic
 BUILDTOP=$(REL)..$(S)..$(S)..
 LOCALINCLUDES = -I. -I$(srcdir) -I$(srcdir)/..
-DEFS=
 
 ##DOS##BUILDTOP = ..\..\..
 ##DOS##PREFIXDIR=generic
@@ -144,10 +143,10 @@ win-create-ehdrdir:
 
 clean-unix:: clean-libobjs
 	$(RM) $(ETHDRS) $(ETSRCS) $(HDRS) $(EXPORTED_BUILT_HEADERS) \
-		$(EHDRDIR)$(S)timestamp errmap.h
+		$(EHDRDIR)$(S)timestamp errmap.h maptest.h
 
 clean-windows::
-	$(RM) $(HDRS)
+	$(RM) $(HDRS) maptest.h
 	-if exist $(EHDRDIR)\nul rmdir $(EHDRDIR)
 
 generate-files-mac: gssapi.h errmap.h

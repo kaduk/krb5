@@ -441,7 +441,6 @@ kg_accept_krb5(minor_status, context_handle,
     char *sptr;
     OM_uint32 tmp;
     size_t md5len;
-    int bigend;
     krb5_gss_cred_id_t cred = 0;
     krb5_data ap_rep, ap_req;
     unsigned int i;
@@ -626,8 +625,8 @@ kg_accept_krb5(minor_status, context_handle,
 
     /* Limit the encryption types negotiated (if requested). */
     if (cred->req_enctypes) {
-        if ((code = krb5_set_default_tgs_enctypes(context,
-                                                  cred->req_enctypes))) {
+        if ((code = krb5_auth_con_setpermetypes(context, auth_context,
+                                                cred->req_enctypes))) {
             major_status = GSS_S_FAILURE;
             goto fail;
         }
@@ -698,7 +697,6 @@ kg_accept_krb5(minor_status, context_handle,
         }
 
         gss_flags = GSS_C_MUTUAL_FLAG | GSS_C_REPLAY_FLAG | GSS_C_SEQUENCE_FLAG;
-        bigend = 0;
         decode_req_message = 0;
     } else {
         /* gss krb5 v1 */
@@ -1235,7 +1233,7 @@ fail:
         memset(&krb_error_data, 0, sizeof(krb_error_data));
 
         code -= ERROR_TABLE_BASE_krb5;
-        if (code < 0 || code > 128)
+        if (code < 0 || code > KRB_ERR_MAX)
             code = 60 /* KRB_ERR_GENERIC */;
 
         krb_error_data.error = code;

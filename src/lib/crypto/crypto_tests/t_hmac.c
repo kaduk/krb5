@@ -233,10 +233,9 @@ static void test_hmac()
     };
 
     for (i = 0; i < sizeof(md5tests)/sizeof(md5tests[0]); i++) {
-        key.contents = md5tests[i].key;
+        key.contents = (krb5_octet *)md5tests[i].key;
         key.length = md5tests[i].key_len;
-        in.data = md5tests[i].data;
-        in.length = md5tests[i].data_len;
+        in = make_data((char *)md5tests[i].data, md5tests[i].data_len);
 
         out.data = outbuf;
         out.length = 20;
@@ -247,11 +246,11 @@ static void test_hmac()
             exit(1);
         }
 
-        krb5int_buf_init_fixed(&buf, stroutbuf, sizeof(stroutbuf));
-        krb5int_buf_add(&buf, "0x");
+        k5_buf_init_fixed(&buf, stroutbuf, sizeof(stroutbuf));
+        k5_buf_add(&buf, "0x");
         for (j = 0; j < out.length; j++)
-            krb5int_buf_add_fmt(&buf, "%02x", 0xff & outbuf[j]);
-        if (krb5int_buf_data(&buf) == NULL)
+            k5_buf_add_fmt(&buf, "%02x", 0xff & outbuf[j]);
+        if (k5_buf_data(&buf) == NULL)
             abort();
         if (strcmp(stroutbuf, md5tests[i].hexdigest)) {
             printf("*** CHECK FAILED!\n"

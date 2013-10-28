@@ -12,7 +12,7 @@ krb5_rd_priv -  Process a KRB-PRIV message.
 
 	          **[in]** **context** - Library context
 
-	          **[inout]** **auth_context** - Authentication structure
+	          **[in]** **auth_context** - Authentication structure
 
 	          **[in]** **inbuf** - **KRB-PRIV** message to be parsed
 

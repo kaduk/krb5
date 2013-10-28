@@ -55,6 +55,6 @@ This function signs *pac* using the keys *server_key* and *privsvr_key* and retu
 
 .. note::
 
-	 First introduced in 1.10
+	 New in 1.10
  
 

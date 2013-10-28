@@ -54,6 +54,7 @@
 #ifndef LEAN_CLIENT
 
 #include "k5-int.h"
+#include "../os/os-proto.h"
 #include <stdio.h>
 
 /*
@@ -271,9 +272,7 @@ krb5_ktfile_get_entry(krb5_context context, krb5_keytab id,
     int was_open;
     char *princname;
 
-    kerror = KTLOCK(id);
-    if (kerror)
-        return kerror;
+    KTLOCK(id);
 
     if (KTFILEP(id) != NULL) {
         was_open = 1;
@@ -451,9 +450,7 @@ krb5_ktfile_start_seq_get(krb5_context context, krb5_keytab id, krb5_kt_cursor *
     krb5_error_code retval;
     long *fileoff;
 
-    retval = KTLOCK(id);
-    if (retval)
-        return retval;
+    KTLOCK(id);
 
     if (KTITERS(id) == 0) {
         if ((retval = krb5_ktfileint_openr(context, id))) {
@@ -495,9 +492,7 @@ krb5_ktfile_get_next(krb5_context context, krb5_keytab id, krb5_keytab_entry *en
     krb5_keytab_entry cur_entry;
     krb5_error_code kerror;
 
-    kerror = KTLOCK(id);
-    if (kerror)
-        return kerror;
+    KTLOCK(id);
     if (KTFILEP(id) == NULL) {
         KTUNLOCK(id);
         return KRB5_KT_IOERR;
@@ -526,9 +521,7 @@ krb5_ktfile_end_get(krb5_context context, krb5_keytab id, krb5_kt_cursor *cursor
     krb5_error_code kerror;
 
     free(*cursor);
-    kerror = KTLOCK(id);
-    if (kerror)
-        return kerror;
+    KTLOCK(id);
     KTITERS(id)--;
     if (KTFILEP(id) != NULL && KTITERS(id) == 0)
         kerror = krb5_ktfileint_close(context, id);
@@ -816,9 +809,7 @@ krb5_ktfile_add(krb5_context context, krb5_keytab id, krb5_keytab_entry *entry)
 {
     krb5_error_code retval;
 
-    retval = KTLOCK(id);
-    if (retval)
-        return retval;
+    KTLOCK(id);
     if (KTFILEP(id)) {
         /* Iterator(s) active -- no changes.  */
         KTUNLOCK(id);
@@ -852,9 +843,7 @@ krb5_ktfile_remove(krb5_context context, krb5_keytab id, krb5_keytab_entry *entr
     krb5_error_code     kerror;
     krb5_int32          delete_point;
 
-    kerror = KTLOCK(id);
-    if (kerror)
-        return kerror;
+    KTLOCK(id);
     if (KTFILEP(id)) {
         /* Iterator(s) active -- no changes.  */
         KTUNLOCK(id);
@@ -1045,7 +1034,7 @@ krb5_ktfileint_open(krb5_context context, krb5_keytab id, int mode)
     if (!KTFILEP(id)) {
         if ((mode == KRB5_LOCKMODE_EXCLUSIVE) && (errno == ENOENT)) {
             /* try making it first time around */
-            krb5_create_secure_file(context, KTFILENAME(id));
+            k5_create_secure_file(context, KTFILENAME(id));
             errno = 0;
             KTFILEP(id) = fopen(KTFILENAME(id), fopen_mode_rbplus);
             if (!KTFILEP(id))
@@ -1185,7 +1174,7 @@ krb5_ktfileint_delete_entry(krb5_context context, krb5_keytab id, krb5_int32 del
             }
         }
 
-        return krb5_sync_disk_file(context, KTFILEP(id));
+        return k5_sync_disk_file(context, KTFILEP(id));
     }
 
     return 0;
@@ -1278,7 +1267,7 @@ krb5_ktfileint_internal_read_entry(krb5_context context, krb5_keytab id, krb5_ke
     }
     u_princ_size = princ_size;
 
-    krb5_princ_set_realm_length(context, ret_entry->principal, u_princ_size);
+    ret_entry->principal->realm.length = u_princ_size;
     tmpdata = malloc(u_princ_size+1);
     if (!tmpdata) {
         error = ENOMEM;
@@ -1292,10 +1281,10 @@ krb5_ktfileint_internal_read_entry(krb5_context context, krb5_keytab id, krb5_ke
     tmpdata[princ_size] = 0;    /* Some things might be expecting null */
                                 /* termination...  ``Be conservative in */
                                 /* what you send out'' */
-    krb5_princ_set_realm_data(context, ret_entry->principal, tmpdata);
+    ret_entry->principal->realm.data = tmpdata;
 
     for (i = 0; i < count; i++) {
-        princ = krb5_princ_component(context, ret_entry->principal, i);
+        princ = &ret_entry->principal->data[i];
         if (!fread(&princ_size, sizeof(princ_size), 1, KTFILEP(id))) {
             error = KRB5_KT_END;
             goto fail;
@@ -1394,11 +1383,8 @@ krb5_ktfileint_internal_read_entry(krb5_context context, krb5_keytab id, krb5_ke
     return 0;
 fail:
 
-    for (i = 0; i < krb5_princ_size(context, ret_entry->principal); i++) {
-        princ = krb5_princ_component(context, ret_entry->principal, i);
-        if (princ->data)
-            free(princ->data);
-    }
+    for (i = 0; i < ret_entry->principal->length; i++)
+        free(ret_entry->principal->data[i].data);
     free(ret_entry->principal->data);
     ret_entry->principal->data = 0;
     free(ret_entry->principal);
@@ -1443,29 +1429,29 @@ krb5_ktfileint_write_entry(krb5_context context, krb5_keytab id, krb5_keytab_ent
     }
 
     if (KTVERSION(id) == KRB5_KT_VNO_1) {
-        count = (krb5_int16) krb5_princ_size(context, entry->principal) + 1;
+        count = (krb5_int16)entry->principal->length + 1;
     } else {
-        count = htons((u_short) krb5_princ_size(context, entry->principal));
+        count = htons((u_short)entry->principal->length);
     }
 
     if (!fwrite(&count, sizeof(count), 1, KTFILEP(id))) {
     abend:
         return KRB5_KT_IOERR;
     }
-    size = krb5_princ_realm(context, entry->principal)->length;
+    size = entry->principal->realm.length;
     if (KTVERSION(id) != KRB5_KT_VNO_1)
         size = htons(size);
     if (!fwrite(&size, sizeof(size), 1, KTFILEP(id))) {
         goto abend;
     }
-    if (!fwrite(krb5_princ_realm(context, entry->principal)->data, sizeof(char),
-                krb5_princ_realm(context, entry->principal)->length, KTFILEP(id))) {
+    if (!fwrite(entry->principal->realm.data, sizeof(char),
+                entry->principal->realm.length, KTFILEP(id))) {
         goto abend;
     }
 
-    count = (krb5_int16) krb5_princ_size(context, entry->principal);
+    count = (krb5_int16)entry->principal->length;
     for (i = 0; i < count; i++) {
-        princ = krb5_princ_component(context, entry->principal, i);
+        princ = &entry->principal->data[i];
         size = princ->length;
         if (KTVERSION(id) != KRB5_KT_VNO_1)
             size = htons(size);
@@ -1481,7 +1467,7 @@ krb5_ktfileint_write_entry(krb5_context context, krb5_keytab id, krb5_keytab_ent
      * Write out the principal type
      */
     if (KTVERSION(id) != KRB5_KT_VNO_1) {
-        princ_type = htonl(krb5_princ_type(context, entry->principal));
+        princ_type = htonl(entry->principal->type);
         if (!fwrite(&princ_type, sizeof(princ_type), 1, KTFILEP(id))) {
             goto abend;
         }
@@ -1530,7 +1516,7 @@ krb5_ktfileint_write_entry(krb5_context context, krb5_keytab id, krb5_keytab_ent
     if (fflush(KTFILEP(id)))
         goto abend;
 
-    retval = krb5_sync_disk_file(context, KTFILEP(id));
+    retval = k5_sync_disk_file(context, KTFILEP(id));
 
     if (retval) {
         return retval;
@@ -1546,7 +1532,7 @@ krb5_ktfileint_write_entry(krb5_context context, krb5_keytab id, krb5_keytab_ent
     }
     if (fflush(KTFILEP(id)))
         goto abend;
-    retval = krb5_sync_disk_file(context, KTFILEP(id));
+    retval = k5_sync_disk_file(context, KTFILEP(id));
 
     return retval;
 }
@@ -1562,15 +1548,13 @@ krb5_ktfileint_size_entry(krb5_context context, krb5_keytab_entry *entry, krb5_i
     krb5_int32 total_size, i;
     krb5_error_code retval = 0;
 
-    count = (krb5_int16) krb5_princ_size(context, entry->principal);
+    count = (krb5_int16)entry->principal->length;
 
     total_size = sizeof(count);
-    total_size += krb5_princ_realm(context, entry->principal)->length + (sizeof(krb5_int16));
+    total_size += entry->principal->realm.length + sizeof(krb5_int16);
 
-    for (i = 0; i < count; i++) {
-        total_size += krb5_princ_component(context, entry->principal,i)->length
-            + (sizeof(krb5_int16));
-    }
+    for (i = 0; i < count; i++)
+        total_size += entry->principal->data[i].length + sizeof(krb5_int16);
 
     total_size += sizeof(entry->principal->type);
     total_size += sizeof(entry->timestamp);

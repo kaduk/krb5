@@ -17,7 +17,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../',
-        VERSION:     '1.11.3',
+        VERSION:     '1.12-alpha1',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -35,128 +35,31 @@
   </head>
   <body>
     <div class="header-wrapper">
-        <div class="header" style="padding-bottom: 0px;">
+        <div class="header">
             
             
-                <h1><a href="../../index.html"
-                style="color: #5d1509; font-size: 120%;
-                padding-top: 10px;">MIT Kerberos Documentation</a></h1>
+            <h1><a href="../../index.html">MIT Kerberos Documentation</a></h1>
             
             <div class="rel">
-                    <a href="../../index.html"
-                    title="Full Table of Contents"
-                    accesskey="C">Contents</a>
-                     |
-                    <a href="kadmind.html"
-                    title="kadmind"
-                    accesskey="P">previous</a>
-                     |
-                    <a href="kdb5_ldap_util.html"
-                    title="kdb5_ldap_util"
-                    accesskey="N">next</a>
-                     |
-                    <a href="../../genindex.html"
-                    title="General Index"
-                    accesskey="I">index</a>
-                     |
-                    <a href="../../search.html"
-                    title="Enter search criteria"
-                    accesskey="S">Search</a>
-                     |
-                <a href="mailto:krb5-bugs@mit.edu?subject=Documentation__kdb5_util">feedback</a>
+                
+        <a href="../../index.html" title="Full Table of Contents"
+            accesskey="C">Contents</a> |
+        <a href="kadmind.html" title="kadmind"
+            accesskey="P">previous</a> |
+        <a href="kdb5_ldap_util.html" title="kdb5_ldap_util"
+            accesskey="N">next</a> |
+        <a href="../../genindex.html" title="General Index"
+            accesskey="I">index</a> |
+        <a href="../../search.html" title="Enter search criteria"
+            accesskey="S">Search</a> |
+    <a href="mailto:krb5-bugs@mit.edu?subject=Documentation__kdb5_util">feedback</a>
             </div>
         </div>
     </div>
 
     <div class="content-wrapper">
-        <div class="content">
-                <div class="sidebar"
-                    style="float: right; background: #F9F9F9">
-                    <h2>On this page </h2>
-                    <ul>
-<li><a class="reference internal" href="#">kdb5_util</a><ul>
-<li><a class="reference internal" href="#synopsis">SYNOPSIS</a></li>
-<li><a class="reference internal" href="#description">DESCRIPTION</a></li>
-<li><a class="reference internal" href="#command-line-options">COMMAND-LINE OPTIONS</a></li>
-<li><a class="reference internal" href="#commands">COMMANDS</a><ul>
-<li><a class="reference internal" href="#create">create</a></li>
-<li><a class="reference internal" href="#destroy">destroy</a></li>
-<li><a class="reference internal" href="#stash">stash</a></li>
-<li><a class="reference internal" href="#dump">dump</a></li>
-<li><a class="reference internal" href="#load">load</a></li>
-<li><a class="reference internal" href="#ark">ark</a></li>
-<li><a class="reference internal" href="#add-mkey">add_mkey</a></li>
-<li><a class="reference internal" href="#use-mkey">use_mkey</a></li>
-<li><a class="reference internal" href="#list-mkeys">list_mkeys</a></li>
-<li><a class="reference internal" href="#purge-mkeys">purge_mkeys</a></li>
-<li><a class="reference internal" href="#update-princ-encryption">update_princ_encryption</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#see-also">SEE ALSO</a></li>
-</ul>
-</li>
-</ul>
-
-                    <br/>
-                    <h2>Table of contents</h2>
-                    <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="../../user/index.html">For users</a></li>
-<li class="toctree-l1 current"><a class="reference internal" href="../index.html">For administrators</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="../install.html">Installation guide</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../conf_files/index.html">Configuration Files</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../realm_config.html">Realm configuration decisions</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../database.html">Database administration</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../lockout.html">Account lockout</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../conf_ldap.html">Configuring Kerberos with OpenLDAP back-end</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../appl_servers.html">Application servers</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../host_config.html">Host configuration</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../backup_host.html">Backups of secure hosts</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../pkinit.html">PKINIT configuration</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../princ_dns.html">Principal names and DNS</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../enctypes.html">Encryption types</a></li>
-<li class="toctree-l2 current"><a class="reference internal" href="index.html">Administration  programs</a><ul class="current">
-<li class="toctree-l3"><a class="reference internal" href="kadmin_local.html">kadmin</a></li>
-<li class="toctree-l3"><a class="reference internal" href="kadmind.html">kadmind</a></li>
-<li class="toctree-l3 current"><a class="current reference internal" href="">kdb5_util</a></li>
-<li class="toctree-l3"><a class="reference internal" href="kdb5_ldap_util.html">kdb5_ldap_util</a></li>
-<li class="toctree-l3"><a class="reference internal" href="krb5kdc.html">krb5kdc</a></li>
-<li class="toctree-l3"><a class="reference internal" href="kprop.html">kprop</a></li>
-<li class="toctree-l3"><a class="reference internal" href="kpropd.html">kpropd</a></li>
-<li class="toctree-l3"><a class="reference internal" href="kproplog.html">kproplog</a></li>
-<li class="toctree-l3"><a class="reference internal" href="ktutil.html">ktutil</a></li>
-<li class="toctree-l3"><a class="reference internal" href="k5srvutil.html">k5srvutil</a></li>
-<li class="toctree-l3"><a class="reference internal" href="sserver.html">sserver</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="../../mitK5defaults.html">MIT Kerberos defaults</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../env_variables.html">Environment variables</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../troubleshoot.html">Troubleshooting</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../advanced/index.html">Advanced topics</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../various_envs.html">Various links</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="../../appdev/index.html">For application developers</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../plugindev/index.html">For plugin module developers</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../build/index.html">Building Kerberos V5</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../basic/index.html">Kerberos V5 concepts</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../mitK5features.html">MIT Kerberos features</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../build_this.html">How to build this documentation from the source</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../about.html">The Kerberos Documentation Set</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../resources.html">Resources</a></li>
-</ul>
-
-                    <br/>
-                    <h4><a href="../../index.html">Full Table of Contents
-                    </a></h4>
-                    <h4>Search</h4>
-                    <form class="search" action="../../search.html" method="get">
-                        <input type="text" name="q" size="18" />
-                        <input type="submit" value="Go" />
-                        <input type="hidden" name="check_keywords" value="yes" />
-                        <input type="hidden" name="area" value="default" />
-                    </form>
-                </div>
-            <div class="document">
+      <div class="content">
+        <div class="document">
             
       <div class="documentwrapper">
         <div class="bodywrapper">
@@ -253,20 +156,14 @@ argument can be used to override the <em>keyfile</em> specified in
 <div class="section" id="dump">
 <span id="kdb5-util-stash-end"></span><h3>dump<a class="headerlink" href="#dump" title="Permalink to this headline">¶</a></h3>
 <blockquote id="kdb5-util-dump">
-<div><strong>dump</strong> [<strong>-old</strong>|<strong>-b6</strong>|<strong>-b7</strong>|<strong>-ov</strong>|<strong>-r13</strong>]
-[<strong>-verbose</strong>] [<strong>-mkey_convert</strong>] [<strong>-new_mkey_file</strong> <em>mkey_file</em>]
-[<strong>-rev</strong>] [<strong>-recurse</strong>] [<em>filename</em> [<em>principals</em>...]]</div></blockquote>
+<div><strong>dump</strong> [<strong>-b7</strong>|<strong>-ov</strong>|<strong>-r13</strong>] [<strong>-verbose</strong>]
+[<strong>-mkey_convert</strong>] [<strong>-new_mkey_file</strong> <em>mkey_file</em>] [<strong>-rev</strong>]
+[<strong>-recurse</strong>] [<em>filename</em> [<em>principals</em>...]]</div></blockquote>
 <p>Dumps the current Kerberos and KADM5 database into an ASCII file.  By
 default, the database is dumped in current format, &#8220;kdb5_util
 load_dump version 6&#8221;.  If filename is not specified, or is the string
 &#8220;-&#8221;, the dump is sent to standard output.  Options:</p>
 <dl class="docutils">
-<dt><strong>-old</strong></dt>
-<dd>causes the dump to be in the Kerberos 5 Beta 5 and earlier dump
-format (&#8220;kdb5_edit load_dump version 2.0&#8221;).</dd>
-<dt><strong>-b6</strong></dt>
-<dd>causes the dump to be in the Kerberos 5 Beta 6 format (&#8220;kdb5_edit
-load_dump version 3.0&#8221;).</dd>
 <dt><strong>-b7</strong></dt>
 <dd>causes the dump to be in the Kerberos 5 Beta 7 format (&#8220;kdb5_util
 load_dump version 4&#8221;).  This was the dump format produced on
@@ -306,8 +203,8 @@ than the <strong>-rev</strong> option will.</dd>
 <div class="section" id="load">
 <span id="kdb5-util-dump-end"></span><h3>load<a class="headerlink" href="#load" title="Permalink to this headline">¶</a></h3>
 <blockquote id="kdb5-util-load">
-<div><strong>load</strong> [<strong>-old</strong>|<strong>-b6</strong>|<strong>-b7</strong>|<strong>-ov</strong>|<strong>-r13</strong>]
-[<strong>-hash</strong>] [<strong>-verbose</strong>] [<strong>-update</strong>] <em>filename</em> [<em>dbname</em>]</div></blockquote>
+<div><strong>load</strong> [<strong>-b7</strong>|<strong>-ov</strong>|<strong>-r13</strong>] [<strong>-hash</strong>]
+[<strong>-verbose</strong>] [<strong>-update</strong>] <em>filename</em> [<em>dbname</em>]</div></blockquote>
 <p>Loads a database dump from the named file into the named database.  If
 no option is given to determine the format of the dump file, the
 format is detected automatically and handled as appropriate.  Unless
@@ -317,12 +214,6 @@ any previously existing database.  Note that when using the LDAP KDC
 database module, the <strong>-update</strong> flag is required.</p>
 <p>Options:</p>
 <dl class="docutils">
-<dt><strong>-old</strong></dt>
-<dd>requires the database to be in the Kerberos 5 Beta 5 and earlier
-format (&#8220;kdb5_edit load_dump version 2.0&#8221;).</dd>
-<dt><strong>-b6</strong></dt>
-<dd>requires the database to be in the Kerberos 5 Beta 6 format
-(&#8220;kdb5_edit load_dump version 3.0&#8221;).</dd>
 <dt><strong>-b7</strong></dt>
 <dd>requires the database to be in the Kerberos 5 Beta 7 format
 (&#8220;kdb5_util load_dump version 4&#8221;).</dd>
@@ -447,40 +338,117 @@ showing the actions which would have been taken.</p>
           </div>
         </div>
       </div>
-            </div>
-            <div class="clearer" ></div>
         </div>
+        <div class="sidebar">
+    <h2>On this page</h2>
+    <ul>
+<li><a class="reference internal" href="#">kdb5_util</a><ul>
+<li><a class="reference internal" href="#synopsis">SYNOPSIS</a></li>
+<li><a class="reference internal" href="#description">DESCRIPTION</a></li>
+<li><a class="reference internal" href="#command-line-options">COMMAND-LINE OPTIONS</a></li>
+<li><a class="reference internal" href="#commands">COMMANDS</a><ul>
+<li><a class="reference internal" href="#create">create</a></li>
+<li><a class="reference internal" href="#destroy">destroy</a></li>
+<li><a class="reference internal" href="#stash">stash</a></li>
+<li><a class="reference internal" href="#dump">dump</a></li>
+<li><a class="reference internal" href="#load">load</a></li>
+<li><a class="reference internal" href="#ark">ark</a></li>
+<li><a class="reference internal" href="#add-mkey">add_mkey</a></li>
+<li><a class="reference internal" href="#use-mkey">use_mkey</a></li>
+<li><a class="reference internal" href="#list-mkeys">list_mkeys</a></li>
+<li><a class="reference internal" href="#purge-mkeys">purge_mkeys</a></li>
+<li><a class="reference internal" href="#update-princ-encryption">update_princ_encryption</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#see-also">SEE ALSO</a></li>
+</ul>
+</li>
+</ul>
+
+    <br/>
+    <h2>Table of contents</h2>
+    <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../user/index.html">For users</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">For administrators</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../install.html">Installation guide</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../conf_files/index.html">Configuration Files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../realm_config.html">Realm configuration decisions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../database.html">Database administration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../lockout.html">Account lockout</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../conf_ldap.html">Configuring Kerberos with OpenLDAP back-end</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../appl_servers.html">Application servers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../host_config.html">Host configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../backup_host.html">Backups of secure hosts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../pkinit.html">PKINIT configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../otp.html">OTP Preauthentication</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../princ_dns.html">Principal names and DNS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../enctypes.html">Encryption types</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="index.html">Administration  programs</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="kadmin_local.html">kadmin</a></li>
+<li class="toctree-l3"><a class="reference internal" href="kadmind.html">kadmind</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="">kdb5_util</a></li>
+<li class="toctree-l3"><a class="reference internal" href="kdb5_ldap_util.html">kdb5_ldap_util</a></li>
+<li class="toctree-l3"><a class="reference internal" href="krb5kdc.html">krb5kdc</a></li>
+<li class="toctree-l3"><a class="reference internal" href="kprop.html">kprop</a></li>
+<li class="toctree-l3"><a class="reference internal" href="kpropd.html">kpropd</a></li>
+<li class="toctree-l3"><a class="reference internal" href="kproplog.html">kproplog</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ktutil.html">ktutil</a></li>
+<li class="toctree-l3"><a class="reference internal" href="k5srvutil.html">k5srvutil</a></li>
+<li class="toctree-l3"><a class="reference internal" href="sserver.html">sserver</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../mitK5defaults.html">MIT Kerberos defaults</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../env_variables.html">Environment variables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../troubleshoot.html">Troubleshooting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../advanced/index.html">Advanced topics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../various_envs.html">Various links</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../appdev/index.html">For application developers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../plugindev/index.html">For plugin module developers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../build/index.html">Building Kerberos V5</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../basic/index.html">Kerberos V5 concepts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../mitK5features.html">MIT Kerberos features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../build_this.html">How to build this documentation from the source</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../about.html">Contributing to the MIT Kerberos Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../resources.html">Resources</a></li>
+</ul>
+
+    <br/>
+    <h4><a href="../../index.html">Full Table of Contents</a></h4>
+    <h4>Search</h4>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+        </div>
+        <div class="clearer"></div>
+      </div>
     </div>
- 
-    <div class="footer-wrapper" >
+
+    <div class="footer-wrapper">
         <div class="footer" >
-            <div class="right" ><i>Release: 1.11.3</i><br />
+            <div class="right" ><i>Release: 1.12-alpha1</i><br />
                 &copy; <a href="../../copyright.html">Copyright</a> 1985-2013, MIT.
             </div>
-            <div class="left" >
-                    <a href="../../index.html"
-                    title="Full Table of Contents"
-                    >Contents</a>
-                     |
-                    <a href="kadmind.html"
-                    title="kadmind"
-                    >previous</a>
-                     |
-                    <a href="kdb5_ldap_util.html"
-                    title="kdb5_ldap_util"
-                    >next</a>
-                     |
-                    <a href="../../genindex.html"
-                    title="General Index"
-                    >index</a>
-                     |
-                    <a href="../../search.html"
-                    title="Enter search criteria"
-                    >Search</a>
-                     |
-                    <a href="mailto:krb5-bugs@mit.edu?subject=Documentation__kdb5_util">feedback</a>
+            <div class="left">
+                
+        <a href="../../index.html" title="Full Table of Contents"
+            >Contents</a> |
+        <a href="kadmind.html" title="kadmind"
+            >previous</a> |
+        <a href="kdb5_ldap_util.html" title="kdb5_ldap_util"
+            >next</a> |
+        <a href="../../genindex.html" title="General Index"
+            >index</a> |
+        <a href="../../search.html" title="Enter search criteria"
+            >Search</a> |
+    <a href="mailto:krb5-bugs@mit.edu?subject=Documentation__kdb5_util">feedback</a>
             </div>
         </div>
     </div>
+
   </body>
 </html>

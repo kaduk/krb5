@@ -9,6 +9,7 @@ KRB5_PADATA_FX_COOKIE
 .. data:: KRB5_PADATA_FX_COOKIE
 ..
 
+RFC 6113.
 
 
 

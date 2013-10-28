@@ -40,6 +40,7 @@
  * + [v]asprintf
  * + mkstemp
  * + zap (support function; macro is in k5-int.h)
+ * + constant time memory comparison
  * + path manipulation
  * + _, N_, dgettext, bindtextdomain (for localization)
  */
@@ -347,7 +348,19 @@ typedef struct { int error; unsigned char did_run; } k5_init_t;
 
 
 
-#if defined(USE_LINKER_FINI_OPTION) || defined(_WIN32)
+#if !defined(SHARED) && !defined(_WIN32)
+
+/*
+ * In this case, we just don't care about finalization.
+ *
+ * The code will still define the function, but we won't do anything
+ * with it.  Annoying: This may generate unused-function warnings.
+ */
+
+# define MAKE_FINI_FUNCTION(NAME)               \
+        static void NAME(void)
+
+#elif defined(USE_LINKER_FINI_OPTION) || defined(_WIN32)
 /* If we're told the linker option will be used, it doesn't really
    matter what compiler we're using.  Do it the same way
    regardless.  */
@@ -390,16 +403,6 @@ typedef struct { int error; unsigned char did_run; } k5_init_t;
    XXX How do we know if the C++ support actually works?  */
 # define MAKE_FINI_FUNCTION(NAME)       \
         static void NAME(void) __attribute__((destructor))
-
-#elif !defined(SHARED)
-
-/* In this case, we just don't care about finalization.
-
-   The code will still define the function, but we won't do anything
-   with it.  Annoying: This may generate unused-function warnings.  */
-
-# define MAKE_FINI_FUNCTION(NAME)       \
-        static void NAME(void)
 
 #else
 
@@ -1045,6 +1048,13 @@ extern int krb5int_gettimeofday(struct timeval *tp, void *ignore);
 #endif
 
 extern void krb5int_zap(void *ptr, size_t len);
+
+/*
+ * Return 0 if the n-byte memory regions p1 and p2 are equal, and nonzero if
+ * they are not.  The function is intended to take the same amount of time
+ * regardless of how many bytes of p1 and p2 are equal.
+ */
+int k5_bcmp(const void *p1, const void *p2, size_t n);
 
 /*
  * Split a path into parent directory and basename.  Either output parameter
