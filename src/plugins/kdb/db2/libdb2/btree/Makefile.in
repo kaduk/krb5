@@ -9,6 +9,8 @@ SRCS= $(STLIBOBJS:.o=.c)
 LOCALINCLUDES=	-I. -I$(srcdir)/../include -I../include -I$(srcdir)/../mpool \
 		-I$(srcdir)/../db
 
+WARN_CFLAGS+=-Wno-cast-align
+
 all-unix:: all-libobjs
 clean-unix:: clean-libobjs
 @libobj_frag@
