@@ -1095,21 +1095,6 @@ fd_enomem (EV_P)
       }
 }
 
-/* usually called after fork if backend needs to re-arm all fds from scratch */
-static void noinline
-fd_rearm_all (EV_P)
-{
-  int fd;
-
-  for (fd = 0; fd < anfdmax; ++fd)
-    if (anfds [fd].events)
-      {
-        anfds [fd].events = 0;
-        anfds [fd].emask  = 0;
-        fd_change (EV_A_ fd, EV__IOFDSET | EV_ANFD_REIFY);
-      }
-}
-
 /* used to prepare libev internal fd's */
 /* this is not fork-safe */
 inline_speed void
