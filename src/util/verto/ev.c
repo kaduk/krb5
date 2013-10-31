@@ -490,7 +490,7 @@ struct signalfd_siginfo
 #endif
 
 #define EMPTY       /* required for microsofts broken pseudo-c compiler */
-#define EMPTY2(a,b) /* used to suppress some warnings */
+#define EMPTY2(a,b) ((void)(a),(void)(b))  /* used to suppress some warnings */
 
 typedef ev_watcher *W;
 typedef ev_watcher_list *WL;
