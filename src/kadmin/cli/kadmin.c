@@ -1109,24 +1109,25 @@ kadmin_addprinc_usage()
     fprintf(stderr, _("usage: add_principal [options] principal\n"));
     fprintf(stderr, _("\toptions are:\n"));
     fprintf(stderr,
-            _("\t\t[-randkey|-nokey] [-x db_princ_args]* [-expire expdate] "
-              "[-pwexpire pwexpdate] [-maxlife maxtixlife]\n"
-              "\t\t[-kvno kvno] [-policy policy] [-clearpolicy]\n"
-              "\t\t[-pw password] [-maxrenewlife maxrenewlife]\n"
-              "\t\t[-e keysaltlist]\n\t\t[{+|-}attribute]\n")
+            _("\t\t[-randkey|-nokey] [-x db_princ_args]* [-expire expdate]\n"
+              "\t\t[-pwexpire pwexpdate] [-maxlife maxtixlife] "
+              "[-kvno kvno]\n"
+              "\t\t[-policy policy] [-clearpolicy] "
+              "[-pw password]\n"
+              "\t\t[-maxrenewlife maxrenewlife] "
+              "[-e keysaltlist] [{+|-}attribute]\n")
     );
     fprintf(stderr, _("\tattributes are:\n"));
     fprintf(stderr,
-            _("\t\tallow_postdated allow_forwardable allow_tgs_req "
-              "allow_renewable\n"
-              "\t\tallow_proxiable allow_dup_skey allow_tix requires_preauth\n"
-              "\t\trequires_hwauth needchange allow_svr "
-              "password_changing_service\n"
-              "\t\tok_as_delegate ok_to_auth_as_delegate "
-              "no_auth_data_required\n"
-              "\nwhere,\n\t[-x db_princ_args]* - any number of database "
+            _("\t\tallow_postdated  allow_forwardable  allow_tgs_req\n"
+              "\t\tallow_renewable  allow_proxiable  allow_dup_skey  "
+              "allow_tix\n"
+              "\t\trequires_preauth  requires_hwauth  needchange  allow_svr\n"
+              "\t\tpassword_changing_service  ok_as_delegate\n"
+              "\t\tok_to_auth_as_delegate  no_auth_data_required\n"
+              "where,\n\t[-x db_princ_args]* - any number of database "
               "specific arguments.\n"
-              "\t\t\tLook at each database documentation for supported "
+              "\t\tLook at each database documentation for supported "
               "arguments\n"));
 }
 
@@ -1137,23 +1138,21 @@ kadmin_modprinc_usage()
     fprintf(stderr, _("\toptions are:\n"));
     fprintf(stderr,
             _("\t\t[-x db_princ_args]* [-expire expdate] "
-              "[-pwexpire pwexpdate] [-maxlife maxtixlife]\n"
-              "\t\t[-kvno kvno] [-policy policy] [-clearpolicy]\n"
-              "\t\t[-maxrenewlife maxrenewlife] [-unlock] "
-              "[{+|-}attribute]\n"));
+              "[-pwexpire pwexpdate]\n"
+              "\t\t[-maxlife maxtixlife] [-kvno kvno] [-policy policy]\n"
+              "\t\t[-clearpolicy] [-maxrenewlife maxrenewlife] [-unlock]\n"
+              "\t\t[{+|-}attribute]\n"));
     fprintf(stderr, "\tattributes are:\n");
     fprintf(stderr,
-            _("\t\tallow_postdated allow_forwardable allow_tgs_req "
-              "allow_renewable\n"
-              "\t\tallow_proxiable allow_dup_skey allow_tix "
-              "requires_preauth\n"
-              "\t\trequires_hwauth needchange allow_svr "
-              "password_changing_service\n"
-              "\t\tok_as_delegate ok_to_auth_as_delegate "
-              "no_auth_data_required\n"
-              "\nwhere,\n\t[-x db_princ_args]* - any number of database "
+            _("\t\tallow_postdated  allow_forwardable  allow_tgs_req\n"
+              "\t\tallow_renewable  allow_proxiable  allow_dup_skey  "
+              "allow_tix\n"
+              "\t\trequires_preauth  requires_hwauth  needchange  allow_svr\n"
+              "\t\tpassword_changing_service  ok_as_delegate\n"
+              "\t\tok_to_auth_as_delegate  no_auth_data_required\n"
+              "where,\n\t[-x db_princ_args]* - any number of database "
               "specific arguments.\n"
-              "\t\t\tLook at each database documentation for supported "
+              "\t\tLook at each database documentation for supported "
               "arguments\n"));
 }
 
