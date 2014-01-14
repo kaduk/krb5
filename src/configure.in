@@ -277,6 +277,10 @@ if test "$CRYPTO_IMPL" = builtin -a "x$enable_aesni" != xno; then
 	# use the System V x86-64 calling convention.
 	aesni_flags="-D__linux__ -f elf -m $aesni_machine"
 	;;
+    *-apple-darwin*)
+	# Apple Mac OS X is a Mach-O binary format, but also needs
+	# -D__linux__ for the SysV ABI.
+	aesni_flags="-D__linux__ -f macho -m $aesni_machine"
     esac
     if test "x$aesni_obj" != x && test "x$aesni_flags" != x; then
 	AC_CHECK_PROG(YASM,yasm,yasm)
