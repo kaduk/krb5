@@ -57,6 +57,8 @@ OBJS=   \
 	$(OUTPRE)LeashFrame.obj \
 	$(OUTPRE)LeashMessageBox.obj \
 	$(OUTPRE)LeashProperties.obj \
+	$(OUTPRE)LeashUIApplication.obj \
+	$(OUTPRE)LeashUICommandHandler.obj \
 	$(OUTPRE)LeashView.obj \
 	$(OUTPRE)lglobals.obj \
 	$(OUTPRE)MainFrm.obj \

@@ -14,6 +14,7 @@
 
 
 #include "stdafx.h"
+#include "LeashUIApplication.h"
 #include "Leash.h"
 #include "MainFrm.h"
 #include "lglobals.h"
@@ -81,6 +82,7 @@ CMainFrame::CMainFrame()
 	m_isMinimum = FALSE;
     m_isBeingResized = FALSE;
     m_bOwnerCreated = FALSE;
+    pApplication = NULL;
 }
 
 CMainFrame::~CMainFrame()
@@ -108,6 +110,7 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
         CDockingManager::SetDockingMode(DT_SMART);
         m_wndRibbonBar.SetWindows7Look(TRUE);
 
+#if 0	/* try to use the other ribbon */
         // Create the ribbon bar
         if (!m_wndRibbonBar.Create(this))
             return -1;   // Failed to create ribbon bar
@@ -117,6 +120,17 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
         m_wndApplicationButton.SetVisible(FALSE);
         // Uncomment the next line to hide the application button
         //m_wndRibbonBar.SetApplicationButton(&m_wndApplicationButton, CSize());
+#endif
+        HWND hwnd;
+        HRESULT hr;
+        hwnd = this->GetSafeHwnd();
+        if (hwnd == NULL)
+            printf("Failed to get HWND\n");
+        hr = LeashUIApplication::CreateInstance(&pApplication, hwnd);
+        if (FAILED(hr)) {
+	    MessageBox("LeashUIApplication::CreateInstance!", "Error", MB_OK);
+            return -1;
+        }
     }
 
 	if (CLeashFrame::OnCreate(lpCreateStruct) == -1)
