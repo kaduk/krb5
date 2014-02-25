@@ -124,12 +124,8 @@ struct ListItemInfo
     HFONT m_font;         // For all other items
 };
 
-class LeashUICommandHandler;
-
 class CLeashView : public CListView
 {
-    // LeashUICommandHandler needs to call message-map functions.
-    friend class LeashUICommandHandler;
 private:
 ////@#+Remove
 #ifndef NO_KRB4
