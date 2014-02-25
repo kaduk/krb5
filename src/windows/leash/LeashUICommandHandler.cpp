@@ -41,6 +41,13 @@
 #include <UIRibbon.h>
 #include "kfwribbon.h"
 #include "LeashUICommandHandler.h"
+#include "stdafx.h"
+#include "leash.h"
+#include "LeashFileDialog.h"
+#include "Krb5Properties.h"
+#include "win-mac.h"
+#include "lglobals.h"
+#include "LeashView.h"
 
 HRESULT
 LeashUICommandHandler::CreateInstance(IUICommandHandler **out)
@@ -99,7 +106,14 @@ LeashUICommandHandler::Execute(UINT32 commandId, UI_EXECUTIONVERB verb,
                                const PROPVARIANT *currentValue,
                                IUISimplePropertySet *commandExecutionProperties)
 {
-    /* XXX Need logic to actually handle commands! */
+    if (verb != UI_EXECUTIONVERB_EXECUTE)
+	return E_NOTIMPL;
+    switch(commandId) {
+        case cmdGetTicketButton:
+            CLeashView::OnInitTicket();
+        default:
+            return S_OK;
+    }
     return S_OK;
 }
 
