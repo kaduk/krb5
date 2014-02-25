@@ -1654,3 +1654,9 @@ BOOL CLeashApp::OnIdle(LONG lCount)
     }
     return retval;
 }
+
+void
+NOTANAPI_InitTicket()
+{
+    SendMessage(theApp.m_pActiveWnd->m_hWnd, ID_INIT_TICKET, 0, 0);
+}

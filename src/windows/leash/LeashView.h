@@ -283,6 +283,8 @@ public:
 	virtual VOID Dump(CDumpContext& dc) const;
 #endif
 
+	friend void NOTANAPI_InitTicket();
+
 // Generated message map functions
 protected:
 	//{{AFX_MSG(CLeashView)
