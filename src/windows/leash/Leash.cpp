@@ -1658,5 +1658,6 @@ BOOL CLeashApp::OnIdle(LONG lCount)
 void
 NOTANAPI_InitTicket()
 {
-    SendMessage(theApp.m_pActiveWnd->m_hWnd, ID_INIT_TICKET, 0, 0);
+    SendMessage(FindWindowEx(CLeashApp::m_hProgram, NULL, L"SysListView32",
+                             NULL), ID_INIT_TICKET, 0, 0);
 }
