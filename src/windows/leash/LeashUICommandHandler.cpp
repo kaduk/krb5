@@ -43,8 +43,6 @@
 #include "LeashUICommandHandler.h"
 #include "resource.h"
 
-extern void NOTANAPI_InitTicket();
-
 HRESULT
 LeashUICommandHandler::CreateInstance(IUICommandHandler **out, HWND hwnd)
 {

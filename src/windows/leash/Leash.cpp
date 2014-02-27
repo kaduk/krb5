@@ -1654,10 +1654,3 @@ BOOL CLeashApp::OnIdle(LONG lCount)
     }
     return retval;
 }
-
-void
-NOTANAPI_InitTicket()
-{
-    SendMessage(FindWindowEx(CLeashApp::m_hProgram, NULL, L"SysListView32",
-                             NULL), ID_INIT_TICKET, 0, 0);
-}
