@@ -47,7 +47,7 @@ class LeashUICommandHandler : public IUICommandHandler
 {
 public:
     /* Actual work for creation is done here, not the constructor. */
-    static HRESULT CreateInstance(IUICommandHandler **out);
+    static HRESULT CreateInstance(IUICommandHandler **out, HWND hwnd);
 
     /* IUnknown virtual methods */
     ULONG STDMETHODCALLTYPE AddRef();
@@ -64,6 +64,7 @@ public:
 
 private:
     LeashUICommandHandler() : refcnt(1) {}
+    HWND mainwin;	/* Something to which to send messages. */
     LONG refcnt;
 };
 

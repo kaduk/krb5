@@ -54,7 +54,7 @@ LeashUIApplication::CreateInstance(IUIApplication **out, HWND hwnd)
     app = new LeashUIApplication();
     if (app == NULL)
         return E_OUTOFMEMORY;
-    ret = LeashUICommandHandler::CreateInstance(&app->commandHandler);
+    ret = LeashUICommandHandler::CreateInstance(&app->commandHandler, hwnd);
     if (!SUCCEEDED(ret)) {
         delete app;
         return ret;

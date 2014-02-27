@@ -45,7 +45,7 @@
 extern void NOTANAPI_InitTicket();
 
 HRESULT
-LeashUICommandHandler::CreateInstance(IUICommandHandler **out)
+LeashUICommandHandler::CreateInstance(IUICommandHandler **out, HWND hwnd)
 {
     LeashUICommandHandler *handler;
 
@@ -55,6 +55,7 @@ LeashUICommandHandler::CreateInstance(IUICommandHandler **out)
     handler = new LeashUICommandHandler();
     if (handler == NULL)
         return E_OUTOFMEMORY;
+    handler->mainwin = hwnd;
     *out = static_cast<IUICommandHandler *>(handler);
     return S_OK;
 }
