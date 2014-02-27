@@ -106,7 +106,68 @@ LeashUICommandHandler::Execute(UINT32 commandId, UI_EXECUTIONVERB verb,
     switch(commandId) {
         case cmdGetTicketButton:
             SendMessage(mainwin, WM_COMMAND, MAKEWPARAM(ID_INIT_TICKET, 1), 0);
+            break;
+        case cmdRenewTicketButton:
+            SendMessage(mainwin, WM_COMMAND, MAKEWPARAM(ID_RENEW_TICKET, 1), 0);
+            break;
+        case cmdDestroyTicketButton:
+            SendMessage(mainwin, WM_COMMAND, MAKEWPARAM(ID_DESTROY_TICKET, 1),
+                        0);
+            break;
+        case cmdMakeDefaultButton:
+            SendMessage(mainwin, WM_COMMAND, MAKEWPARAM(ID_MAKE_DEFAULT, 1),
+                        0);
+            break;
+        case cmdChangePasswordButton:
+            SendMessage(mainwin, WM_COMMAND, MAKEWPARAM(ID_CHANGE_PASSWORD, 1),
+                        0);
+            break;
+        case cmdIssuedCheckBox:
+            SendMessage(mainwin, WM_COMMAND, MAKEWPARAM(ID_TIME_ISSUED, 1), 0);
+            break;
+        case cmdRenewUntilCheckBox:
+            SendMessage(mainwin, WM_COMMAND, MAKEWPARAM(ID_RENEWABLE_UNTIL, 1),
+                        0);
+            break;
+        case cmdValidUntilCheckBox:
+            SendMessage(mainwin, WM_COMMAND, MAKEWPARAM(ID_VALID_UNTIL, 1), 0);
+            break;
+        case cmdEncTypeCheckBox:
+            SendMessage(mainwin, WM_COMMAND, MAKEWPARAM(ID_ENCRYPTION_TYPE, 1),
+                        0);
+            break;
+        case cmdFlagsCheckBox:
+            SendMessage(mainwin, WM_COMMAND, MAKEWPARAM(ID_SHOW_TICKET_FLAGS,
+                                                        1), 0);
+            break;
+        case cmdAutoRenewCheckBox:
+            SendMessage(mainwin, WM_COMMAND, MAKEWPARAM(ID_AUTO_RENEW, 1), 0);
+            break;
+        case cmdExpireAlarmCheckBox:
+            SendMessage(mainwin, WM_COMMAND, MAKEWPARAM(ID_LOW_TICKET_ALARM,
+                                                        1), 0);
+            break;
+        case cmdDestroyOnExitCheckBox:
+            SendMessage(mainwin, WM_COMMAND, MAKEWPARAM(ID_KILL_TIX_ONEXIT, 1),
+                        0);
+            break;
+        case cmdMixedCaseCheckBox:
+            SendMessage(mainwin, WM_COMMAND, MAKEWPARAM(ID_UPPERCASE_REALM, 1),
+                        0);
+            break;
+        case cmdHelp:
+            SendMessage(mainwin, WM_COMMAND, MAKEWPARAM(ID_HELP_LEASH32, 1), 0);
+            break;
+#if 0
+        case cmdAbout:
+            SendMessage(mainwin, WM_COMMAND, MAKEWPARAM(ID_APP_ABOUT, 1), 0);
+            break;
+        case cmdExit:
+            SendMessage(mainwin, WM_GOODBYE, 0, 0);
+            break;
+#endif
         default:
+            // Lots of commands we don't need to pass on
             return S_OK;
     }
     return S_OK;
