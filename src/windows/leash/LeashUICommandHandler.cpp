@@ -41,6 +41,7 @@
 #include <UIRibbon.h>
 #include "kfwribbon.h"
 #include "LeashUICommandHandler.h"
+#include "resource.h"
 
 extern void NOTANAPI_InitTicket();
 
@@ -106,7 +107,7 @@ LeashUICommandHandler::Execute(UINT32 commandId, UI_EXECUTIONVERB verb,
 	return E_NOTIMPL;
     switch(commandId) {
         case cmdGetTicketButton:
-            NOTANAPI_InitTicket();
+            SendMessage(mainwin, WM_COMMAND, MAKEWPARAM(ID_INIT_TICKET, 1), 0);
         default:
             return S_OK;
     }
