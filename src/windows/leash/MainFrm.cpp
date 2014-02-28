@@ -94,8 +94,6 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
     if (CLeashApp::m_useRibbon) {
         // Fixup tooltips (cribbed from http://social.msdn.microsoft.com/Forums/en/vcmfcatl/thread/5c5b4879-d278-4d79-8894-99e7f9b322df)
 
-        CView *view;
-        WINDOWPLACEMENT wpl;
         CMFCToolTipInfo ttParams;
         ttParams.m_bVislManagerTheme = TRUE;
         ttParams.m_bVislManagerTheme = FALSE;
@@ -133,26 +131,13 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	    MessageBox("LeashUIApplication::CreateInstance!", "Error", MB_OK);
             return -1;
         }
-        view = GetActiveView();
-        if (view == NULL) {
-            MessageBox("No View yet", "Error", MB_OK);
-            return -1;
-        }
-        if (view->GetWindowPlacement(&wpl)) {
-            MessageBox("No placement for the view", "Error", MB_OK);
-            return -1;
-        }
-        wpl.rcNormalPosition.top += 20;
-        if (view->SetWindowPlacement(&wpl)) {
-            MessageBox("Couldn't set placement for the view", "Error", MB_OK);
-            return -1;
-        }
-    }
 
 	if (CLeashFrame::OnCreate(lpCreateStruct) == -1)
 		return -1;
+    }
 
     ShowWindow(SW_HIDE);
+
 
 /* NT4 and NT5 aren't shipped with a version of MFC that supports
 // 'CreateEx()' as of 2/1/99
@@ -348,6 +333,8 @@ void CMainFrame::OnResetWindowSize()
 
 void CMainFrame::OnSizing(UINT fwSide, LPRECT pRect)
 { // Keeps track of Leash window size for function CMainFrame::RecalcLayout
+        CView *view;
+        WINDOWPLACEMENT wpl;
 	m_winRectLeft = pRect->left;
 	m_winRectTop = pRect->top;
 	m_winRectRight = pRect->right;
@@ -357,6 +344,21 @@ void CMainFrame::OnSizing(UINT fwSide, LPRECT pRect)
 	  m_whatSide = fwSide;
 
 	CLeashFrame::OnSizing(fwSide, pRect);
+        // BJK
+        view = GetActiveView();
+        if (view == NULL) {
+            MessageBox("No View yet", "Error", MB_OK);
+            return;
+        }
+        if (!view->GetWindowPlacement(&wpl)) {
+            MessageBox("No placement for the view", "Error", MB_OK);
+            return;
+        }
+        wpl.rcNormalPosition.top = m_winRectTop + 30;
+        if (!view->SetWindowPlacement(&wpl)) {
+            MessageBox("Couldn't set placement for the view", "Error", MB_OK);
+            return;
+        }
 }
 
 void CMainFrame::RecalcLayout(BOOL bNotify)
