@@ -91,6 +91,7 @@
 #define IDB_HOMESMALL                   266
 #define IDB_HOMELARGE                   267
 #define IDB_BITMAP2                     268
+#define IDR_STATUSBAR                   269
 #define IDC_PROGRESS1                   1000
 #define IDC_TRACKBAR1                   1001
 #define IDC_TRACKBAR2                   1002
