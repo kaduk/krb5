@@ -158,10 +158,11 @@ LeashUICommandHandler::Execute(UINT32 commandId, UI_EXECUTIONVERB verb,
         case cmdHelp:
             SendMessage(mainwin, WM_COMMAND, MAKEWPARAM(ID_HELP_LEASH32, 1), 0);
             break;
-#if 0
         case cmdAbout:
-            SendMessage(mainwin, WM_COMMAND, MAKEWPARAM(ID_APP_ABOUT, 1), 0);
+            // ID_APP_ABOUT (0xe140) is defined in afxres.h, an MFC header
+            SendMessage(mainwin, WM_COMMAND, MAKEWPARAM(0xe140, 1), 0);
             break;
+#if 0
         case cmdExit:
             SendMessage(mainwin, WM_GOODBYE, 0, 0);
             break;
