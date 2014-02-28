@@ -94,6 +94,8 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
     if (CLeashApp::m_useRibbon) {
         // Fixup tooltips (cribbed from http://social.msdn.microsoft.com/Forums/en/vcmfcatl/thread/5c5b4879-d278-4d79-8894-99e7f9b322df)
 
+        CView *view;
+        WINDOWPLACEMENT wpl;
         CMFCToolTipInfo ttParams;
         ttParams.m_bVislManagerTheme = TRUE;
         ttParams.m_bVislManagerTheme = FALSE;
@@ -129,6 +131,20 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
         hr = LeashUIApplication::CreateInstance(&pApplication, hwnd);
         if (FAILED(hr)) {
 	    MessageBox("LeashUIApplication::CreateInstance!", "Error", MB_OK);
+            return -1;
+        }
+        view = GetActiveView();
+        if (view == NULL) {
+            MessageBox("No View yet", "Error", MB_OK);
+            return -1;
+        }
+        if (view->GetWindowPlacement(&wpl)) {
+            MessageBox("No placement for the view", "Error", MB_OK);
+            return -1;
+        }
+        wpl.rcNormalPosition.top += 20;
+        if (view->SetWindowPlacement(&wpl)) {
+            MessageBox("Couldn't set placement for the view", "Error", MB_OK);
             return -1;
         }
     }
