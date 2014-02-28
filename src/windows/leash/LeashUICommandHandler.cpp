@@ -162,11 +162,10 @@ LeashUICommandHandler::Execute(UINT32 commandId, UI_EXECUTIONVERB verb,
             // ID_APP_ABOUT (0xe140) is defined in afxres.h, an MFC header
             SendMessage(mainwin, WM_COMMAND, MAKEWPARAM(0xe140, 1), 0);
             break;
-#if 0
         case cmdExit:
-            SendMessage(mainwin, WM_GOODBYE, 0, 0);
+            SendMessage(mainwin, WM_COMMAND, MAKEWPARAM(ID_LEASH_MINIMIZE, 1),
+                        0);
             break;
-#endif
         default:
             // Lots of commands we don't need to pass on
             return S_OK;
