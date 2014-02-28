@@ -163,8 +163,8 @@ LeashUICommandHandler::Execute(UINT32 commandId, UI_EXECUTIONVERB verb,
             SendMessage(mainwin, WM_COMMAND, MAKEWPARAM(0xe140, 1), 0);
             break;
         case cmdExit:
-            SendMessage(mainwin, WM_COMMAND, MAKEWPARAM(ID_LEASH_MINIMIZE, 1),
-                        0);
+            // ID_APP_EXIT (0xe141) is defined in afxres.h, an MFC header
+            SendMessage(mainwin, WM_COMMAND, MAKEWPARAM(0xe141, 1), 0);
             break;
         default:
             // Lots of commands we don't need to pass on
