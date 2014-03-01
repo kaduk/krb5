@@ -143,24 +143,22 @@ LeashUIApplication::OnViewChanged(UINT32 viewId, UI_VIEWTYPE typeID,
                                   INT32 uReasonCode)
 {
     IUIRibbon *ribbon;
-    UINT height;
     HRESULT ret;
 
     if (viewId != 0 || typeID != UI_VIEWTYPE_RIBBON)
         return E_NOTIMPL;
 
     switch(verb) {
-        case UI_VIEWVERB_CREATE:
-            /* We don't actually have to do anything. */
-            return S_OK;
         case UI_VIEWVERB_DESTROY:
             /* We didn't cache any state at create time, so do nothing. */
             return S_OK;
+        case UI_VIEWVERB_CREATE:
+            /* Fall through to get the initial ribbon height. */
         case UI_VIEWVERB_SIZE:
             ret = view->QueryInterface(IID_PPV_ARGS(&ribbon));
             if (!SUCCEEDED(ret))
                 return ret;
-            ret = ribbon->GetHeight(&height);
+            ret = ribbon->GetHeight(&ribbonHeight);
             if (!SUCCEEDED(ret)) {
                 ribbon->Release();
                 return ret;

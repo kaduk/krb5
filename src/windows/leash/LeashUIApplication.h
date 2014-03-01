@@ -46,6 +46,8 @@
 class LeashUIApplication : public IUIApplication
 {
 public:
+    /* Export how much space the ribbon is taking up. */
+    UINT ribbonHeight;
     /* Do the real work here, not in the constructor */
     static HRESULT CreateInstance(IUIApplication **out, HWND hwnd);
 
