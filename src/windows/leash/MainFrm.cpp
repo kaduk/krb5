@@ -131,6 +131,10 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	    MessageBox("LeashUIApplication::CreateInstance!", "Error", MB_OK);
             return -1;
         }
+        RECT pane;
+        NegotiateBorderSpace(CFrameWnd::borderGet, &pane);
+        pane.top = pane.top + 30;
+        NegotiateBorderSpace(CFrameWnd::borderSet, &pane);
     }
 
 	if (CLeashFrame::OnCreate(lpCreateStruct) == -1)
