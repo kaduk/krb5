@@ -121,7 +121,6 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
         // Uncomment the next line to hide the application button
         //m_wndRibbonBar.SetApplicationButton(&m_wndApplicationButton, CSize());
 #endif
-        CStatusBar dummybar;
         HWND hwnd;
         HRESULT hr;
         hwnd = this->GetSafeHwnd();
@@ -132,9 +131,6 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	    MessageBox("LeashUIApplication::CreateInstance!", "Error", MB_OK);
             return -1;
         }
-        dummybar.Create(this, CBRS_TOP | WS_CHILD, IDR_STATUSBAR);
-        CStatusBarCtrl& control = dummybar.GetStatusBarCtrl();
-        control.SetMinHeight(25);
     }
 
 	if (CLeashFrame::OnCreate(lpCreateStruct) == -1)
