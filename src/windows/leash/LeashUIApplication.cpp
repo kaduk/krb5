@@ -48,6 +48,7 @@ HRESULT
 LeashUIApplication::CreateInstance(IUIApplication **out, HWND hwnd)
 {
     LeashUIApplication *app;
+    LeashUICommandHandler *handler;
     HRESULT ret;
 
     if (out == NULL)
@@ -68,6 +69,8 @@ LeashUIApplication::CreateInstance(IUIApplication **out, HWND hwnd)
         return ret;
     }
     mainwin = hwnd;
+    handler = static_cast<LeashUICommandHandler *>(app->commandHandler);
+    handler->app = app;
     *out = static_cast<IUIApplication *>(app);
     return S_OK;
 }
@@ -102,11 +105,13 @@ LeashUIApplication::InitializeRibbon(HWND hwnd)
         //MessageBox("RibbonFramework::LoadUI!", "Error", MB_OK);
         return -1;
     }
+#if 0
     ret = LoadRibbonState();
     if (FAILED(ret)) {
         //MessageBox("LoadRibbonState!", "Error", MB_OK);
         return -1;
     }
+#endif
     return S_OK;
 }
 

@@ -104,6 +104,9 @@ LeashUICommandHandler::Execute(UINT32 commandId, UI_EXECUTIONVERB verb,
     if (verb != UI_EXECUTIONVERB_EXECUTE)
 	return E_NOTIMPL;
     switch(commandId) {
+        case cmdOptionsTab:
+            app->LoadRibbonState();
+            break;
         case cmdGetTicketButton:
             SendMessage(mainwin, WM_COMMAND, MAKEWPARAM(ID_INIT_TICKET, 1), 0);
             break;

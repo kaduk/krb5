@@ -42,10 +42,12 @@
 #define WINDOWS_LEASHUICOMMANDHANDLER_H__
 
 #include <UIRibbon.h>
+#include "LeashUIApplication.h"
 
 class LeashUICommandHandler : public IUICommandHandler
 {
 public:
+    LeashUIApplication *app;
     /* Actual work for creation is done here, not the constructor. */
     static HRESULT CreateInstance(IUICommandHandler **out, HWND hwnd);
 

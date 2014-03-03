@@ -48,6 +48,7 @@
 class LeashUIApplication : public IUIApplication
 {
 public:
+    HRESULT LoadRibbonState();
     /* Export how much space the ribbon is taking up. */
     UINT ribbonHeight;
     /* Do the real work here, not in the constructor */
@@ -70,7 +71,6 @@ private:
     LeashUIApplication() : refcnt(1), commandHandler(NULL),
                            ribbonFramework(NULL) {}
     HRESULT InitializeRibbon(HWND hwnd);
-    HRESULT LoadRibbonState();
     static HWND mainwin;
     LONG refcnt;
     IUICommandHandler *commandHandler;
