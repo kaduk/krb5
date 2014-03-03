@@ -353,6 +353,12 @@ void CMainFrame::RecalcLayout(BOOL bNotify)
 { // MINSIZE - Insurance that we have a minimum Leash window size
 	int width = MIN_RIGHT - MIN_LEFT;
 	int height = MIN_BOTTOM - MIN_TOP;
+        LeashUIApplication *leashUI;
+        RECT border;
+        border.left = border.right = border.bottom = 0;
+        leashUI = static_cast<LeashUIApplication*>(pApplication);
+        border.top = leashUI->ribbonHeight;
+        NegotiateBorderSpace(CFrameWnd::borderSet, &border);
 
     BOOL change = FALSE;
 	WINDOWPLACEMENT wndpl;

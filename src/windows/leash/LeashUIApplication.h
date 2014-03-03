@@ -68,6 +68,7 @@ private:
     LeashUIApplication() : refcnt(1), commandHandler(NULL),
                            ribbonFramework(NULL) {}
     HRESULT InitializeRibbon(HWND hwnd);
+    static HWND mainwin;
     LONG refcnt;
     IUICommandHandler *commandHandler;
     IUIFramework *ribbonFramework;

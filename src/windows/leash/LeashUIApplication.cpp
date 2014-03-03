@@ -41,6 +41,8 @@
 #include "LeashUIApplication.h"
 #include "LeashUICommandHandler.h"
 
+HWND LeashUIApplication::mainwin;
+
 HRESULT
 LeashUIApplication::CreateInstance(IUIApplication **out, HWND hwnd)
 {
@@ -64,6 +66,7 @@ LeashUIApplication::CreateInstance(IUIApplication **out, HWND hwnd)
         delete app;
         return ret;
     }
+    mainwin = hwnd;
     *out = static_cast<IUIApplication *>(app);
     return S_OK;
 }
@@ -162,6 +165,11 @@ LeashUIApplication::OnViewChanged(UINT32 viewId, UI_VIEWTYPE typeID,
             if (!SUCCEEDED(ret)) {
                 ribbon->Release();
                 return ret;
+            }
+            if (verb == UI_VIEWVERB_SIZE) {
+		// Tell the main frame to recalc its layout and redraw
+                // 0x0368 is WM_RECALCPARENT, but we don't want that header
+		SendMessage(mainwin, 0x0368, 0, NULL);
             }
             //MessageBox("Got a new ribbon height", "Info", MB_OK);
             ribbon->Release();
