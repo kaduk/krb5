@@ -43,6 +43,8 @@
 
 #include <UIRibbon.h>
 
+#define WM_RIBBON_RESIZE	(WM_USER + 10)
+
 class LeashUIApplication : public IUIApplication
 {
 public:

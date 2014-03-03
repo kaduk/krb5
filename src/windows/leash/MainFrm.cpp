@@ -58,6 +58,7 @@ BEGIN_MESSAGE_MAP(CMainFrame, CLeashFrame)
 	ON_COMMAND(ID_HELP_LEASH_, CMainFrame::OnHelpFinder)
 	ON_COMMAND(ID_HELP, CMainFrame::OnHelp)
 	ON_COMMAND(ID_CONTEXT_HELP, CMainFrame::OnContextHelp)
+        ON_MESSAGE_VOID(WM_RIBBON_RESIZE, OnRibbonResize)
 END_MESSAGE_MAP()
 
 static UINT indicators[] =
@@ -447,6 +448,11 @@ LRESULT CMainFrame::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
         }
     }
     return CLeashFrame::WindowProc(message, wParam, lParam);
+}
+
+void CMainFrame::OnRibbonResize()
+{
+    RecalcLayout(TRUE);
 }
 
 /*

@@ -168,8 +168,7 @@ LeashUIApplication::OnViewChanged(UINT32 viewId, UI_VIEWTYPE typeID,
             }
             if (verb == UI_VIEWVERB_SIZE) {
 		// Tell the main frame to recalc its layout and redraw
-                // 0x0368 is WM_RECALCPARENT, but we don't want that header
-		SendMessage(mainwin, 0x0368, 0, NULL);
+		SendMessage(mainwin, WM_RIBBON_RESIZE, 0, NULL);
             }
             //MessageBox("Got a new ribbon height", "Info", MB_OK);
             ribbon->Release();
