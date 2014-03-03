@@ -37,6 +37,7 @@
  */
 
 #include <UIRibbon.h>
+#include <UIRibbonPropertyHelpers.h>
 #include "kfwribbon.h"
 #include "LeashUIApplication.h"
 #include "LeashUICommandHandler.h"
@@ -101,7 +102,32 @@ LeashUIApplication::InitializeRibbon(HWND hwnd)
         //MessageBox("RibbonFramework::LoadUI!", "Error", MB_OK);
         return -1;
     }
+    ret = LoadRibbonState();
+    if (FAILED(ret)) {
+        //MessageBox("LoadRibbonState!", "Error", MB_OK);
+        return -1;
+    }
     return S_OK;
+}
+
+HRESULT
+LeashUIApplication::LoadRibbonState()
+{
+    HRESULT ret;
+    PROPVARIANT propvar;
+    IPropertyStore *store;
+
+    ret = ribbonFramework->QueryInterface(IID_PPV_ARGS(&store));
+    if (FAILED(ret))
+        return ret;
+    PropVariantInit(&propvar);
+    ret = UIInitPropertyFromBoolean(UI_PKEY_Enabled, TRUE, &propvar);
+    if (FAILED(ret))
+        return ret;
+    ret = ribbonFramework->SetUICommandProperty(cmdIssuedCheckBox,
+                                                UI_PKEY_Enabled, propvar);
+    if (FAILED(ret))
+        return ret;
 }
 
 ULONG
