@@ -123,7 +123,6 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 #endif
         HWND hwnd;
         HRESULT hr;
-        LeashUIApplication *leashUI;
         hwnd = this->GetSafeHwnd();
         if (hwnd == NULL)
             printf("Failed to get HWND\n");
@@ -132,11 +131,6 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	    MessageBox("LeashUIApplication::CreateInstance!", "Error", MB_OK);
             return -1;
         }
-        RECT border;
-        border.left = border.right = border.bottom = 0;
-        leashUI = static_cast<LeashUIApplication*>(pApplication);
-        border.top = leashUI->ribbonHeight;
-        NegotiateBorderSpace(CFrameWnd::borderSet, &border);
     }
 
 	if (CLeashFrame::OnCreate(lpCreateStruct) == -1)
