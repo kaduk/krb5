@@ -551,6 +551,7 @@ VOID CLeashView::OnShowWindow(BOOL bShow, UINT nStatus)
     {
         m_largeIcons = m_pApp->GetProfileInt("Settings", "LargeIcons", ON);
 
+#if 0	// No support for reading these from the new ribbon
         // Get State of Destroy Tickets On Exit
         m_destroyTicketsOnExit = m_pApp->GetProfileInt("Settings", "DestroyTicketsOnExit", OFF);
 
@@ -562,6 +563,7 @@ VOID CLeashView::OnShowWindow(BOOL bShow, UINT nStatus)
 
         // Get State of Upper Case Realm
         m_upperCaseRealm = pLeash_get_default_uppercaserealm();
+#endif
 
         // Forwardable flag
         m_forwardableTicket = pLeash_get_default_forwardable();
@@ -581,9 +583,12 @@ VOID CLeashView::OnShowWindow(BOOL bShow, UINT nStatus)
         // UI main display column widths
         for (int i=0; i<NUM_VIEW_COLUMNS; i++) {
             ViewColumnInfo &info = sm_viewColumns[i];
+            info.m_enabled = FALSE;
+#if 0
             info.m_enabled = m_pApp->GetProfileInt("Settings",
                                                    info.m_name,
                                                    info.m_enabled);
+#endif
             info.m_columnWidth = m_pApp->GetProfileInt("ColumnWidths",
                                                    info.m_name,
                                                    info.m_columnWidth);
