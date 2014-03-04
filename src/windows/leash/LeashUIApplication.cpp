@@ -126,11 +126,11 @@ LeashUIApplication::LoadRibbonState()
     if (FAILED(ret))
         return ret;
     PropVariantInit(&propvar);
-    ret = UIInitPropertyFromBoolean(UI_PKEY_Enabled, TRUE, &propvar);
+    ret = UIInitPropertyFromBoolean(UI_PKEY_Boolean, TRUE, &propvar);
     if (FAILED(ret))
         return ret;
     ret = ribbonFramework->SetUICommandProperty(cmdIssuedCheckBox,
-                                                UI_PKEY_Enabled, propvar);
+                                                UI_PKEY_Boolean, propvar);
     if (FAILED(ret))
         return ret;
 }
