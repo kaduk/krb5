@@ -583,12 +583,13 @@ VOID CLeashView::OnShowWindow(BOOL bShow, UINT nStatus)
         // UI main display column widths
         for (int i=0; i<NUM_VIEW_COLUMNS; i++) {
             ViewColumnInfo &info = sm_viewColumns[i];
+if (i > 0) {
             info.m_enabled = FALSE;
-#if 0
+} else {
             info.m_enabled = m_pApp->GetProfileInt("Settings",
                                                    info.m_name,
                                                    info.m_enabled);
-#endif
+}
             info.m_columnWidth = m_pApp->GetProfileInt("ColumnWidths",
                                                    info.m_name,
                                                    info.m_columnWidth);
