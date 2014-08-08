@@ -23,3 +23,7 @@ upstream/0019-Null-pointer-deref-in-kadmind-CVE-2012-1013.patch
 0023-Work-around-getaddrinfo-bug.patch
 0024-KDC-TGS-REQ-null-deref-CVE-2013-1416.patch
 upstream/7637
+upstream/0026-Handle-invalid-RFC-1964-tokens-CVE-2014-4341.patch
+upstream/0027-Fix-double-free-in-SPNEGO-CVE-2014-4343.patch
+upstream/0028-Fix-null-deref-in-SPNEGO-acceptor-CVE-2014-4344.patch
+upstream/0029-Fix-LDAP-key-data-segmentation-CVE-2014-4345.patch

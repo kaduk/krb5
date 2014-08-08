@@ -1,3 +1,18 @@
+krb5 (1.10.1+dfsg-5+deb7u2) stable-security; urgency=high
+
+  * Apply upstream patches for several issues:
+    - CVE-2014-4341: denial of service due to improper GSSAPI message
+      validation, Closes: #753624
+    - CVE-2014-4342: denial of service due to improper GSSAPI message
+      validation, Closes: #753625
+    - CVE-2014-4343: double-free in SPNEGO initiator during renegotiation,
+      Closes: #755520
+    - CVE-2014-4344: NULL dereference in SPNEGO acceptor, Closes: #755521
+    - CVE-2014-4345 [MITKRB5-SA-2014-001]: buffer overrun in kadmind with
+      LDAP backend, Closes: #757416
+
+ -- Benjamin Kaduk <kaduk@mit.edu>  Fri, 08 Aug 2014 12:12:09 -0400
+
 krb5 (1.10.1+dfsg-5+deb7u1) stable-security; urgency=high
 
   * Non-maintainer upload by the Security Team.
