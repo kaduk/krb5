@@ -22,4 +22,3 @@ upstream/0019-Null-pointer-deref-in-kadmind-CVE-2012-1013.patch
 0022-CVE-patch-from-krb5-1.10.1-dfsg-4-nmu1.patch
 0023-Work-around-getaddrinfo-bug.patch
 0024-KDC-TGS-REQ-null-deref-CVE-2013-1416.patch
-upstream/0020-CVE-2002-2443.patch
