@@ -4,7 +4,7 @@ Date: Mon, 26 Dec 2011 18:19:19 -0500
 Subject: Debian: set AI_ADDRCONFIG for kprop slave
 
 ---
- src/slave/kprop.c |    1 +
+ src/slave/kprop.c | 1 +
  1 file changed, 1 insertion(+)
 
 diff --git a/src/slave/kprop.c b/src/slave/kprop.c

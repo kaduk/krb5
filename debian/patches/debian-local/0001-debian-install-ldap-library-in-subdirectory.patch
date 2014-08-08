@@ -1,14 +1,14 @@
 From 033851a3fdb1da7c611bc53e83511625b30cb174 Mon Sep 17 00:00:00 2001
 From: Sam Hartman <hartmans@debian.org>
 Date: Mon, 26 Dec 2011 18:12:39 -0500
-Subject: =?UTF-8?q?debian:=20install=20ldap=20library=20in=20subdirectory=0A?=
- =?UTF-8?q?Debian=20received=20a=20request=20to=20install=20the=20internal=20?=
- =?UTF-8?q?ldap=20library=20not=20in=0Athe=20main=20lib=20directory.?=
+Subject: =?UTF-8?q?debian:=20install=20ldap=20library=20in=20subdirectory?=
+ =?UTF-8?q?=0ADebian=20received=20a=20request=20to=20install=20the=20inter?=
+ =?UTF-8?q?nal=20ldap=20library=20not=20in=0Athe=20main=20lib=20directory.?=
 
 Patch-Category: debian-local
 ---
- src/plugins/kdb/ldap/Makefile.in           |    2 +-
- src/plugins/kdb/ldap/ldap_util/Makefile.in |    2 +-
+ src/plugins/kdb/ldap/Makefile.in           | 2 +-
+ src/plugins/kdb/ldap/ldap_util/Makefile.in | 2 +-
  2 files changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/src/plugins/kdb/ldap/Makefile.in b/src/plugins/kdb/ldap/Makefile.in

@@ -1,16 +1,16 @@
 From c13c7a9a3da805d69194e7841d9dc1a89e8bf2ba Mon Sep 17 00:00:00 2001
 From: Sam Hartman <hartmans@debian.org>
 Date: Tue, 29 Nov 2011 19:40:23 -0500
-Subject: =?UTF-8?q?ticket:=20new=0Asubject:=20Respect=20locale=20for=20time=20?=
- =?UTF-8?q?display?=
+Subject: =?UTF-8?q?ticket:=20new=0Asubject:=20Respect=20locale=20for=20tim?=
+ =?UTF-8?q?e=20display?=
 
 Call setlocale(LC_TIME) in klist and kadmin to get locale-specific
 time display.
 
 Patch-Name: time_locale
 ---
- src/clients/klist/klist.c   |    1 +
- src/kadmin/cli/ss_wrapper.c |    1 +
+ src/clients/klist/klist.c   | 1 +
+ src/kadmin/cli/ss_wrapper.c | 1 +
  2 files changed, 2 insertions(+)
 
 diff --git a/src/clients/klist/klist.c b/src/clients/klist/klist.c

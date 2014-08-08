@@ -4,7 +4,7 @@ Date: Fri, 13 Jan 2012 16:52:58 -0500
 Subject: autoreconf
 
 ---
- src/configure |  494 ++++++++++++++++++++++++++++-----------------------------
+ src/configure | 494 +++++++++++++++++++++++++++++-----------------------------
  1 file changed, 245 insertions(+), 249 deletions(-)
 
 diff --git a/src/configure b/src/configure

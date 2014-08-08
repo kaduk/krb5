@@ -7,7 +7,7 @@ Handel multi-arch suppressions
 
 Patch-Category: debian-local
 ---
- src/krb5-config.in |   14 +++++++++-----
+ src/krb5-config.in | 14 +++++++++-----
  1 file changed, 9 insertions(+), 5 deletions(-)
 
 diff --git a/src/krb5-config.in b/src/krb5-config.in
