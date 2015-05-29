@@ -1925,7 +1925,8 @@ krb5_lcc_get_principal(krb5_context context, krb5_ccache id, krb5_principal *pri
                 return krb5_copy_principal(context, data->princ, princ);
         }
     }
-    return KRB5_CC_NOTFOUND;
+    *princ = NULL;
+    return KRB5_FCC_NOFILE;
 }
 
 
