@@ -774,7 +774,10 @@ get_cached_tgt(krb5_context context, krb5_tkt_creds_context ctx,
     code = cache_get(context, ctx->ccache, flags, &mcreds, tgt_out);
     context->use_conf_ktypes = FALSE;
     krb5_free_principal(context, tgtname);
-    return (code == KRB5_CC_NOTFOUND || code != KRB5_CC_NOT_KTYPE) ? 0 : code;
+    /* Checking the MSLSA: cache will cause the LSA to make a TGS-REQ;
+     * principal unknown is not fatal since we have capths. */
+    return (code == KRB5_CC_NOTFOUND || code != KRB5_CC_NOT_KTYPE ||
+            code == KRB5KDC_ERR_S_PRINCIPAL_UNKNOWN) ? 0 : code;
 }
 
 /* Point *tgt_out at an allocated credentials structure containing the local
